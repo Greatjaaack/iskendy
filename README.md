@@ -28,7 +28,21 @@
 - **Frontend:** один статичный `index.html` без сборки (палитра «Bakır»,
   Bebas Neue + IBM Plex), опрос статуса раз в 5 сек. Отдаётся тем же бэкендом.
 
-## Запуск локально
+## Запуск в Docker (рекомендуется)
+
+Один контейнер отдаёт и API, и статичный фронт. БД живёт в volume `app-data`
+(состояние переживает пересборку). Нужен заполненный `.env` в корне.
+
+```bash
+cp .env.example .env        # задать STAFF_PASSWORD
+docker compose up -d --build
+```
+
+- Гостевое табло: http://localhost:8080/
+- «Экран персонала» — ссылка внизу табло, вход по `STAFF_PASSWORD`.
+- Логи: `docker compose logs -f app` · остановить: `docker compose down`.
+
+## Запуск локально без Docker
 
 ```bash
 cd backend
@@ -37,9 +51,6 @@ pip install -r requirements.txt
 cp ../.env.example ../.env     # задать STAFF_PASSWORD
 STAFF_PASSWORD=<пароль> uvicorn main:app --reload --port 8080
 ```
-
-- Гостевое табло: http://localhost:8080/
-- «Экран персонала» — ссылка внизу табло, вход по `STAFF_PASSWORD`.
 
 ## API
 

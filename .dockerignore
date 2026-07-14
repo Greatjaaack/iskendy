@@ -1,0 +1,14 @@
+.git
+.gitignore
+.venv
+venv
+__pycache__
+*.py[cod]
+*.db
+*.sqlite3
+.env
+.idea
+.vscode
+.DS_Store
+README.md
+TASKS.md
