@@ -5,13 +5,15 @@ POST /api/batch/ready, /api/batch/undo, /api/day/reset, PUT /api/settings.
 Фронт (frontend/) отдаётся как статика: гостевое табло + экран персонала.
 """
 
+import io
 from pathlib import Path
 
 import db
+import segno
 from auth import issue_token, require_staff, verify_password
 from config import settings
-from fastapi import Depends, FastAPI, HTTPException, status
-from fastapi.responses import FileResponse
+from fastapi import Depends, FastAPI, HTTPException, Query, status
+from fastapi.responses import FileResponse, Response
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
@@ -26,7 +28,8 @@ def _startup() -> None:
 
 
 def _status_payload(state: dict) -> dict:
-    """Ответ гостевого табло: состояние дня + производные (размер партии)."""
+    """Ответ гостевого табло: состояние дня + производные (размер партии,
+    дневная норма позиций, серверное время для экрана «приём с …»)."""
     return {
         "date": state["date"],
         "readyBatch": state["ready_batch"],
@@ -34,6 +37,9 @@ def _status_payload(state: dict) -> dict:
         "startTime": state["start_time"],
         "intervalMin": state["interval_min"],
         "batchSize": settings.batch_size,
+        "capacity": state["total_batches"] * settings.batch_size,
+        "soldOut": bool(state["sold_out"]),
+        "now": db.now_hm(),
         "updatedAt": state["updated_at"],
     }
 
@@ -74,6 +80,29 @@ def batch_undo(_: dict = Depends(require_staff)) -> dict:
 @app.post("/api/day/reset")
 def day_reset(_: dict = Depends(require_staff)) -> dict:
     return _status_payload(db.reset_day())
+
+
+@app.post("/api/day/stop")
+def day_stop(_: dict = Depends(require_staff)) -> dict:
+    """Стоп продаж на сегодня — гостю показывается «на сегодня всё продано»."""
+    return _status_payload(db.set_sold_out(True))
+
+
+@app.post("/api/day/open")
+def day_open(_: dict = Depends(require_staff)) -> dict:
+    """Снять стоп продаж (открыть снова)."""
+    return _status_payload(db.set_sold_out(False))
+
+
+@app.get("/api/qr")
+def qr(data: str = Query(max_length=512)) -> Response:
+    """SVG QR-кода для произвольной строки (обычно URL этой страницы) — для
+    печати таблички/наклейки. Генерится локально, без внешних сервисов."""
+    buff = io.BytesIO()
+    segno.make(data, error="m").save(
+        buff, kind="svg", scale=8, border=2, dark="#17130f", light="#ffffff"
+    )
+    return Response(content=buff.getvalue(), media_type="image/svg+xml")
 
 
 class SettingsBody(BaseModel):

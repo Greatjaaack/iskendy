@@ -28,10 +28,18 @@ def init_db() -> None:
                 total_batches INTEGER NOT NULL,
                 start_time    TEXT    NOT NULL,
                 interval_min  INTEGER NOT NULL,
+                sold_out      INTEGER NOT NULL DEFAULT 0,
                 updated_at    TEXT    NOT NULL
             )
             """
         )
+        # Миграция для БД, созданных до появления sold_out.
+        cols = [r[1] for r in conn.execute("PRAGMA table_info(day_state)")]
+        if "sold_out" not in cols:
+            conn.execute(
+                "ALTER TABLE day_state ADD COLUMN sold_out "
+                "INTEGER NOT NULL DEFAULT 0"
+            )
         conn.execute(
             """
             CREATE TABLE IF NOT EXISTS batch_log (
@@ -52,6 +60,12 @@ def today() -> str:
 
 def _now() -> str:
     return datetime.now(ZoneInfo(settings.timezone)).isoformat(timespec="seconds")
+
+
+def now_hm() -> str:
+    """Текущее время в часовом поясе ресторана как HH:MM (для сравнения с
+    временем старта на фронте — по серверу, не по телефону гостя)."""
+    return datetime.now(ZoneInfo(settings.timezone)).strftime("%H:%M")
 
 
 def get_state(date: str | None = None) -> dict:
@@ -128,15 +142,29 @@ def undo_ready() -> dict:
 
 
 def reset_day() -> dict:
-    """Обнулить готовые партии сегодня (новый день / сброс)."""
+    """Обнулить готовые партии сегодня и снять стоп продаж (новый день / сброс)."""
     date = today()
     get_state(date)
     with _connect() as conn:
         conn.execute(
-            "UPDATE day_state SET ready_batch = 0, updated_at = ? WHERE date = ?",
+            "UPDATE day_state SET ready_batch = 0, sold_out = 0, "
+            "updated_at = ? WHERE date = ?",
             (_now(), date),
         )
         _log(conn, date, "reset", 0)
+    return get_state(date)
+
+
+def set_sold_out(flag: bool) -> dict:
+    """Стоп продаж на сегодня (True) / открыть продажи снова (False)."""
+    date = today()
+    get_state(date)
+    with _connect() as conn:
+        conn.execute(
+            "UPDATE day_state SET sold_out = ?, updated_at = ? WHERE date = ?",
+            (1 if flag else 0, _now(), date),
+        )
+        _log(conn, date, "sold_out", 1 if flag else 0)
     return get_state(date)
 
 

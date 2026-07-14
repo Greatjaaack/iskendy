@@ -159,6 +159,23 @@
     .muted-note { font-size: 12px; color: var(--muted); text-align: center; margin-top: 8px; line-height: 1.5; }
     .hidden { display: none !important; }
     .stamp { text-align: center; font-size: 11px; color: var(--muted); font-family: "IBM Plex Mono", monospace; margin-top: 4px; }
+
+    .plaque { text-align: center; padding: 34px 22px; }
+    .plaque-big {
+      font-family: "Bebas Neue", sans-serif;
+      font-size: 52px;
+      line-height: 1;
+      letter-spacing: 1px;
+      margin-bottom: 10px;
+    }
+    .plaque-sub { color: var(--muted); font-size: 15px; line-height: 1.45; }
+    .plaque.sold { background: #2c1c14; border-color: #6b4326; }
+    .plaque.sold .plaque-big { color: var(--amber); }
+    .plaque.before .plaque-big { color: var(--copper); }
+
+    #qrBox { text-align: center; margin-top: 14px; }
+    #qrBox img { width: 220px; height: 220px; background: #fff; border-radius: 12px; padding: 10px; }
+    #qrBox .cap { font-size: 12px; color: var(--muted); margin-top: 8px; word-break: break-all; }
   </style>
 </head>
 <body>
@@ -170,7 +187,8 @@
 
     <!-- ГОСТЕВОЙ ЭКРАН -->
     <div id="guest">
-      <div class="card">
+      <!-- рабочее табло -->
+      <div class="card" id="boardNormal">
         <div class="board-label">Готовы партии</div>
         <div class="board-num" id="readyRange">—</div>
         <div class="board-range" id="totalNote"></div>
@@ -178,9 +196,25 @@
           <span>Следующая партия</span>
           <b id="nextTime">—</b>
         </div>
+        <div class="board-next" style="border-top:0; padding-top:6px;">
+          <span>Норма на день</span>
+          <b id="capNoteGuest">—</b>
+        </div>
       </div>
 
-      <div class="card">
+      <!-- «на сегодня всё продано» -->
+      <div class="card plaque sold hidden" id="boardSold">
+        <div class="plaque-big">Всё продано</div>
+        <div class="plaque-sub" id="soldSub">На сегодня партии закончились. Ждём тебя завтра!</div>
+      </div>
+
+      <!-- «приём с HH:MM» (день ещё не начался) -->
+      <div class="card plaque before hidden" id="boardBefore">
+        <div class="plaque-big" id="beforeTime">Приём с 12:00</div>
+        <div class="plaque-sub">Жарим при тебе — 10 минут партия. Возвращайся к открытию.</div>
+      </div>
+
+      <div class="card" id="checkCard">
         <label class="field" for="myBatch">Номер твоей партии из талона</label>
         <div class="row">
           <input id="myBatch" type="number" inputmode="numeric" min="1" placeholder="напр. 12" />
@@ -218,6 +252,8 @@
             <button class="ghost" onclick="act('/api/batch/undo')">Отменить последнюю</button>
             <button class="ghost" onclick="resetDay()">Новый день · сброс</button>
           </div>
+          <div style="height:10px"></div>
+          <button id="soldBtn" class="ghost" onclick="toggleSold()">Стоп продаж на сегодня</button>
         </div>
 
         <div class="card">
@@ -238,6 +274,16 @@
           </div>
           <button onclick="saveSettings()">Сохранить настройки</button>
           <div class="muted-note" id="capNote"></div>
+        </div>
+
+        <div class="card">
+          <div class="board-label" style="margin-bottom:14px;">QR на табло</div>
+          <button class="ghost" onclick="showQr()">Показать QR этой страницы</button>
+          <div id="qrBox" class="hidden">
+            <img id="qrImg" alt="QR" />
+            <div class="cap" id="qrUrl"></div>
+            <div class="muted-note">Сохрани картинку (долгий тап) и распечатай на табличку / наклейку.</div>
+          </div>
         </div>
 
         <div class="staff-line"><a onclick="showGuest()">← Гостевое табло</a> · <a onclick="logout()">Выйти</a></div>
@@ -262,20 +308,47 @@
     }
 
     // ---------- гостевое табло ----------
+    // "HH:MM" → минуты от полуночи (для сравнения серверного времени и старта)
+    function toMin(hm){ const [h,m]=(hm||"0:0").split(":").map(Number); return h*60+m; }
+
     function renderGuest(){
       if(!state) return;
-      const { readyBatch, totalBatches, startTime, intervalMin } = state;
+      const { readyBatch, totalBatches, startTime, intervalMin, soldOut } = state;
+
+      // Три состояния табло: продано / до старта / рабочее.
+      const finished = soldOut || readyBatch >= totalBatches;
+      const beforeStart = !finished && readyBatch === 0
+        && state.now && toMin(state.now) < toMin(startTime);
+
+      show("boardSold", finished);
+      show("boardBefore", beforeStart);
+      show("boardNormal", !finished && !beforeStart);
+      show("checkCard", !finished);   // до старта проверку оставляем (талон уже мог быть выдан)
+
+      if(finished){
+        document.getElementById("soldSub").textContent = soldOut
+          ? "Дневная норма продана. Ждём тебя завтра к " + startTime + "!"
+          : "Все партии на сегодня готовы. Ждём тебя завтра к " + startTime + "!";
+      }
+      if(beforeStart){
+        document.getElementById("beforeTime").textContent = "Приём с " + startTime;
+      }
+
       document.getElementById("readyRange").textContent =
         readyBatch > 0 ? "1–" + readyBatch : "0";
       document.getElementById("totalNote").textContent =
         "из " + totalBatches + " партий на сегодня";
-      // время, когда будет готова следующая (readyBatch+1)-я партия
       const next = readyBatch >= totalBatches ? "всё продано"
         : batchTime(startTime, readyBatch + 1, intervalMin);
       document.getElementById("nextTime").textContent = next;
+      document.getElementById("capNoteGuest").textContent =
+        (state.capacity || totalBatches * (state.batchSize||7)) + " порций";
+
       const upd = state.updatedAt ? state.updatedAt.slice(11,16) : "";
       document.getElementById("stamp").textContent = upd ? "обновлено в " + upd : "";
     }
+
+    function show(id, on){ document.getElementById(id).classList.toggle("hidden", !on); }
 
     function checkBatch(){
       if(!state) return;
@@ -381,6 +454,17 @@
     function resetDay(){
       if(confirm("Обнулить готовые партии на сегодня?")) act("/api/day/reset");
     }
+    function toggleSold(){
+      if(!state) return;
+      act(state.soldOut ? "/api/day/open" : "/api/day/stop");
+    }
+    function showQr(){
+      const box = document.getElementById("qrBox");
+      const url = window.location.origin + "/";
+      document.getElementById("qrImg").src = API + "/api/qr?data=" + encodeURIComponent(url);
+      document.getElementById("qrUrl").textContent = url;
+      box.classList.remove("hidden");
+    }
     async function saveSettings(){
       const body = {
         totalBatches: parseInt(document.getElementById("sTotal").value,10),
@@ -404,10 +488,18 @@
       if(!state) return;
       document.getElementById("staffReady").textContent = state.readyBatch;
       document.getElementById("staffTotal").textContent = "из " + state.totalBatches;
-      const cap = state.totalBatches * (state.batchSize || 7);
+      const cap = state.capacity || state.totalBatches * (state.batchSize || 7);
       document.getElementById("capNote").innerHTML =
         "Дневной лимит: " + state.totalBatches + " × " + (state.batchSize||7)
         + " = <b style='color:var(--text)'>" + cap + "</b> позиций";
+      const btn = document.getElementById("soldBtn");
+      if(state.soldOut){
+        btn.textContent = "Открыть продажи снова";
+        btn.classList.add("amber"); btn.classList.remove("ghost");
+      } else {
+        btn.textContent = "Стоп продаж на сегодня";
+        btn.classList.add("ghost"); btn.classList.remove("amber");
+      }
     }
     function fillSettings(){
       if(!state) return;
