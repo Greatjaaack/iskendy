@@ -1,0 +1,424 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="theme-color" content="#17130f" />
+  <title>Искенди · статус партий</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link
+    href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=IBM+Plex+Mono:wght@400;600&family=IBM+Plex+Sans:wght@400;500;600&display=swap"
+    rel="stylesheet"
+  />
+  <style>
+    :root {
+      --bg: #17130f;
+      --card: #211a14;
+      --line: #3a2c20;
+      --copper: #c17a3d;
+      --amber: #e8a93a;
+      --text: #f4ece2;
+      --muted: #9c8a76;
+      --ok-bg: #23331d;
+      --ok-line: #4d6b3a;
+    }
+    * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+    html, body { margin: 0; }
+    body {
+      background: radial-gradient(120% 80% at 50% -10%, #24190f 0%, var(--bg) 60%);
+      color: var(--text);
+      font-family: "IBM Plex Sans", system-ui, sans-serif;
+      min-height: 100dvh;
+      display: flex;
+      justify-content: center;
+      padding: 20px 16px calc(20px + env(safe-area-inset-bottom));
+    }
+    .wrap { width: 100%; max-width: 420px; }
+
+    .brand {
+      text-align: center;
+      margin-bottom: 18px;
+    }
+    .brand h1 {
+      font-family: "Bebas Neue", sans-serif;
+      font-size: 44px;
+      letter-spacing: 2px;
+      margin: 0;
+      color: var(--copper);
+      line-height: 1;
+    }
+    .brand .sub {
+      font-family: "IBM Plex Mono", monospace;
+      font-size: 12px;
+      letter-spacing: 3px;
+      text-transform: uppercase;
+      color: var(--muted);
+      margin-top: 6px;
+    }
+
+    .card {
+      background: var(--card);
+      border: 1px solid var(--line);
+      border-radius: 18px;
+      padding: 22px;
+      margin-bottom: 14px;
+    }
+
+    .board-label {
+      font-family: "IBM Plex Mono", monospace;
+      font-size: 12px;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      color: var(--muted);
+      text-align: center;
+    }
+    .board-num {
+      font-family: "Bebas Neue", sans-serif;
+      font-size: 96px;
+      line-height: 0.9;
+      text-align: center;
+      color: var(--amber);
+      margin: 6px 0 2px;
+    }
+    .board-range {
+      text-align: center;
+      color: var(--muted);
+      font-size: 14px;
+    }
+    .board-next {
+      margin-top: 16px;
+      padding-top: 14px;
+      border-top: 1px dashed var(--line);
+      display: flex;
+      justify-content: space-between;
+      font-size: 14px;
+      color: var(--muted);
+    }
+    .board-next b { color: var(--text); font-family: "IBM Plex Mono", monospace; }
+
+    label.field { display: block; font-size: 13px; color: var(--muted); margin-bottom: 6px; }
+    input[type="number"], input[type="text"], input[type="password"] {
+      width: 100%;
+      background: #17110c;
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      color: var(--text);
+      font-size: 18px;
+      font-family: "IBM Plex Mono", monospace;
+      padding: 13px 14px;
+      outline: none;
+    }
+    input:focus { border-color: var(--copper); }
+
+    button {
+      font-family: "IBM Plex Sans", sans-serif;
+      font-weight: 600;
+      font-size: 16px;
+      border: 0;
+      border-radius: 12px;
+      padding: 14px;
+      width: 100%;
+      cursor: pointer;
+      color: #17130f;
+      background: var(--copper);
+    }
+    button.ghost { background: transparent; color: var(--muted); border: 1px solid var(--line); }
+    button.amber { background: var(--amber); }
+    button.big { font-size: 20px; padding: 20px; }
+    button:active { transform: translateY(1px); }
+    .row { display: flex; gap: 10px; }
+    .row > * { flex: 1; }
+
+    .result {
+      margin-top: 14px;
+      border-radius: 14px;
+      padding: 16px;
+      text-align: center;
+      font-size: 17px;
+      line-height: 1.4;
+      display: none;
+    }
+    .result.show { display: block; }
+    .result.ready { background: var(--ok-bg); border: 1px solid var(--ok-line); color: #d7f0c6; }
+    .result.wait  { background: #2a2013; border: 1px solid #5a4327; color: var(--amber); }
+    .result.err   { background: #2c1717; border: 1px solid #5a2a2a; color: #f0b6b6; }
+    .result .hl { font-family: "Bebas Neue", sans-serif; font-size: 34px; display: block; letter-spacing: 1px; }
+
+    .staff-line {
+      text-align: center;
+      margin-top: 8px;
+      font-size: 12px;
+      color: var(--muted);
+      letter-spacing: 1px;
+    }
+    .staff-line a { color: var(--copper); text-decoration: none; cursor: pointer; }
+
+    .settings-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 12px; }
+    .settings-grid .full { grid-column: 1 / -1; }
+    .muted-note { font-size: 12px; color: var(--muted); text-align: center; margin-top: 8px; line-height: 1.5; }
+    .hidden { display: none !important; }
+    .stamp { text-align: center; font-size: 11px; color: var(--muted); font-family: "IBM Plex Mono", monospace; margin-top: 4px; }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="brand">
+      <h1>ИСКЕНДИ</h1>
+      <div class="sub">жарим при тебе · 10 мин партия</div>
+    </div>
+
+    <!-- ГОСТЕВОЙ ЭКРАН -->
+    <div id="guest">
+      <div class="card">
+        <div class="board-label">Готовы партии</div>
+        <div class="board-num" id="readyRange">—</div>
+        <div class="board-range" id="totalNote"></div>
+        <div class="board-next">
+          <span>Следующая партия</span>
+          <b id="nextTime">—</b>
+        </div>
+      </div>
+
+      <div class="card">
+        <label class="field" for="myBatch">Номер твоей партии из талона</label>
+        <div class="row">
+          <input id="myBatch" type="number" inputmode="numeric" min="1" placeholder="напр. 12" />
+          <button class="amber" style="flex:0 0 auto; width:auto; padding-left:22px; padding-right:22px;" onclick="checkBatch()">Проверить</button>
+        </div>
+        <div class="result" id="result"></div>
+      </div>
+
+      <div class="stamp" id="stamp"></div>
+      <div class="staff-line"><a onclick="showStaff()">Экран персонала</a></div>
+    </div>
+
+    <!-- ЭКРАН ПЕРСОНАЛА -->
+    <div id="staff" class="hidden">
+      <!-- вход -->
+      <div class="card" id="loginBox">
+        <div class="board-label" style="margin-bottom:14px;">Вход для кассы</div>
+        <label class="field" for="pw">Пароль</label>
+        <input id="pw" type="password" onkeydown="if(event.key==='Enter')doLogin()" />
+        <div style="height:12px"></div>
+        <button onclick="doLogin()">Войти</button>
+        <div class="result err" id="loginErr"></div>
+      </div>
+
+      <!-- панель -->
+      <div id="panelBox" class="hidden">
+        <div class="card">
+          <div class="board-label">Готово партий</div>
+          <div class="board-num" id="staffReady">—</div>
+          <div class="board-range" id="staffTotal"></div>
+          <div style="height:10px"></div>
+          <button class="amber big" onclick="act('/api/batch/ready')">Партия готова → +1</button>
+          <div style="height:10px"></div>
+          <div class="row">
+            <button class="ghost" onclick="act('/api/batch/undo')">Отменить последнюю</button>
+            <button class="ghost" onclick="resetDay()">Новый день · сброс</button>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="board-label" style="margin-bottom:14px;">Настройки дня</div>
+          <div class="settings-grid">
+            <div>
+              <label class="field" for="sTotal">Всего партий</label>
+              <input id="sTotal" type="number" min="1" />
+            </div>
+            <div>
+              <label class="field" for="sInterval">Интервал, мин</label>
+              <input id="sInterval" type="number" min="1" />
+            </div>
+            <div class="full">
+              <label class="field" for="sStart">Время старта</label>
+              <input id="sStart" type="text" placeholder="12:00" />
+            </div>
+          </div>
+          <button onclick="saveSettings()">Сохранить настройки</button>
+          <div class="muted-note" id="capNote"></div>
+        </div>
+
+        <div class="staff-line"><a onclick="showGuest()">← Гостевое табло</a> · <a onclick="logout()">Выйти</a></div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const API = ""; // тот же origin
+    let state = null;
+    let token = localStorage.getItem("iskendy_staff_token") || "";
+
+    // ---------- утилиты ----------
+    function pad(n){ return String(n).padStart(2,"0"); }
+    // время старта "HH:MM" + n*interval минут → "HH:MM"
+    function batchTime(startTime, n, intervalMin){
+      const [h,m] = (startTime||"12:00").split(":").map(Number);
+      const total = h*60 + m + n*intervalMin;
+      const hh = Math.floor((total % (24*60)) / 60);
+      const mm = total % 60;
+      return pad(hh)+":"+pad(mm);
+    }
+
+    // ---------- гостевое табло ----------
+    function renderGuest(){
+      if(!state) return;
+      const { readyBatch, totalBatches, startTime, intervalMin } = state;
+      document.getElementById("readyRange").textContent =
+        readyBatch > 0 ? "1–" + readyBatch : "0";
+      document.getElementById("totalNote").textContent =
+        "из " + totalBatches + " партий на сегодня";
+      // время, когда будет готова следующая (readyBatch+1)-я партия
+      const next = readyBatch >= totalBatches ? "всё продано"
+        : batchTime(startTime, readyBatch + 1, intervalMin);
+      document.getElementById("nextTime").textContent = next;
+      const upd = state.updatedAt ? state.updatedAt.slice(11,16) : "";
+      document.getElementById("stamp").textContent = upd ? "обновлено в " + upd : "";
+    }
+
+    function checkBatch(){
+      if(!state) return;
+      const box = document.getElementById("result");
+      const raw = document.getElementById("myBatch").value.trim();
+      const num = parseInt(raw, 10);
+      box.className = "result show";
+      if(!raw || isNaN(num) || num < 1){
+        box.classList.add("err");
+        box.innerHTML = "Введи номер партии с талона";
+        return;
+      }
+      if(num > state.totalBatches){
+        box.classList.add("err");
+        box.innerHTML = "Партии №" + num + " сегодня нет.<br>Всего партий: " + state.totalBatches;
+        return;
+      }
+      if(num <= state.readyBatch){
+        box.classList.add("ready");
+        box.innerHTML = "<span class='hl'>Готово!</span>Забирай партию №" + num + " на выдаче";
+        return;
+      }
+      const remain = num - state.readyBatch;
+      const waitMin = remain * state.intervalMin;
+      const at = batchTime(state.startTime, num, state.intervalMin);
+      box.classList.add("wait");
+      box.innerHTML = "<span class='hl'>~" + waitMin + " мин</span>"
+        + "Осталось " + remain + " " + plural(remain, "партия","партии","партий")
+        + " · ориентир " + at;
+    }
+
+    function plural(n, one, few, many){
+      const m10 = n % 10, m100 = n % 100;
+      if(m10 === 1 && m100 !== 11) return one;
+      if(m10 >= 2 && m10 <= 4 && (m100 < 10 || m100 >= 20)) return few;
+      return many;
+    }
+
+    // ---------- загрузка статуса (опрос) ----------
+    async function loadStatus(){
+      try {
+        const r = await fetch(API + "/api/status");
+        state = await r.json();
+        renderGuest();
+        renderStaff();
+      } catch(e){ /* сеть моргнула — пропускаем тик */ }
+    }
+
+    // ---------- переключение экранов ----------
+    function showStaff(){
+      document.getElementById("guest").classList.add("hidden");
+      document.getElementById("staff").classList.remove("hidden");
+      const authed = !!token;
+      document.getElementById("loginBox").classList.toggle("hidden", authed);
+      document.getElementById("panelBox").classList.toggle("hidden", !authed);
+      if(authed) fillSettings();
+    }
+    function showGuest(){
+      document.getElementById("staff").classList.add("hidden");
+      document.getElementById("guest").classList.remove("hidden");
+    }
+
+    // ---------- авторизация ----------
+    async function doLogin(){
+      const pw = document.getElementById("pw").value;
+      const err = document.getElementById("loginErr");
+      err.classList.remove("show");
+      try {
+        const r = await fetch(API + "/api/auth/login", {
+          method: "POST",
+          headers: {"Content-Type":"application/json"},
+          body: JSON.stringify({ password: pw })
+        });
+        if(!r.ok){ throw new Error("bad"); }
+        const data = await r.json();
+        token = data.token;
+        localStorage.setItem("iskendy_staff_token", token);
+        document.getElementById("pw").value = "";
+        showStaff();
+      } catch(e){
+        err.className = "result err show";
+        err.textContent = "Неверный пароль";
+      }
+    }
+    function logout(){
+      token = "";
+      localStorage.removeItem("iskendy_staff_token");
+      showGuest();
+    }
+
+    // ---------- действия кассы ----------
+    async function act(path){
+      try {
+        const r = await fetch(API + path, {
+          method: "POST",
+          headers: { "Authorization": "Bearer " + token }
+        });
+        if(r.status === 401){ logout(); showStaff(); return; }
+        state = await r.json();
+        renderGuest(); renderStaff();
+      } catch(e){}
+    }
+    function resetDay(){
+      if(confirm("Обнулить готовые партии на сегодня?")) act("/api/day/reset");
+    }
+    async function saveSettings(){
+      const body = {
+        totalBatches: parseInt(document.getElementById("sTotal").value,10),
+        startTime: document.getElementById("sStart").value.trim(),
+        intervalMin: parseInt(document.getElementById("sInterval").value,10)
+      };
+      try {
+        const r = await fetch(API + "/api/settings", {
+          method: "PUT",
+          headers: { "Authorization":"Bearer "+token, "Content-Type":"application/json" },
+          body: JSON.stringify(body)
+        });
+        if(r.status === 401){ logout(); showStaff(); return; }
+        state = await r.json();
+        renderGuest(); renderStaff();
+      } catch(e){}
+    }
+
+    // ---------- панель персонала ----------
+    function renderStaff(){
+      if(!state) return;
+      document.getElementById("staffReady").textContent = state.readyBatch;
+      document.getElementById("staffTotal").textContent = "из " + state.totalBatches;
+      const cap = state.totalBatches * (state.batchSize || 7);
+      document.getElementById("capNote").innerHTML =
+        "Дневной лимит: " + state.totalBatches + " × " + (state.batchSize||7)
+        + " = <b style='color:var(--text)'>" + cap + "</b> позиций";
+    }
+    function fillSettings(){
+      if(!state) return;
+      document.getElementById("sTotal").value = state.totalBatches;
+      document.getElementById("sInterval").value = state.intervalMin;
+      document.getElementById("sStart").value = state.startTime;
+    }
+
+    // ---------- старт ----------
+    loadStatus();
+    setInterval(loadStatus, 5000);
+  </script>
+</body>
+</html>
