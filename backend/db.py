@@ -235,8 +235,16 @@ def delete_order(number: int) -> dict:
 
 
 def reset_day() -> dict:
-    """Очистить все заказы за сегодня (новый день / сброс)."""
+    """Очистить ТАБЛО за сегодня: убрать активные (open/готовится/готово).
+
+    Выданные (served) НЕ трогаем — это история дня, она хранится постоянно
+    (для аналитики). Кнопка «Новый день» лишь снимает зависшие активные заказы.
+    """
     date = today()
     with _connect() as conn:
-        conn.execute("DELETE FROM orders WHERE date = ?", (date,))
+        conn.execute(
+            "DELETE FROM orders WHERE date = ? AND status IN "
+            "('open', 'preparing', 'ready')",
+            (date,),
+        )
     return get_board(date)

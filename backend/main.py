@@ -100,10 +100,15 @@ def order_delete(body: OrderBody, _: dict = Depends(require_staff)) -> dict:
 
 
 @app.get("/api/history")
-def history(_: dict = Depends(require_staff)) -> dict:
-    """История заказов за сегодня (включая выданные) с метками времени
-    приёма / готовности / выдачи — для персонала."""
-    return {"date": db.today(), "orders": db.get_history(), "now": db.now_hm()}
+def history(
+    date: str | None = Query(default=None, pattern=r"^\d{4}-\d{2}-\d{2}$"),
+    _: dict = Depends(require_staff),
+) -> dict:
+    """История заказов за день (включая выданные) с метками времени приёма /
+    готовности / выдачи — для персонала. `date` (YYYY-MM-DD) — по умолчанию
+    сегодня; выданные хранятся постоянно, так что доступны прошлые дни."""
+    day = date or db.today()
+    return {"date": day, "orders": db.get_history(day), "now": db.now_hm()}
 
 
 @app.post("/api/day/reset")

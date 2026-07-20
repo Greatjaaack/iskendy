@@ -21,14 +21,17 @@
        ============================================================ -->
   <script>
     window.YM_ID = null; // ← сюда номер счётчика, например 98765432
+    // Считаем только лендинг. Табло весь день висит на экране, а касса —
+    // рабочий инструмент: их просмотры завысили бы статистику своими же.
+    window.YM_ON = !!window.YM_ID && !/^\/(board|staff)\b/.test(location.pathname);
     // Хелпер «цели»: дёргаем при клике по ссылке лендинга, чтобы в отчётах
     // Метрики было видно, по какой именно ссылке кликают.
     window.ymGoal = function (name) {
-      if (window.YM_ID && window.ym) { window.ym(window.YM_ID, "reachGoal", name); }
+      if (window.YM_ON && window.ym) { window.ym(window.YM_ID, "reachGoal", name); }
     };
   </script>
   <script>
-    if (window.YM_ID) {
+    if (window.YM_ON) {
       (function (m, e, t, r, i, k, a) {
         m[i] = m[i] || function () { (m[i].a = m[i].a || []).push(arguments); };
         m[i].l = 1 * new Date();
@@ -249,8 +252,10 @@
     .order-st {
       flex: 1; font-size: 13px; color: var(--muted);
       font-family: "IBM Plex Mono", monospace;
+      display: flex; flex-direction: column; gap: 2px;
     }
     .st-ready .order-st { color: #a7d68a; }
+    .order-times { font-size: 11px; color: var(--muted); opacity: .8; }
     .order-acts { display: flex; gap: 6px; flex: 0 0 auto; }
     button.mini {
       width: auto; font-size: 14px; font-weight: 600;
@@ -445,6 +450,7 @@
     body.brand .order-row { border-bottom-color: rgba(0, 0, 0, .1); }
     body.brand .order-num { color: #f7621e; }
     body.brand .order-st { color: #6a4a08; }
+    body.brand .order-times { color: #9a7b52; }
     body.brand .st-ready .order-st { color: #2e8b2e; font-weight: 700; }
     body.brand button.mini.ok { background: #34a853; color: #fff; }
     body.brand button.mini.x { background: transparent; border: 1px solid rgba(200, 60, 60, .5); color: #c0392b; }
@@ -570,7 +576,7 @@
           <div id="orderList"></div>
           <div class="muted-note" id="emptyNote">Заказов пока нет</div>
           <div style="height:14px"></div>
-          <button class="ghost" onclick="resetDay()">Новый день · очистить всё</button>
+          <button class="ghost" onclick="resetDay()">Новый день · очистить табло</button>
           <div class="muted-note" id="servedNote"></div>
         </div>
 
@@ -595,11 +601,12 @@
     let token = localStorage.getItem("iskendy_staff_token") || "";
 
     // ---------- гостевое табло ----------
-    // Две колонки: «Готовятся» и «Готово ✓». Выданные заказы уже не в state.
+    // Две колонки: «Готовятся» (открытые + в готовке) и «Готово ✓».
+    // Выданные заказы уже не в state.
     function renderGuest(){
       if(!state) return;
       const orders = state.orders || [];
-      const prep  = orders.filter(o => o.status === "preparing").map(o => o.number);
+      const prep  = orders.filter(o => o.status === "open" || o.status === "preparing").map(o => o.number);
       const ready = orders.filter(o => o.status === "ready").map(o => o.number);
 
       document.getElementById("prepNums").innerHTML = prep.length
@@ -747,7 +754,7 @@
       if(confirm("Удалить заказ №" + num + "?")) api("/api/order/delete", { number: num }).catch(() => {});
     }
     function resetDay(){
-      if(confirm("Очистить ВСЕ заказы за сегодня?")) api("/api/day/reset").catch(() => {});
+      if(confirm("Убрать с табло активные заказы? (выданные останутся в истории)")) api("/api/day/reset").catch(() => {});
     }
 
     function showQr(){
@@ -788,12 +795,19 @@
       }
       acts += '<button class="mini x" onclick="delOrder(' + n + ')" title="Удалить">✕</button>';
       const label = STATUS_LABEL[o.status] || o.status;
+      let times = "принят " + hhmm(o.acceptedAt);
+      if(o.readyAt){ times += " · готов " + hhmm(o.readyAt); }
       return '<div class="order-row st-' + o.status + '">'
            +   '<span class="order-num">' + n + '</span>'
-           +   '<span class="order-st">' + label + '</span>'
+           +   '<span class="order-st">' + label
+           +     '<span class="order-times">' + times + '</span>'
+           +   '</span>'
            +   '<span class="order-acts">' + acts + '</span>'
            + '</div>';
     }
+
+    // "2026-07-20T19:35:45[+03:00]" → "19:35" (для меток времени у кассы)
+    function hhmm(iso){ return iso ? String(iso).slice(11,16) : "—"; }
 
     // ---------- старт ----------
     routeFromPath();
