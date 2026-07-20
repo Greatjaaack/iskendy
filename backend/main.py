@@ -8,16 +8,20 @@
 
 import asyncio
 import io
+import logging
 from pathlib import Path
 
 import db
 import segno
-from iiko_poller import run_poller
 from auth import issue_token, require_staff, verify_password
 from fastapi import Depends, FastAPI, HTTPException, Query, status
 from fastapi.responses import FileResponse, Response
 from fastapi.staticfiles import StaticFiles
+from iiko_poller import run_poller
 from pydantic import BaseModel, Field
+
+# Чтобы логи фонового iiko-поллера были видны рядом с логами uvicorn.
+logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
 
 app = FastAPI(title="Искенди — табло заказов")
 
