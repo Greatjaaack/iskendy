@@ -207,6 +207,54 @@
     #qrBox img { width: 220px; height: 220px; background: #fff; border-radius: 12px; padding: 10px; }
     #qrBox .cap { font-size: 12px; color: var(--muted); margin-top: 8px; word-break: break-all; }
 
+    /* ---------- Табло заказов (две колонки) ---------- */
+    .board-cols { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 14px; }
+    .col {
+      background: var(--card); border: 1px solid var(--line);
+      border-radius: 18px; padding: 16px 12px; min-height: 180px;
+    }
+    .col-ready { background: var(--ok-bg); border-color: var(--ok-line); }
+    .col-head {
+      font-family: "IBM Plex Mono", monospace; font-size: 12px; letter-spacing: 2px;
+      text-transform: uppercase; color: var(--muted); text-align: center; margin-bottom: 14px;
+    }
+    .col-ready .col-head { color: #a7d68a; }
+    .nums { display: flex; flex-wrap: wrap; gap: 10px 12px; justify-content: center; }
+    .num {
+      font-family: "Bebas Neue", sans-serif; font-size: 34px; line-height: 1;
+      color: var(--text); letter-spacing: 1px;
+    }
+    .num.hot {
+      color: #17130f; background: var(--amber);
+      border-radius: 10px; padding: 4px 12px;
+      animation: pulse 1.4s ease-in-out infinite;
+    }
+    @keyframes pulse { 0%,100% { transform: scale(1); } 50% { transform: scale(1.08); } }
+    .num-empty { color: var(--muted); font-size: 26px; font-family: "Bebas Neue", sans-serif; }
+
+    /* ---------- Список заказов в кассе ---------- */
+    .order-row {
+      display: flex; align-items: center; gap: 10px;
+      padding: 10px 0; border-bottom: 1px dashed var(--line);
+    }
+    .order-row:last-child { border-bottom: 0; }
+    .order-num {
+      font-family: "Bebas Neue", sans-serif; font-size: 30px; line-height: 1;
+      color: var(--amber); flex: 0 0 46px;
+    }
+    .order-st {
+      flex: 1; font-size: 13px; color: var(--muted);
+      font-family: "IBM Plex Mono", monospace;
+    }
+    .st-ready .order-st { color: #a7d68a; }
+    .order-acts { display: flex; gap: 6px; flex: 0 0 auto; }
+    button.mini {
+      width: auto; font-size: 14px; font-weight: 600;
+      padding: 9px 12px; border-radius: 10px;
+    }
+    button.mini.ok { background: var(--ok-line); color: var(--text); }
+    button.mini.x  { background: transparent; border: 1px solid #5a2a2a; color: #d98a8a; padding: 9px 11px; }
+
     /* ---------- Лендинг (мультиссылка) ---------- */
     .hero { text-align: center; padding: 4px 0 20px; }
     .banner {
@@ -334,6 +382,71 @@
     .lk-social a:active { transform: translateY(1px); }
     .lk-social a svg { width: 27px; height: 27px; }
     .lk-vk { font-weight: 800; font-size: 19px; letter-spacing: .5px; }
+
+    /* ============================================================
+       Фирменная тема табло/кассы — как на главной (лендинге):
+       оранжево-красный градиент, белые карточки, жёлтые акценты.
+       Включается классом body.brand (см. showBoard/showStaff).
+       ============================================================ */
+    body.brand {
+      background: linear-gradient(150deg, #ffb418 6%, #f7621e 52%, #f73131 96%) fixed;
+      color: #201400;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    }
+    body.brand .brand h1 {
+      color: #fff; text-shadow: 0 2px 14px rgba(0, 0, 0, .28);
+    }
+    body.brand .brand .sub { color: rgba(255, 255, 255, .92); }
+
+    body.brand .card {
+      background: #fff; border: 0;
+      box-shadow: 0 8px 24px rgba(0, 0, 0, .18);
+      color: #201400;
+    }
+    body.brand .board-label { color: #a15a12; }
+    body.brand label.field { color: #6a4a08; }
+    body.brand input[type="number"],
+    body.brand input[type="text"],
+    body.brand input[type="password"] {
+      background: #fff8ec; border: 1px solid rgba(0, 0, 0, .15); color: #201400;
+    }
+    body.brand input:focus { border-color: #f7621e; }
+
+    /* Кнопки: жёлтая фирменная — основная */
+    body.brand button { background: #F8D00F; color: #201400; box-shadow: 0 6px 16px rgba(0, 0, 0, .14); }
+    body.brand button.amber { background: #F8D00F; }
+    body.brand button.ghost { background: transparent; border: 1px solid rgba(0, 0, 0, .18); color: #6a4a08; box-shadow: none; }
+
+    /* Две колонки табло */
+    body.brand .col { background: #fff; border: 0; box-shadow: 0 8px 24px rgba(0, 0, 0, .18); }
+    body.brand .col-ready { background: #fff6cf; }
+    body.brand .col-head { color: #a15a12; }
+    body.brand .col-ready .col-head { color: #b06a00; }
+    body.brand .num { color: #201400; }
+    body.brand .num.hot {
+      color: #201400; background: #F8D00F;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, .18);
+    }
+    body.brand .num-empty { color: #d98b4a; }
+
+    /* Список заказов в кассе */
+    body.brand .order-row { border-bottom-color: rgba(0, 0, 0, .1); }
+    body.brand .order-num { color: #f7621e; }
+    body.brand .order-st { color: #6a4a08; }
+    body.brand .st-ready .order-st { color: #2e8b2e; font-weight: 700; }
+    body.brand button.mini.ok { background: #34a853; color: #fff; }
+    body.brand button.mini.x { background: transparent; border: 1px solid rgba(200, 60, 60, .5); color: #c0392b; }
+
+    /* Плашки и метки */
+    body.brand .plaque.before { background: #fff; border: 0; }
+    body.brand .plaque.before .plaque-big { color: #f7621e; }
+    body.brand .plaque-sub { color: #6a4a08; }
+    body.brand .stamp { color: rgba(255, 255, 255, .9); }
+    body.brand .muted-note { color: #6a4a08; }
+    body.brand .staff-line { color: rgba(255, 255, 255, .92); }
+    body.brand .staff-line a { color: #fff; font-weight: 700; text-decoration: underline; }
+    body.brand .result.err { background: #ffecec; border: 1px solid #f0b6b6; color: #c0392b; }
+    body.brand #qrBox .cap { color: #6a4a08; }
   </style>
 </head>
 <body>
@@ -375,50 +488,30 @@
       </a>
     </div>
 
-    <!-- ========================= ТАБЛО ПАРТИЙ (скрытая вкладка /board) ========================= -->
+    <!-- ========================= ТАБЛО ЗАКАЗОВ (скрытая вкладка /board) ========================= -->
     <div id="guest" class="hidden">
       <div class="brand">
         <h1>ИСКЕНДИ</h1>
-        <div class="sub">жарим при тебе · 10 мин партия</div>
+        <div class="sub">табло заказов · найди свой номер</div>
       </div>
-      <!-- рабочее табло -->
-      <div class="card" id="boardNormal">
-        <div class="board-label">Готовы партии</div>
-        <div class="board-num" id="readyRange">—</div>
-        <div class="board-range" id="totalNote"></div>
-        <div class="board-next">
-          <span>Следующая партия</span>
-          <b id="nextTime">—</b>
+
+      <div class="board-cols">
+        <div class="col col-prep">
+          <div class="col-head">Готовятся</div>
+          <div class="nums" id="prepNums"></div>
         </div>
-        <div class="board-next" style="border-top:0; padding-top:6px;">
-          <span>Норма на день</span>
-          <b id="capNoteGuest">—</b>
+        <div class="col col-ready">
+          <div class="col-head">Готово ✓</div>
+          <div class="nums" id="readyNums"></div>
         </div>
       </div>
 
-      <!-- «на сегодня всё продано» -->
-      <div class="card plaque sold hidden" id="boardSold">
-        <div class="plaque-big">Всё продано</div>
-        <div class="plaque-sub" id="soldSub">На сегодня партии закончились. Ждём тебя завтра!</div>
-      </div>
-
-      <!-- «приём с HH:MM» (день ещё не начался) -->
-      <div class="card plaque before hidden" id="boardBefore">
-        <div class="plaque-big" id="beforeTime">Приём с 12:00</div>
-        <div class="plaque-sub">Жарим при тебе — 10 минут партия. Возвращайся к открытию.</div>
-      </div>
-
-      <div class="card" id="checkCard">
-        <label class="field" for="myBatch">Номер твоей партии из талона</label>
-        <div class="row">
-          <input id="myBatch" type="number" inputmode="numeric" min="1" placeholder="напр. 12" />
-          <button class="amber" style="flex:0 0 auto; width:auto; padding-left:22px; padding-right:22px;" onclick="checkBatch()">Проверить</button>
-        </div>
-        <div class="result" id="result"></div>
+      <div class="card plaque before hidden" id="boardEmpty">
+        <div class="plaque-big">Пока пусто</div>
+        <div class="plaque-sub">Заказы появятся здесь, как только их примут на кухне.</div>
       </div>
 
       <div class="stamp" id="stamp"></div>
-      <!-- ссылка на кассу убрана: /staff временно отключён -->
     </div>
 
     <!-- ЭКРАН ПЕРСОНАЛА (/staff) -->
@@ -440,43 +533,27 @@
       <!-- панель -->
       <div id="panelBox" class="hidden">
         <div class="card">
-          <div class="board-label">Готово партий</div>
-          <div class="board-num" id="staffReady">—</div>
-          <div class="board-range" id="staffTotal"></div>
-          <div style="height:10px"></div>
-          <button class="amber big" onclick="act('/api/batch/ready')">Партия готова → +1</button>
-          <div style="height:10px"></div>
+          <label class="field" for="newNum">Новый заказ — номер с чека</label>
           <div class="row">
-            <button class="ghost" onclick="act('/api/batch/undo')">Отменить последнюю</button>
-            <button class="ghost" onclick="resetDay()">Новый день · сброс</button>
+            <input id="newNum" type="number" inputmode="numeric" min="1" placeholder="напр. 14"
+                   onkeydown="if(event.key==='Enter')addOrder()" />
+            <button class="amber" style="flex:0 0 auto; width:auto; padding-left:22px; padding-right:22px;" onclick="addOrder()">Добавить</button>
           </div>
-          <div style="height:10px"></div>
-          <button id="soldBtn" class="ghost" onclick="toggleSold()">Стоп продаж на сегодня</button>
+          <div class="result err" id="addErr"></div>
         </div>
 
         <div class="card">
-          <div class="board-label" style="margin-bottom:14px;">Настройки дня</div>
-          <div class="settings-grid">
-            <div>
-              <label class="field" for="sTotal">Всего партий</label>
-              <input id="sTotal" type="number" min="1" />
-            </div>
-            <div>
-              <label class="field" for="sInterval">Интервал, мин</label>
-              <input id="sInterval" type="number" min="1" />
-            </div>
-            <div class="full">
-              <label class="field" for="sStart">Время старта</label>
-              <input id="sStart" type="text" placeholder="12:00" />
-            </div>
-          </div>
-          <button onclick="saveSettings()">Сохранить настройки</button>
-          <div class="muted-note" id="capNote"></div>
+          <div class="board-label" style="margin-bottom:14px;">Заказы сегодня</div>
+          <div id="orderList"></div>
+          <div class="muted-note" id="emptyNote">Заказов пока нет</div>
+          <div style="height:14px"></div>
+          <button class="ghost" onclick="resetDay()">Новый день · очистить всё</button>
+          <div class="muted-note" id="servedNote"></div>
         </div>
 
         <div class="card">
           <div class="board-label" style="margin-bottom:14px;">QR на табло</div>
-          <button class="ghost" onclick="showQr()">Показать QR этой страницы</button>
+          <button class="ghost" onclick="showQr()">Показать QR табло заказов</button>
           <div id="qrBox" class="hidden">
             <img id="qrImg" alt="QR" />
             <div class="cap" id="qrUrl"></div>
@@ -494,96 +571,28 @@
     let state = null;
     let token = localStorage.getItem("iskendy_staff_token") || "";
 
-    // ---------- утилиты ----------
-    function pad(n){ return String(n).padStart(2,"0"); }
-    // время старта "HH:MM" + n*interval минут → "HH:MM"
-    function batchTime(startTime, n, intervalMin){
-      const [h,m] = (startTime||"12:00").split(":").map(Number);
-      const total = h*60 + m + n*intervalMin;
-      const hh = Math.floor((total % (24*60)) / 60);
-      const mm = total % 60;
-      return pad(hh)+":"+pad(mm);
-    }
-
     // ---------- гостевое табло ----------
-    // "HH:MM" → минуты от полуночи (для сравнения серверного времени и старта)
-    function toMin(hm){ const [h,m]=(hm||"0:0").split(":").map(Number); return h*60+m; }
-
+    // Две колонки: «Готовятся» и «Готово ✓». Выданные заказы уже не в state.
     function renderGuest(){
       if(!state) return;
-      const { readyBatch, totalBatches, startTime, intervalMin, soldOut } = state;
+      const orders = state.orders || [];
+      const prep  = orders.filter(o => o.status === "preparing").map(o => o.number);
+      const ready = orders.filter(o => o.status === "ready").map(o => o.number);
 
-      // Три состояния табло: продано / до старта / рабочее.
-      const finished = soldOut || readyBatch >= totalBatches;
-      const beforeStart = !finished && readyBatch === 0
-        && state.now && toMin(state.now) < toMin(startTime);
+      document.getElementById("prepNums").innerHTML = prep.length
+        ? prep.map(n => '<span class="num">' + n + '</span>').join("")
+        : '<span class="num-empty">—</span>';
+      document.getElementById("readyNums").innerHTML = ready.length
+        ? ready.map(n => '<span class="num hot">' + n + '</span>').join("")
+        : '<span class="num-empty">—</span>';
 
-      show("boardSold", finished);
-      show("boardBefore", beforeStart);
-      show("boardNormal", !finished && !beforeStart);
-      show("checkCard", !finished);   // до старта проверку оставляем (талон уже мог быть выдан)
-
-      if(finished){
-        document.getElementById("soldSub").textContent = soldOut
-          ? "Дневная норма продана. Ждём тебя завтра к " + startTime + "!"
-          : "Все партии на сегодня готовы. Ждём тебя завтра к " + startTime + "!";
-      }
-      if(beforeStart){
-        document.getElementById("beforeTime").textContent = "Приём с " + startTime;
-      }
-
-      document.getElementById("readyRange").textContent =
-        readyBatch > 0 ? "1–" + readyBatch : "0";
-      document.getElementById("totalNote").textContent =
-        "из " + totalBatches + " партий на сегодня";
-      const next = readyBatch >= totalBatches ? "всё продано"
-        : batchTime(startTime, readyBatch + 1, intervalMin);
-      document.getElementById("nextTime").textContent = next;
-      document.getElementById("capNoteGuest").textContent =
-        (state.capacity || totalBatches * (state.batchSize||7)) + " порций";
+      show("boardEmpty", orders.length === 0);
 
       const upd = state.updatedAt ? state.updatedAt.slice(11,16) : "";
       document.getElementById("stamp").textContent = upd ? "обновлено в " + upd : "";
     }
 
     function show(id, on){ document.getElementById(id).classList.toggle("hidden", !on); }
-
-    function checkBatch(){
-      if(!state) return;
-      const box = document.getElementById("result");
-      const raw = document.getElementById("myBatch").value.trim();
-      const num = parseInt(raw, 10);
-      box.className = "result show";
-      if(!raw || isNaN(num) || num < 1){
-        box.classList.add("err");
-        box.innerHTML = "Введи номер партии с талона";
-        return;
-      }
-      if(num > state.totalBatches){
-        box.classList.add("err");
-        box.innerHTML = "Партии №" + num + " сегодня нет.<br>Всего партий: " + state.totalBatches;
-        return;
-      }
-      if(num <= state.readyBatch){
-        box.classList.add("ready");
-        box.innerHTML = "<span class='hl'>Готово!</span>Забирай партию №" + num + " на выдаче";
-        return;
-      }
-      const remain = num - state.readyBatch;
-      const waitMin = remain * state.intervalMin;
-      const at = batchTime(state.startTime, num, state.intervalMin);
-      box.classList.add("wait");
-      box.innerHTML = "<span class='hl'>~" + waitMin + " мин</span>"
-        + "Осталось " + remain + " " + plural(remain, "партия","партии","партий")
-        + " · ориентир " + at;
-    }
-
-    function plural(n, one, few, many){
-      const m10 = n % 10, m100 = n % 100;
-      if(m10 === 1 && m100 !== 11) return one;
-      if(m10 >= 2 && m10 <= 4 && (m100 < 10 || m100 >= 20)) return few;
-      return many;
-    }
 
     // ---------- загрузка статуса (опрос) ----------
     async function loadStatus(){
@@ -614,6 +623,7 @@
     function showLanding(push){
       hideAllScreens();
       document.body.classList.add("landing-bg");
+      document.body.classList.remove("brand");
       document.getElementById("landing").classList.remove("hidden");
       stopPolling();
       if(push !== false) history.pushState({s:"landing"}, "", "/");
@@ -621,6 +631,7 @@
     function showBoard(push){
       hideAllScreens();
       document.body.classList.remove("landing-bg");
+      document.body.classList.add("brand");
       document.getElementById("guest").classList.remove("hidden");
       startPolling();
       if(push !== false) history.pushState({s:"board"}, "", "/board");
@@ -628,11 +639,11 @@
     function showStaff(push){
       hideAllScreens();
       document.body.classList.remove("landing-bg");
+      document.body.classList.add("brand");
       document.getElementById("staff").classList.remove("hidden");
       const authed = !!token;
       document.getElementById("loginBox").classList.toggle("hidden", authed);
       document.getElementById("panelBox").classList.toggle("hidden", !authed);
-      if(authed){ fillSettings(); }
       startPolling();
       if(push !== false) history.pushState({s:"staff"}, "", "/staff");
     }
@@ -677,72 +688,82 @@
     }
 
     // ---------- действия кассы ----------
-    async function act(path){
+    // Общий POST под токеном. При 401 — разлогин, при 4xx — бросаем текст ошибки.
+    async function api(path, body){
+      const r = await fetch(API + path, {
+        method: "POST",
+        headers: { "Authorization": "Bearer " + token, "Content-Type": "application/json" },
+        body: JSON.stringify(body || {})
+      });
+      if(r.status === 401){ logout(); showStaff(); throw new Error("Сессия истекла"); }
+      const data = await r.json().catch(() => ({}));
+      if(!r.ok){ throw new Error(data.detail || "Ошибка"); }
+      state = data;
+      renderGuest(); renderStaff();
+      return data;
+    }
+
+    async function addOrder(){
+      const inp = document.getElementById("newNum");
+      const err = document.getElementById("addErr");
+      err.classList.remove("show");
+      const num = parseInt(inp.value, 10);
+      if(!num || num < 1){
+        err.className = "result err show";
+        err.textContent = "Введи номер заказа";
+        return;
+      }
       try {
-        const r = await fetch(API + path, {
-          method: "POST",
-          headers: { "Authorization": "Bearer " + token }
-        });
-        if(r.status === 401){ logout(); showStaff(); return; }
-        state = await r.json();
-        renderGuest(); renderStaff();
-      } catch(e){}
+        await api("/api/order", { number: num });
+        inp.value = ""; inp.focus();
+      } catch(e){
+        err.className = "result err show";
+        err.textContent = e.message || "Не удалось добавить";
+      }
+    }
+
+    function setStatus(num, status){ api("/api/order/status", { number: num, status }).catch(() => {}); }
+    function delOrder(num){
+      if(confirm("Удалить заказ №" + num + "?")) api("/api/order/delete", { number: num }).catch(() => {});
     }
     function resetDay(){
-      if(confirm("Обнулить готовые партии на сегодня?")) act("/api/day/reset");
+      if(confirm("Очистить ВСЕ заказы за сегодня?")) api("/api/day/reset").catch(() => {});
     }
-    function toggleSold(){
-      if(!state) return;
-      act(state.soldOut ? "/api/day/open" : "/api/day/stop");
-    }
+
     function showQr(){
       const box = document.getElementById("qrBox");
-      const url = window.location.origin + "/";
+      const url = window.location.origin + "/board";
       document.getElementById("qrImg").src = API + "/api/qr?data=" + encodeURIComponent(url);
       document.getElementById("qrUrl").textContent = url;
       box.classList.remove("hidden");
     }
-    async function saveSettings(){
-      const body = {
-        totalBatches: parseInt(document.getElementById("sTotal").value,10),
-        startTime: document.getElementById("sStart").value.trim(),
-        intervalMin: parseInt(document.getElementById("sInterval").value,10)
-      };
-      try {
-        const r = await fetch(API + "/api/settings", {
-          method: "PUT",
-          headers: { "Authorization":"Bearer "+token, "Content-Type":"application/json" },
-          body: JSON.stringify(body)
-        });
-        if(r.status === 401){ logout(); showStaff(); return; }
-        state = await r.json();
-        renderGuest(); renderStaff();
-      } catch(e){}
-    }
 
-    // ---------- панель персонала ----------
+    // ---------- панель кассы ----------
     function renderStaff(){
       if(!state) return;
-      document.getElementById("staffReady").textContent = state.readyBatch;
-      document.getElementById("staffTotal").textContent = "из " + state.totalBatches;
-      const cap = state.capacity || state.totalBatches * (state.batchSize || 7);
-      document.getElementById("capNote").innerHTML =
-        "Дневной лимит: " + state.totalBatches + " × " + (state.batchSize||7)
-        + " = <b style='color:var(--text)'>" + cap + "</b> позиций";
-      const btn = document.getElementById("soldBtn");
-      if(state.soldOut){
-        btn.textContent = "Открыть продажи снова";
-        btn.classList.add("amber"); btn.classList.remove("ghost");
-      } else {
-        btn.textContent = "Стоп продаж на сегодня";
-        btn.classList.add("ghost"); btn.classList.remove("amber");
-      }
+      const orders = state.orders || [];
+      document.getElementById("orderList").innerHTML = orders.map(orderRow).join("");
+      show("emptyNote", orders.length === 0);
+      const n = state.servedCount || 0;
+      document.getElementById("servedNote").textContent = n ? ("Выдано сегодня: " + n) : "";
     }
-    function fillSettings(){
-      if(!state) return;
-      document.getElementById("sTotal").value = state.totalBatches;
-      document.getElementById("sInterval").value = state.intervalMin;
-      document.getElementById("sStart").value = state.startTime;
+
+    function orderRow(o){
+      const n = o.number;
+      let acts;
+      if(o.status === "preparing"){
+        acts = '<button class="mini amber" onclick="setStatus(' + n + ',\'ready\')">Готово →</button>';
+      } else {
+        acts = '<button class="mini ok" onclick="setStatus(' + n + ',\'served\')">Выдано ✓</button>'
+             + '<button class="mini ghost" onclick="setStatus(' + n + ',\'preparing\')" title="Вернуть в готовку">←</button>';
+      }
+      acts += '<button class="mini x" onclick="delOrder(' + n + ')" title="Удалить">✕</button>';
+      const label = o.status === "preparing" ? "готовится" : "готово";
+      return '<div class="order-row st-' + o.status + '">'
+           +   '<span class="order-num">' + n + '</span>'
+           +   '<span class="order-st">' + label + '</span>'
+           +   '<span class="order-acts">' + acts + '</span>'
+           + '</div>';
     }
 
     // ---------- старт ----------

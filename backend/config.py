@@ -1,4 +1,4 @@
-"""Конфигурация сервиса статус-борда партий.
+"""Конфигурация сервиса табло заказов.
 
 Все настройки читаются из окружения / .env через pydantic Settings —
 не тянуть os.getenv по коду, брать `from config import settings`.
@@ -20,12 +20,6 @@ class Settings(BaseSettings):
 
     # Путь к SQLite-файлу.
     db_path: str = "iskendy.db"
-
-    # Дефолты нового дня (совпадают с Excel-листом партий).
-    default_total_batches: int = 40
-    default_start_time: str = "12:00"
-    default_interval_min: int = 15
-    batch_size: int = 7  # тушек в партии
 
 
 settings = Settings()

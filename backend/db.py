@@ -1,8 +1,8 @@
-"""SQLite-хранилище состояния партий (stdlib sqlite3, без ORM — таблица одна).
+"""SQLite-хранилище заказов «Искенди» (stdlib sqlite3, без ORM).
 
-Состояние ведётся по дню ресторана. `day_state` хранит по одной строке на дату:
-готовых партий, всего партий, время старта, интервал. `batch_log` — журнал
-действий кассы (для истории/разбора, не критичен).
+Модель — пер-заказный трекинг статусов. Каждый заказ ведётся по дню ресторана:
+кассир заносит номер (с чека) → статус «готовится» → «готово» → «выдано».
+Выданные заказы уходят с табло. Одна таблица `orders`.
 """
 
 import sqlite3
@@ -10,6 +10,11 @@ from datetime import datetime
 from zoneinfo import ZoneInfo
 
 from config import settings
+
+# Разрешённые статусы и их порядок. «served» (выдано) снимает заказ с табло.
+STATUSES = ("preparing", "ready", "served")
+# Статусы, которые показываются на табло и в панели кассы.
+ACTIVE_STATUSES = ("preparing", "ready")
 
 
 def _connect() -> sqlite3.Connection:
@@ -22,34 +27,20 @@ def init_db() -> None:
     with _connect() as conn:
         conn.execute(
             """
-            CREATE TABLE IF NOT EXISTS day_state (
-                date          TEXT PRIMARY KEY,
-                ready_batch   INTEGER NOT NULL DEFAULT 0,
-                total_batches INTEGER NOT NULL,
-                start_time    TEXT    NOT NULL,
-                interval_min  INTEGER NOT NULL,
-                sold_out      INTEGER NOT NULL DEFAULT 0,
-                updated_at    TEXT    NOT NULL
+            CREATE TABLE IF NOT EXISTS orders (
+                id         INTEGER PRIMARY KEY AUTOINCREMENT,
+                date       TEXT    NOT NULL,
+                number     INTEGER NOT NULL,
+                status     TEXT    NOT NULL DEFAULT 'preparing',
+                created_at TEXT    NOT NULL,
+                updated_at TEXT    NOT NULL
             )
             """
         )
-        # Миграция для БД, созданных до появления sold_out.
-        cols = [r[1] for r in conn.execute("PRAGMA table_info(day_state)")]
-        if "sold_out" not in cols:
-            conn.execute(
-                "ALTER TABLE day_state ADD COLUMN sold_out "
-                "INTEGER NOT NULL DEFAULT 0"
-            )
+        # Поиск активного заказа по дню и номеру — самый частый запрос.
         conn.execute(
-            """
-            CREATE TABLE IF NOT EXISTS batch_log (
-                id      INTEGER PRIMARY KEY AUTOINCREMENT,
-                date    TEXT NOT NULL,
-                action  TEXT NOT NULL,
-                value   INTEGER,
-                at      TEXT NOT NULL
-            )
-            """
+            "CREATE INDEX IF NOT EXISTS idx_orders_date_status "
+            "ON orders (date, status)"
         )
 
 
@@ -63,126 +54,104 @@ def _now() -> str:
 
 
 def now_hm() -> str:
-    """Текущее время в часовом поясе ресторана как HH:MM (для сравнения с
-    временем старта на фронте — по серверу, не по телефону гостя)."""
+    """Текущее время ресторана как HH:MM (по серверу, не по телефону гостя)."""
     return datetime.now(ZoneInfo(settings.timezone)).strftime("%H:%M")
 
 
-def get_state(date: str | None = None) -> dict:
-    """Состояние на дату (по умолчанию сегодня). Строку дня создаёт при первом
-    обращении — с дефолтами из настроек."""
+def get_board(date: str | None = None) -> dict:
+    """Состояние табло на дату (по умолчанию сегодня).
+
+    Возвращает активные заказы (готовится/готово), число выданных за день и
+    время последнего изменения. Заказы отсортированы по номеру.
+    """
     date = date or today()
     with _connect() as conn:
-        row = conn.execute(
-            "SELECT * FROM day_state WHERE date = ?", (date,)
-        ).fetchone()
-        if row is None:
-            conn.execute(
-                """
-                INSERT INTO day_state
-                    (date, ready_batch, total_batches, start_time,
-                     interval_min, updated_at)
-                VALUES (?, 0, ?, ?, ?, ?)
-                """,
-                (
-                    date,
-                    settings.default_total_batches,
-                    settings.default_start_time,
-                    settings.default_interval_min,
-                    _now(),
-                ),
-            )
-            row = conn.execute(
-                "SELECT * FROM day_state WHERE date = ?", (date,)
-            ).fetchone()
-    return dict(row)
+        rows = conn.execute(
+            """
+            SELECT number, status FROM orders
+             WHERE date = ? AND status IN ('preparing', 'ready')
+             ORDER BY number
+            """,
+            (date,),
+        ).fetchall()
+        served = conn.execute(
+            "SELECT COUNT(*) AS n FROM orders WHERE date = ? AND status = 'served'",
+            (date,),
+        ).fetchone()["n"]
+        upd = conn.execute(
+            "SELECT MAX(updated_at) AS m FROM orders WHERE date = ?", (date,)
+        ).fetchone()["m"]
+    return {
+        "date": date,
+        "orders": [{"number": r["number"], "status": r["status"]} for r in rows],
+        "servedCount": served,
+        "updatedAt": upd or "",
+    }
 
 
-def _log(conn: sqlite3.Connection, date: str, action: str, value: int) -> None:
-    conn.execute(
-        "INSERT INTO batch_log (date, action, value, at) VALUES (?, ?, ?, ?)",
-        (date, action, value, _now()),
-    )
+def _active_id(conn: sqlite3.Connection, date: str, number: int) -> int | None:
+    """id активного заказа (готовится/готово) с таким номером сегодня, если есть."""
+    row = conn.execute(
+        """
+        SELECT id FROM orders
+         WHERE date = ? AND number = ? AND status IN ('preparing', 'ready')
+         ORDER BY id DESC LIMIT 1
+        """,
+        (date, number),
+    ).fetchone()
+    return row["id"] if row else None
 
 
-def mark_ready() -> dict:
-    """+1 к готовым партиям (не выше total_batches)."""
+def add_order(number: int) -> dict:
+    """Занести новый заказ (статус «готовится»).
+
+    Если заказ с таким номером уже активен сегодня — ошибка (дубликат).
+    """
     date = today()
-    get_state(date)  # гарантируем строку
     with _connect() as conn:
+        if _active_id(conn, date, number) is not None:
+            raise ValueError(f"Заказ №{number} уже на табло")
+        now = _now()
         conn.execute(
             """
-            UPDATE day_state
-               SET ready_batch = MIN(ready_batch + 1, total_batches),
-                   updated_at = ?
-             WHERE date = ?
+            INSERT INTO orders (date, number, status, created_at, updated_at)
+            VALUES (?, ?, 'preparing', ?, ?)
             """,
-            (_now(), date),
+            (date, number, now, now),
         )
-        _log(conn, date, "ready", 1)
-    return get_state(date)
+    return get_board(date)
 
 
-def undo_ready() -> dict:
-    """−1 к готовым партиям (не ниже 0)."""
+def set_status(number: int, new_status: str) -> dict:
+    """Перевести активный заказ в новый статус (готовится/готово/выдано)."""
+    if new_status not in STATUSES:
+        raise ValueError(f"Неизвестный статус: {new_status}")
     date = today()
-    get_state(date)
     with _connect() as conn:
+        oid = _active_id(conn, date, number)
+        if oid is None:
+            raise ValueError(f"Активного заказа №{number} нет")
         conn.execute(
-            """
-            UPDATE day_state
-               SET ready_batch = MAX(ready_batch - 1, 0),
-                   updated_at = ?
-             WHERE date = ?
-            """,
-            (_now(), date),
+            "UPDATE orders SET status = ?, updated_at = ? WHERE id = ?",
+            (new_status, _now(), oid),
         )
-        _log(conn, date, "undo", -1)
-    return get_state(date)
+    return get_board(date)
+
+
+def delete_order(number: int) -> dict:
+    """Удалить активный заказ (ошибочно занесён)."""
+    date = today()
+    with _connect() as conn:
+        oid = _active_id(conn, date, number)
+        if oid is None:
+            raise ValueError(f"Активного заказа №{number} нет")
+        conn.execute("DELETE FROM orders WHERE id = ?", (oid,))
+    return get_board(date)
 
 
 def reset_day() -> dict:
-    """Обнулить готовые партии сегодня и снять стоп продаж (новый день / сброс)."""
+    """Очистить все заказы за сегодня (новый день / сброс)."""
     date = today()
-    get_state(date)
     with _connect() as conn:
-        conn.execute(
-            "UPDATE day_state SET ready_batch = 0, sold_out = 0, "
-            "updated_at = ? WHERE date = ?",
-            (_now(), date),
-        )
-        _log(conn, date, "reset", 0)
-    return get_state(date)
-
-
-def set_sold_out(flag: bool) -> dict:
-    """Стоп продаж на сегодня (True) / открыть продажи снова (False)."""
-    date = today()
-    get_state(date)
-    with _connect() as conn:
-        conn.execute(
-            "UPDATE day_state SET sold_out = ?, updated_at = ? WHERE date = ?",
-            (1 if flag else 0, _now(), date),
-        )
-        _log(conn, date, "sold_out", 1 if flag else 0)
-    return get_state(date)
-
-
-def update_settings(
-    total_batches: int, start_time: str, interval_min: int
-) -> dict:
-    """Правка параметров дня (всего партий / старт / интервал)."""
-    date = today()
-    get_state(date)
-    with _connect() as conn:
-        conn.execute(
-            """
-            UPDATE day_state
-               SET total_batches = ?, start_time = ?, interval_min = ?,
-                   updated_at = ?
-             WHERE date = ?
-            """,
-            (total_batches, start_time, interval_min, _now(), date),
-        )
-        _log(conn, date, "settings", total_batches)
-    return get_state(date)
+        conn.execute("DELETE FROM orders WHERE date = ?", (date,))
+    return get_board(date)

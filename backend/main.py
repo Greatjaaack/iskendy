@@ -1,8 +1,9 @@
-"""Статус-борд партий «Искенди» — FastAPI-сервис.
+"""Табло заказов «Искенди» — FastAPI-сервис.
 
-Публично: GET /api/status (гостевое табло). Под токеном персонала:
-POST /api/batch/ready, /api/batch/undo, /api/day/reset, PUT /api/settings.
-Фронт (frontend/) отдаётся как статика: гостевое табло + экран персонала.
+Публично: GET /api/status (гостевое табло: что готовится / что готово).
+Под токеном персонала: POST /api/order (занести), /api/order/status
+(двигать статус), /api/order/delete, /api/day/reset.
+Фронт (frontend/) отдаётся как статика: гостевое табло + экран кассы.
 """
 
 import io
@@ -11,13 +12,12 @@ from pathlib import Path
 import db
 import segno
 from auth import issue_token, require_staff, verify_password
-from config import settings
 from fastapi import Depends, FastAPI, HTTPException, Query, status
 from fastapi.responses import FileResponse, Response
 from fastapi.staticfiles import StaticFiles
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
-app = FastAPI(title="Искенди — статус партий")
+app = FastAPI(title="Искенди — табло заказов")
 
 FRONTEND_DIR = Path(__file__).resolve().parent.parent / "frontend"
 
@@ -27,21 +27,9 @@ def _startup() -> None:
     db.init_db()
 
 
-def _status_payload(state: dict) -> dict:
-    """Ответ гостевого табло: состояние дня + производные (размер партии,
-    дневная норма позиций, серверное время для экрана «приём с …»)."""
-    return {
-        "date": state["date"],
-        "readyBatch": state["ready_batch"],
-        "totalBatches": state["total_batches"],
-        "startTime": state["start_time"],
-        "intervalMin": state["interval_min"],
-        "batchSize": settings.batch_size,
-        "capacity": state["total_batches"] * settings.batch_size,
-        "soldOut": bool(state["sold_out"]),
-        "now": db.now_hm(),
-        "updatedAt": state["updated_at"],
-    }
+def _payload(board: dict) -> dict:
+    """Ответ табло: активные заказы + серверное время (для меток на фронте)."""
+    return {**board, "now": db.now_hm()}
 
 
 @app.get("/api/health")
@@ -51,7 +39,7 @@ def health() -> dict:
 
 @app.get("/api/status")
 def get_status() -> dict:
-    return _status_payload(db.get_state())
+    return _payload(db.get_board())
 
 
 class LoginBody(BaseModel):
@@ -67,60 +55,57 @@ def login(body: LoginBody) -> dict:
     return {"token": issue_token()}
 
 
-@app.post("/api/batch/ready")
-def batch_ready(_: dict = Depends(require_staff)) -> dict:
-    return _status_payload(db.mark_ready())
+class OrderBody(BaseModel):
+    number: int = Field(gt=0, le=100000)
 
 
-@app.post("/api/batch/undo")
-def batch_undo(_: dict = Depends(require_staff)) -> dict:
-    return _status_payload(db.undo_ready())
+class StatusBody(BaseModel):
+    number: int = Field(gt=0, le=100000)
+    status: str
+
+
+@app.post("/api/order")
+def order_add(body: OrderBody, _: dict = Depends(require_staff)) -> dict:
+    """Занести новый заказ (статус «готовится»)."""
+    try:
+        return _payload(db.add_order(body.number))
+    except ValueError as exc:
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(exc))
+
+
+@app.post("/api/order/status")
+def order_status(body: StatusBody, _: dict = Depends(require_staff)) -> dict:
+    """Перевести заказ в новый статус: preparing / ready / served."""
+    try:
+        return _payload(db.set_status(body.number, body.status))
+    except ValueError as exc:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc))
+
+
+@app.post("/api/order/delete")
+def order_delete(body: OrderBody, _: dict = Depends(require_staff)) -> dict:
+    """Удалить активный заказ (ошибочно занесён)."""
+    try:
+        return _payload(db.delete_order(body.number))
+    except ValueError as exc:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc))
 
 
 @app.post("/api/day/reset")
 def day_reset(_: dict = Depends(require_staff)) -> dict:
-    return _status_payload(db.reset_day())
-
-
-@app.post("/api/day/stop")
-def day_stop(_: dict = Depends(require_staff)) -> dict:
-    """Стоп продаж на сегодня — гостю показывается «на сегодня всё продано»."""
-    return _status_payload(db.set_sold_out(True))
-
-
-@app.post("/api/day/open")
-def day_open(_: dict = Depends(require_staff)) -> dict:
-    """Снять стоп продаж (открыть снова)."""
-    return _status_payload(db.set_sold_out(False))
+    """Очистить все заказы за сегодня (новый день)."""
+    return _payload(db.reset_day())
 
 
 @app.get("/api/qr")
 def qr(data: str = Query(max_length=512)) -> Response:
-    """SVG QR-кода для произвольной строки (обычно URL этой страницы) — для
-    печати таблички/наклейки. Генерится локально, без внешних сервисов."""
+    """SVG QR-кода для произвольной строки (обычно URL табло) — для печати
+    таблички/наклейки. Генерится локально, без внешних сервисов."""
     buff = io.BytesIO()
     segno.make(data, error="m").save(
         buff, kind="svg", scale=8, border=2, dark="#17130f", light="#ffffff"
     )
     return Response(content=buff.getvalue(), media_type="image/svg+xml")
-
-
-class SettingsBody(BaseModel):
-    totalBatches: int
-    startTime: str
-    intervalMin: int
-
-
-@app.put("/api/settings")
-def put_settings(
-    body: SettingsBody, _: dict = Depends(require_staff)
-) -> dict:
-    state = db.update_settings(
-        total_batches=body.totalBatches,
-        start_time=body.startTime,
-        interval_min=body.intervalMin,
-    )
-    return _status_payload(state)
 
 
 # --- Статика фронта (после API, чтобы не перехватывать /api/*) ---
@@ -133,13 +118,12 @@ if FRONTEND_DIR.exists():
 
     @app.get("/board")
     def board() -> FileResponse:
-        """Табло партий — скрытая вкладка (ссылок с лендинга нет)."""
+        """Табло заказов — скрытая вкладка (ссылок с лендинга нет)."""
         return FileResponse(FRONTEND_DIR / "index.html")
 
     @app.get("/staff")
     def staff() -> FileResponse:
-        """Экран персонала / касса — ВРЕМЕННО ОТКЛЮЧЁН (отдаём 404).
-        Чтобы включить обратно: вернуть `return FileResponse(... index.html)`."""
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Not Found")
+        """Экран кассы — заносить заказы и двигать их статусы."""
+        return FileResponse(FRONTEND_DIR / "index.html")
 
     app.mount("/", StaticFiles(directory=FRONTEND_DIR), name="frontend")
