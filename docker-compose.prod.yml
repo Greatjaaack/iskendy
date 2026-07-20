@@ -1,0 +1,23 @@
+# Прод iskendy.ru — контейнер без внешних портов, за общим Caddy
+# (сеть dashboards_default). HTTPS терминирует Caddy.
+# Деплой на сервере: git pull && docker compose -f docker-compose.prod.yml up -d --build
+services:
+  app:
+    build: .
+    container_name: iskendy
+    env_file:
+      - .env
+    environment:
+      DB_PATH: /data/iskendy.db
+    volumes:
+      - app-data:/data
+    restart: unless-stopped
+    networks:
+      - dashboards_default
+
+networks:
+  dashboards_default:
+    external: true
+
+volumes:
+  app-data:
