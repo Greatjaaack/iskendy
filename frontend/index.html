@@ -739,9 +739,16 @@
     }
 
     // ---------- панель кассы ----------
+    // порядок статусов в списке кассы: открытые сверху, затем в работе, готовые
+    const STATUS_ORDER = { open: 0, preparing: 1, ready: 2 };
+    const STATUS_LABEL = { open: "открытый", preparing: "готовится", ready: "готово" };
+
     function renderStaff(){
       if(!state) return;
-      const orders = state.orders || [];
+      const orders = (state.orders || []).slice().sort(function(a, b){
+        const d = (STATUS_ORDER[a.status] || 0) - (STATUS_ORDER[b.status] || 0);
+        return d !== 0 ? d : a.number - b.number;
+      });
       document.getElementById("orderList").innerHTML = orders.map(orderRow).join("");
       show("emptyNote", orders.length === 0);
       const n = state.servedCount || 0;
@@ -751,14 +758,16 @@
     function orderRow(o){
       const n = o.number;
       let acts;
-      if(o.status === "preparing"){
+      if(o.status === "open"){
+        acts = '<button class="mini amber" onclick="setStatus(' + n + ',\'preparing\')">Готовить →</button>';
+      } else if(o.status === "preparing"){
         acts = '<button class="mini amber" onclick="setStatus(' + n + ',\'ready\')">Готово →</button>';
       } else {
         acts = '<button class="mini ok" onclick="setStatus(' + n + ',\'served\')">Выдано ✓</button>'
              + '<button class="mini ghost" onclick="setStatus(' + n + ',\'preparing\')" title="Вернуть в готовку">←</button>';
       }
       acts += '<button class="mini x" onclick="delOrder(' + n + ')" title="Удалить">✕</button>';
-      const label = o.status === "preparing" ? "готовится" : "готово";
+      const label = STATUS_LABEL[o.status] || o.status;
       return '<div class="order-row st-' + o.status + '">'
            +   '<span class="order-num">' + n + '</span>'
            +   '<span class="order-st">' + label + '</span>'

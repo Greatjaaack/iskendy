@@ -11,10 +11,13 @@ from zoneinfo import ZoneInfo
 
 from config import settings
 
-# Разрешённые статусы и их порядок. «served» (выдано) снимает заказ с табло.
-STATUSES = ("preparing", "ready", "served")
-# Статусы, которые показываются на табло и в панели кассы.
-ACTIVE_STATUSES = ("preparing", "ready")
+# Разрешённые статусы и их порядок:
+# open (открытый — приехал из iiko, ещё не взяли в работу) → preparing (готовится)
+# → ready (готово) → served (выдано). «served» снимает заказ с табло.
+STATUSES = ("open", "preparing", "ready", "served")
+# Статусы активных заказов (в панели кассы). Гостю на табло показываем только
+# preparing/ready (см. фронт) — «открытые» видит лишь касса.
+ACTIVE_STATUSES = ("open", "preparing", "ready")
 
 
 def _connect() -> sqlite3.Connection:
@@ -35,7 +38,8 @@ def init_db() -> None:
                 created_at TEXT    NOT NULL,
                 updated_at TEXT    NOT NULL,
                 ready_at   TEXT,
-                served_at  TEXT
+                served_at  TEXT,
+                source     TEXT    NOT NULL DEFAULT 'manual'
             )
             """
         )
@@ -44,12 +48,16 @@ def init_db() -> None:
             "CREATE INDEX IF NOT EXISTS idx_orders_date_status "
             "ON orders (date, status)"
         )
-        # Миграция БД, созданных до появления меток времени статусов.
-        # created_at = время приёма, ready_at = готово, served_at = выдано.
+        # Миграции БД, созданных раньше. created_at = время приёма, ready_at =
+        # готово, served_at = выдано; source = откуда заказ (manual/iiko).
         cols = [r[1] for r in conn.execute("PRAGMA table_info(orders)")]
         for col in ("ready_at", "served_at"):
             if col not in cols:
                 conn.execute(f"ALTER TABLE orders ADD COLUMN {col} TEXT")
+        if "source" not in cols:
+            conn.execute(
+                "ALTER TABLE orders ADD COLUMN source TEXT NOT NULL DEFAULT 'manual'"
+            )
 
 
 def today() -> str:
@@ -77,7 +85,7 @@ def get_board(date: str | None = None) -> dict:
         rows = conn.execute(
             """
             SELECT number, status, created_at, ready_at, served_at FROM orders
-             WHERE date = ? AND status IN ('preparing', 'ready')
+             WHERE date = ? AND status IN ('open', 'preparing', 'ready')
              ORDER BY number
             """,
             (date,),
@@ -129,11 +137,11 @@ def get_history(date: str | None = None) -> list[dict]:
 
 
 def _active_id(conn: sqlite3.Connection, date: str, number: int) -> int | None:
-    """id активного заказа (готовится/готово) с таким номером сегодня, если есть."""
+    """id активного заказа (open/готовится/готово) с таким номером сегодня, если есть."""
     row = conn.execute(
         """
         SELECT id FROM orders
-         WHERE date = ? AND number = ? AND status IN ('preparing', 'ready')
+         WHERE date = ? AND number = ? AND status IN ('open', 'preparing', 'ready')
          ORDER BY id DESC LIMIT 1
         """,
         (date, number),
@@ -159,6 +167,33 @@ def add_order(number: int) -> dict:
             (date, number, now, now),
         )
     return get_board(date)
+
+
+def ingest_iiko_order(number: int, opened_at: str | None = None) -> bool:
+    """Завести заказ из iiko со статусом «open», если его сегодня ещё нет.
+
+    Дедуп по (дата, номер) в ЛЮБОМ статусе — уже занесённый/продвинутый/выданный
+    заказ повторно не создаём. `opened_at` — время открытия из iiko (идёт как
+    время приёма). Возвращает True, если заказ создан.
+    """
+    date = today()
+    with _connect() as conn:
+        exists = conn.execute(
+            "SELECT 1 FROM orders WHERE date = ? AND number = ? LIMIT 1",
+            (date, number),
+        ).fetchone()
+        if exists is not None:
+            return False
+        now = _now()
+        conn.execute(
+            """
+            INSERT INTO orders
+                (date, number, status, created_at, updated_at, source)
+            VALUES (?, ?, 'open', ?, ?, 'iiko')
+            """,
+            (date, number, opened_at or now, now),
+        )
+    return True
 
 
 def set_status(number: int, new_status: str) -> dict:

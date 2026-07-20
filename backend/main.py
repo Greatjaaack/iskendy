@@ -6,11 +6,13 @@
 Фронт (frontend/) отдаётся как статика: гостевое табло + экран кассы.
 """
 
+import asyncio
 import io
 from pathlib import Path
 
 import db
 import segno
+from iiko_poller import run_poller
 from auth import issue_token, require_staff, verify_password
 from fastapi import Depends, FastAPI, HTTPException, Query, status
 from fastapi.responses import FileResponse, Response
@@ -23,8 +25,10 @@ FRONTEND_DIR = Path(__file__).resolve().parent.parent / "frontend"
 
 
 @app.on_event("startup")
-def _startup() -> None:
+async def _startup() -> None:
     db.init_db()
+    # Фоновый поллер заказов из iiko (если настроен URL/токен аналитики).
+    asyncio.create_task(run_poller())
 
 
 def _payload(board: dict) -> dict:

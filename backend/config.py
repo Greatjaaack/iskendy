@@ -21,5 +21,18 @@ class Settings(BaseSettings):
     # Путь к SQLite-файлу.
     db_path: str = "iskendy.db"
 
+    # Часовой пояс ресторана — по нему считается «сегодня» и окно свежести iiko.
+    timezone: str = "Europe/Moscow"
+
+    # --- Подтягивание заказов из iiko (через ручку аналитики) ---
+    # URL внутренней ручки аналитики (напр. http://dashboards-backend-1:8000/api/orders/today).
+    # Пустой — поллинг выключен (табло работает только на ручном вводе).
+    iiko_orders_url: str = ""
+    iiko_internal_token: str = ""  # заголовок X-Internal-Token к ручке аналитики
+    iiko_poll_seconds: int = 30  # период опроса
+    # Окно свежести: заводим только заказы, открытые за последние N минут — чтобы
+    # при старте/перезапуске не залить табло старыми уже готовыми заказами.
+    iiko_ingest_window_min: int = 20
+
 
 settings = Settings()
