@@ -33,7 +33,9 @@ def init_db() -> None:
                 number     INTEGER NOT NULL,
                 status     TEXT    NOT NULL DEFAULT 'preparing',
                 created_at TEXT    NOT NULL,
-                updated_at TEXT    NOT NULL
+                updated_at TEXT    NOT NULL,
+                ready_at   TEXT,
+                served_at  TEXT
             )
             """
         )
@@ -42,6 +44,12 @@ def init_db() -> None:
             "CREATE INDEX IF NOT EXISTS idx_orders_date_status "
             "ON orders (date, status)"
         )
+        # Миграция БД, созданных до появления меток времени статусов.
+        # created_at = время приёма, ready_at = готово, served_at = выдано.
+        cols = [r[1] for r in conn.execute("PRAGMA table_info(orders)")]
+        for col in ("ready_at", "served_at"):
+            if col not in cols:
+                conn.execute(f"ALTER TABLE orders ADD COLUMN {col} TEXT")
 
 
 def today() -> str:
@@ -68,7 +76,7 @@ def get_board(date: str | None = None) -> dict:
     with _connect() as conn:
         rows = conn.execute(
             """
-            SELECT number, status FROM orders
+            SELECT number, status, created_at, ready_at, served_at FROM orders
              WHERE date = ? AND status IN ('preparing', 'ready')
              ORDER BY number
             """,
@@ -83,10 +91,41 @@ def get_board(date: str | None = None) -> dict:
         ).fetchone()["m"]
     return {
         "date": date,
-        "orders": [{"number": r["number"], "status": r["status"]} for r in rows],
+        "orders": [_order_dict(r) for r in rows],
         "servedCount": served,
         "updatedAt": upd or "",
     }
+
+
+def _order_dict(row: sqlite3.Row) -> dict:
+    """Заказ для API: номер, статус и метки времени статусов.
+
+    acceptedAt — приём (создание), readyAt — готово, servedAt — выдано.
+    """
+    return {
+        "number": row["number"],
+        "status": row["status"],
+        "acceptedAt": row["created_at"],
+        "readyAt": row["ready_at"],
+        "servedAt": row["served_at"],
+    }
+
+
+def get_history(date: str | None = None) -> list[dict]:
+    """Полная история заказов за день (включая выданные) — для персонала.
+
+    Отсортировано по времени приёма. Содержит метки всех статусов.
+    """
+    date = date or today()
+    with _connect() as conn:
+        rows = conn.execute(
+            """
+            SELECT number, status, created_at, ready_at, served_at FROM orders
+             WHERE date = ? ORDER BY created_at, number
+            """,
+            (date,),
+        ).fetchall()
+    return [_order_dict(r) for r in rows]
 
 
 def _active_id(conn: sqlite3.Connection, date: str, number: int) -> int | None:
@@ -127,14 +166,25 @@ def set_status(number: int, new_status: str) -> dict:
     if new_status not in STATUSES:
         raise ValueError(f"Неизвестный статус: {new_status}")
     date = today()
+    now = _now()
     with _connect() as conn:
         oid = _active_id(conn, date, number)
         if oid is None:
             raise ValueError(f"Активного заказа №{number} нет")
-        conn.execute(
-            "UPDATE orders SET status = ?, updated_at = ? WHERE id = ?",
-            (new_status, _now(), oid),
-        )
+        # Метку времени ставим для статуса, в который переходим. Приём
+        # (created_at) не трогаем — он фиксирует первое занесение заказа.
+        stamp = {"ready": "ready_at", "served": "served_at"}.get(new_status)
+        if stamp:
+            conn.execute(
+                f"UPDATE orders SET status = ?, {stamp} = ?, updated_at = ? "
+                "WHERE id = ?",
+                (new_status, now, now, oid),
+            )
+        else:
+            conn.execute(
+                "UPDATE orders SET status = ?, updated_at = ? WHERE id = ?",
+                (new_status, now, oid),
+            )
     return get_board(date)
 
 

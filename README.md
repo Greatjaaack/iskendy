@@ -66,13 +66,17 @@ STAFF_PASSWORD=<пароль> uvicorn main:app --reload --port 8080
 | POST | `/api/order`         | касса    | занести заказ → «готовится» |
 | POST | `/api/order/status`  | касса    | сменить статус (`preparing`/`ready`/`served`) |
 | POST | `/api/order/delete`  | касса    | удалить активный заказ |
+| GET  | `/api/history`       | касса    | история заказов за день (с метками времени) |
 | POST | `/api/day/reset`     | касса    | очистить все заказы за сегодня |
 | GET  | `/api/qr?data=<url>` | публично | SVG QR-кода (для печати таблички) |
 | GET  | `/api/health`        | публично | проверка живости |
 
-Ответ `/api/status` и всех кассовых ручек: `{ date, orders: [{number, status}],
-servedCount, updatedAt, now }` — `orders` содержит только активные (готовятся +
-готово), отсортированные по номеру.
+Ответ `/api/status` и всех кассовых ручек: `{ date, orders: [{number, status,
+acceptedAt, readyAt, servedAt}], servedCount, updatedAt, now }` — `orders`
+содержит только активные (готовятся + готово), отсортированные по номеру.
+Метки времени статусов (`acceptedAt` — приём, `readyAt` — готово, `servedAt` —
+выдано) хранятся по каждому заказу; полная история дня, включая выданные, —
+через `GET /api/history`.
 
 ## Дальше (не сделано)
 

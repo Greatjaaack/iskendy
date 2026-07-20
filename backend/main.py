@@ -91,6 +91,13 @@ def order_delete(body: OrderBody, _: dict = Depends(require_staff)) -> dict:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc))
 
 
+@app.get("/api/history")
+def history(_: dict = Depends(require_staff)) -> dict:
+    """История заказов за сегодня (включая выданные) с метками времени
+    приёма / готовности / выдачи — для персонала."""
+    return {"date": db.today(), "orders": db.get_history(), "now": db.now_hm()}
+
+
 @app.post("/api/day/reset")
 def day_reset(_: dict = Depends(require_staff)) -> dict:
     """Очистить все заказы за сегодня (новый день)."""
