@@ -219,18 +219,23 @@
       text-transform: uppercase; color: var(--muted); text-align: center; margin-bottom: 14px;
     }
     .col-ready .col-head { color: #a7d68a; }
-    .nums { display: flex; flex-wrap: wrap; gap: 10px 12px; justify-content: center; }
+    /* Номера — построчно, каждый отдельной плашкой (чтобы не сливались). */
+    .nums { display: flex; flex-direction: column; gap: 8px; }
     .num {
       font-family: "Bebas Neue", sans-serif; font-size: 34px; line-height: 1;
-      color: var(--text); letter-spacing: 1px;
+      color: var(--text); letter-spacing: 1px; text-align: center;
+      padding: 10px 8px; border-radius: 12px;
+      background: #17110c; border: 1px solid var(--line);
     }
     .num.hot {
-      color: #17130f; background: var(--amber);
-      border-radius: 10px; padding: 4px 12px;
+      color: #17130f; background: var(--amber); border-color: var(--amber);
       animation: pulse 1.4s ease-in-out infinite;
     }
-    @keyframes pulse { 0%,100% { transform: scale(1); } 50% { transform: scale(1.08); } }
-    .num-empty { color: var(--muted); font-size: 26px; font-family: "Bebas Neue", sans-serif; }
+    @keyframes pulse { 0%,100% { transform: scale(1); } 50% { transform: scale(1.04); } }
+    .num-empty {
+      color: var(--muted); font-size: 26px; font-family: "Bebas Neue", sans-serif;
+      text-align: center; background: none; border: 0; padding: 6px 0;
+    }
 
     /* ---------- Список заказов в кассе ---------- */
     .order-row {
@@ -422,12 +427,14 @@
     body.brand .col-ready { background: #fff6cf; }
     body.brand .col-head { color: #a15a12; }
     body.brand .col-ready .col-head { color: #b06a00; }
-    body.brand .num { color: #201400; }
+    body.brand .num {
+      color: #201400; background: #fff3e0; border-color: rgba(0, 0, 0, .08);
+    }
     body.brand .num.hot {
-      color: #201400; background: #F8D00F;
+      color: #201400; background: #F8D00F; border-color: #F8D00F;
       box-shadow: 0 4px 12px rgba(0, 0, 0, .18);
     }
-    body.brand .num-empty { color: #d98b4a; }
+    body.brand .num-empty { color: #d98b4a; background: none; border: 0; }
 
     /* Список заказов в кассе */
     body.brand .order-row { border-bottom-color: rgba(0, 0, 0, .1); }
