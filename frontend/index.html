@@ -188,7 +188,6 @@
     .settings-grid .full { grid-column: 1 / -1; }
     .muted-note { font-size: 12px; color: var(--muted); text-align: center; margin-top: 8px; line-height: 1.5; }
     .hidden { display: none !important; }
-    .stamp { text-align: center; font-size: 11px; color: var(--muted); font-family: "IBM Plex Mono", monospace; margin-top: 4px; }
 
     .plaque { text-align: center; padding: 34px 22px; }
     .plaque-big {
@@ -448,7 +447,6 @@
     body.brand .plaque.before { background: #fff; border: 0; }
     body.brand .plaque.before .plaque-big { color: #f7621e; }
     body.brand .plaque-sub { color: #6a4a08; }
-    body.brand .stamp { color: rgba(255, 255, 255, .9); }
     body.brand .muted-note { color: #6a4a08; }
     body.brand .staff-line { color: rgba(255, 255, 255, .92); }
     body.brand .staff-line a { color: #fff; font-weight: 700; text-decoration: underline; }
@@ -499,7 +497,7 @@
     <div id="guest" class="hidden">
       <div class="brand">
         <h1>ИСКЕНДИ</h1>
-        <div class="sub">табло заказов · найди свой номер</div>
+        <div class="sub">табло заказов</div>
       </div>
 
       <div class="board-cols">
@@ -517,8 +515,6 @@
         <div class="plaque-big">Пока пусто</div>
         <div class="plaque-sub">Заказы появятся здесь, как только их примут на кухне.</div>
       </div>
-
-      <div class="stamp" id="stamp"></div>
     </div>
 
     <!-- ЭКРАН ПЕРСОНАЛА (/staff) -->
@@ -594,9 +590,6 @@
         : '<span class="num-empty">—</span>';
 
       show("boardEmpty", orders.length === 0);
-
-      const upd = state.updatedAt ? state.updatedAt.slice(11,16) : "";
-      document.getElementById("stamp").textContent = upd ? "обновлено в " + upd : "";
     }
 
     function show(id, on){ document.getElementById(id).classList.toggle("hidden", !on); }
