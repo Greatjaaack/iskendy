@@ -4,13 +4,44 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
   <meta name="theme-color" content="#17130f" />
-  <title>Искенди · статус партий</title>
+  <link rel="icon" type="image/png" href="/assets/favicon.png" />
+  <link rel="apple-touch-icon" href="/assets/favicon.png" />
+  <title>Искенди · крутим айраны, наливаем дюрюмы</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link
     href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=IBM+Plex+Mono:wght@400;600&family=IBM+Plex+Sans:wght@400;500;600&display=swap"
     rel="stylesheet"
   />
+
+  <!-- ============================================================
+       Яндекс.Метрика
+       Впиши номер счётчика в window.YM_ID ниже (см. инструкцию в чате).
+       Пока YM_ID = null — метрика не подключается и ошибок не даёт.
+       ============================================================ -->
+  <script>
+    window.YM_ID = null; // ← сюда номер счётчика, например 98765432
+    // Хелпер «цели»: дёргаем при клике по ссылке лендинга, чтобы в отчётах
+    // Метрики было видно, по какой именно ссылке кликают.
+    window.ymGoal = function (name) {
+      if (window.YM_ID && window.ym) { window.ym(window.YM_ID, "reachGoal", name); }
+    };
+  </script>
+  <script>
+    if (window.YM_ID) {
+      (function (m, e, t, r, i, k, a) {
+        m[i] = m[i] || function () { (m[i].a = m[i].a || []).push(arguments); };
+        m[i].l = 1 * new Date();
+        for (var j = 0; j < e.scripts.length; j++) { if (e.scripts[j].src === r) { return; } }
+        k = e.createElement(t); a = e.getElementsByTagName(t)[0];
+        k.async = 1; k.src = r; a.parentNode.insertBefore(k, a);
+      })(window, document, "script", "https://mc.yandex.ru/metrika/tag.js", "ym");
+      window.ym(window.YM_ID, "init", {
+        clickmap: true, trackLinks: true, accurateTrackBounce: true, webvisor: true
+      });
+    }
+  </script>
+
   <style>
     :root {
       --bg: #17130f;
@@ -24,17 +55,16 @@
       --ok-line: #4d6b3a;
     }
     * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
-    html, body { margin: 0; }
+    html, body { margin: 0; overflow-x: hidden; }
     body {
       background: radial-gradient(120% 80% at 50% -10%, #24190f 0%, var(--bg) 60%);
       color: var(--text);
       font-family: "IBM Plex Sans", system-ui, sans-serif;
       min-height: 100dvh;
-      display: flex;
-      justify-content: center;
       padding: 20px 16px calc(20px + env(safe-area-inset-bottom));
     }
-    .wrap { width: 100%; max-width: 420px; }
+    .wrap { width: 100%; max-width: 420px; margin: 0 auto; }
+    img { max-width: 100%; height: auto; }
 
     .brand {
       text-align: center;
@@ -176,17 +206,181 @@
     #qrBox { text-align: center; margin-top: 14px; }
     #qrBox img { width: 220px; height: 220px; background: #fff; border-radius: 12px; padding: 10px; }
     #qrBox .cap { font-size: 12px; color: var(--muted); margin-top: 8px; word-break: break-all; }
+
+    /* ---------- Лендинг (мультиссылка) ---------- */
+    .hero { text-align: center; padding: 4px 0 20px; }
+    .banner {
+      width: 100%; display: block; border-radius: 16px;
+      border: 1px solid var(--line);
+    }
+    .banner-logo { margin-bottom: 12px; }
+    .banner-food { margin-bottom: 16px; box-shadow: 0 8px 30px rgba(0, 0, 0, .45); }
+    .hero-tag2 {
+      font-family: "Bebas Neue", sans-serif;
+      font-size: clamp(22px, 6.6vw, 30px); letter-spacing: 0.5px; line-height: 1.08;
+      margin: 2px 0 0; color: var(--amber); text-transform: uppercase;
+      overflow-wrap: break-word;
+    }
+    .eda-card { align-items: center; gap: 14px; padding: 12px 14px; }
+    .eda-thumb {
+      flex: 0 0 64px; width: 64px; height: 64px; border-radius: 12px;
+      object-fit: cover; display: block; border: 1px solid rgba(23, 19, 15, .18);
+    }
+    .hero-badge {
+      width: 112px; height: 112px; border-radius: 22px;
+      display: block; margin: 0 auto 16px;
+      border: 1px solid var(--line);
+      box-shadow: 0 8px 30px rgba(0, 0, 0, .45);
+    }
+    .hero-logo {
+      font-family: "Bebas Neue", sans-serif;
+      font-size: clamp(48px, 15vw, 62px); line-height: 0.92; letter-spacing: 2px;
+      margin: 0; color: var(--copper);
+      text-shadow: 0 2px 28px rgba(193, 122, 61, .28);
+    }
+    .hero-tag {
+      font-family: "IBM Plex Mono", monospace;
+      font-size: 12px; letter-spacing: 3px; text-transform: uppercase;
+      color: var(--amber); margin-top: 14px; line-height: 1.7;
+    }
+    .hero-sub { color: var(--muted); font-size: 13px; margin-top: 10px; }
+
+    .links { display: flex; flex-direction: column; gap: 12px; }
+    .link {
+      display: flex; align-items: center; gap: 14px;
+      background: var(--card); border: 1px solid var(--line);
+      border-radius: 16px; padding: 15px 16px;
+      color: var(--text); text-decoration: none;
+      transition: border-color .15s, transform .05s;
+    }
+    .link:active { transform: translateY(1px); }
+    .link:hover { border-color: var(--copper); }
+    .link .ic {
+      flex: 0 0 42px; width: 42px; height: 42px; border-radius: 12px;
+      display: flex; align-items: center; justify-content: center;
+      background: #17110c; border: 1px solid var(--line); color: var(--copper);
+      font-family: "Bebas Neue", sans-serif; font-size: 20px; letter-spacing: 1px;
+    }
+    .link .ic svg { width: 22px; height: 22px; display: block; }
+    .link .tx { flex: 1; min-width: 0; }
+    .link .tx b { display: block; font-size: 16px; font-weight: 600; }
+    .link .tx span { display: block; font-size: 12px; color: var(--muted); margin-top: 2px; }
+    .link .arr { color: var(--muted); flex: 0 0 auto; display: flex; }
+    .link .arr svg { width: 18px; height: 18px; display: block; }
+
+    /* Главный CTA — Яндекс Еда */
+    .link.cta {
+      background: linear-gradient(135deg, var(--amber), var(--copper));
+      border-color: #f0c069; color: #17130f;
+    }
+    .link.cta .ic { background: rgba(23, 19, 15, .14); border-color: rgba(23, 19, 15, .2); color: #17130f; }
+    .link.cta .tx span { color: rgba(23, 19, 15, .72); }
+    .link.cta .arr { color: rgba(23, 19, 15, .6); }
+
+    .landing-foot {
+      text-align: center; margin-top: 24px;
+      font-size: 12px; color: var(--muted); line-height: 1.7;
+    }
+
+    /* ---------- Лендинг в стиле оригинала LinkU ---------- */
+    body.landing-bg {
+      background: linear-gradient(150deg, #ffb418 6%, #f7621e 52%, #f73131 96%) fixed;
+    }
+    #landing {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+      padding-top: 6px;
+    }
+    .lk-banner {
+      width: 100%; display: block; border-radius: 18px;
+      box-shadow: 0 8px 24px rgba(0, 0, 0, .22);
+    }
+    .lk-banner + .lk-banner { margin-top: 12px; }
+    .lk-head {
+      text-align: center; color: #fff; font-weight: 800;
+      font-size: clamp(19px, 5.6vw, 24px); line-height: 1.18;
+      text-transform: uppercase; letter-spacing: .3px;
+      margin: 16px 4px 18px; text-shadow: 0 2px 12px rgba(0, 0, 0, .3);
+    }
+    .lk-btn {
+      display: flex; align-items: center; gap: 13px;
+      background: #F8D00F; color: #201400;
+      border-radius: 16px; padding: 13px 15px;
+      text-decoration: none; margin-bottom: 14px;
+      box-shadow: 0 6px 18px rgba(0, 0, 0, .18);
+      transition: transform .05s, filter .15s;
+    }
+    .lk-btn:hover { filter: brightness(1.04); }
+    .lk-btn:active { transform: translateY(1px); }
+    .lk-thumb {
+      flex: 0 0 58px; width: 58px; height: 58px;
+      border-radius: 12px; object-fit: cover; display: block;
+    }
+    .lk-tx { flex: 1; min-width: 0; }
+    .lk-tx b { display: block; font-size: 15px; font-weight: 800; line-height: 1.22; }
+    .lk-tx span { display: block; font-size: 12.5px; font-weight: 600; color: #6a4a08; margin-top: 3px; line-height: 1.35; }
+    .lk-maps { justify-content: center; gap: 10px; }
+    .lk-maps .lk-tx { flex: 0 1 auto; }
+    .lk-maps .lk-tx b { font-size: 16px; }
+    .lk-map-ic { display: flex; color: #201400; }
+    .lk-map-ic svg { width: 22px; height: 22px; }
+    .lk-social { display: flex; justify-content: center; gap: 16px; margin: 2px 0 16px; }
+    .lk-social a {
+      width: 54px; height: 54px; border-radius: 50%;
+      background: #fff; color: #f73131;
+      display: flex; align-items: center; justify-content: center;
+      box-shadow: 0 6px 16px rgba(0, 0, 0, .2);
+      transition: transform .05s; text-decoration: none;
+    }
+    .lk-social a:active { transform: translateY(1px); }
+    .lk-social a svg { width: 27px; height: 27px; }
+    .lk-vk { font-weight: 800; font-size: 19px; letter-spacing: .5px; }
   </style>
 </head>
 <body>
   <div class="wrap">
-    <div class="brand">
-      <h1>ИСКЕНДИ</h1>
-      <div class="sub">жарим при тебе · 10 мин партия</div>
+    <!-- ========================= ЛЕНДИНГ (мультиссылка) ========================= -->
+    <div id="landing">
+      <img class="lk-banner" src="/assets/banner_logo.jpg" alt="Искенди · Дюрюмная" />
+      <img class="lk-banner" src="/assets/banner_food.jpg" alt="Дюрюмы Искенди" loading="lazy" />
+
+      <h1 class="lk-head">Крутим айраны наливаем дюрюмы</h1>
+
+      <a class="lk-btn lk-eda" href="https://eda.yandex.ru/r/iskendi_restaurant?placeSlug=iskendi"
+         target="_blank" rel="noopener" onclick="ymGoal('yandex_eda')">
+        <img class="lk-thumb" src="/assets/eda_thumb.jpg" alt="" loading="lazy" />
+        <span class="lk-tx">
+          <b>Заказывайте у нас на Яндекс Еде!</b>
+          <span>Наши блюда уже ждут вас на Яндекс Еде — закажите за пару кликов!</span>
+        </span>
+      </a>
+
+      <div class="lk-social">
+        <a href="https://t.me/iskendy" target="_blank" rel="noopener" aria-label="Telegram" onclick="ymGoal('telegram')">
+          <svg viewBox="0 0 24 24" fill="currentColor"><path d="M21.9 4.3 2.9 11.6c-1 .4-1 1.85.15 2.15l4.75 1.5 1.8 5.55c.28.82 1.3 1.05 1.9.42l2.55-2.5 4.68 3.45c.72.53 1.75.12 1.92-.72L23 5.35c.2-.9-.72-1.5-1.1-1.05z" /></svg>
+        </a>
+        <a href="https://vk.com/iskendy" target="_blank" rel="noopener" aria-label="ВКонтакте" onclick="ymGoal('vk')">
+          <span class="lk-vk">VK</span>
+        </a>
+        <a href="https://instagram.com/_iskendy_" target="_blank" rel="noopener" aria-label="Instagram" onclick="ymGoal('instagram')">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="5" /><circle cx="12" cy="12" r="4" /><circle cx="17.4" cy="6.6" r="1.15" fill="currentColor" stroke="none" /></svg>
+        </a>
+      </div>
+
+      <a class="lk-btn lk-maps" href="https://yandex.ru/maps/org/iskendi/52119597703"
+         target="_blank" rel="noopener" onclick="ymGoal('yandex_maps')">
+        <span class="lk-map-ic" aria-hidden="true">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21s7-5.6 7-11a7 7 0 1 0-14 0c0 5.4 7 11 7 11z" /><circle cx="12" cy="10" r="2.5" /></svg>
+        </span>
+        <span class="lk-tx"><b>Мы на Яндекс картах</b></span>
+      </a>
     </div>
 
-    <!-- ГОСТЕВОЙ ЭКРАН -->
-    <div id="guest">
+    <!-- ========================= ТАБЛО ПАРТИЙ (скрытая вкладка /board) ========================= -->
+    <div id="guest" class="hidden">
+      <div class="brand">
+        <h1>ИСКЕНДИ</h1>
+        <div class="sub">жарим при тебе · 10 мин партия</div>
+      </div>
       <!-- рабочее табло -->
       <div class="card" id="boardNormal">
         <div class="board-label">Готовы партии</div>
@@ -224,11 +418,15 @@
       </div>
 
       <div class="stamp" id="stamp"></div>
-      <div class="staff-line"><a onclick="showStaff()">Экран персонала</a></div>
+      <!-- ссылка на кассу убрана: /staff временно отключён -->
     </div>
 
-    <!-- ЭКРАН ПЕРСОНАЛА -->
+    <!-- ЭКРАН ПЕРСОНАЛА (/staff) -->
     <div id="staff" class="hidden">
+      <div class="brand">
+        <h1>ИСКЕНДИ</h1>
+        <div class="sub">касса · экран персонала</div>
+      </div>
       <!-- вход -->
       <div class="card" id="loginBox">
         <div class="board-label" style="margin-bottom:14px;">Вход для кассы</div>
@@ -397,19 +595,58 @@
       } catch(e){ /* сеть моргнула — пропускаем тик */ }
     }
 
-    // ---------- переключение экранов ----------
-    function showStaff(){
+    // ---------- переключение экранов + опрос ----------
+    // Опрос /api/status нужен только на табло и кассе — на лендинге молчим.
+    let pollTimer = null;
+    function startPolling(){
+      if(pollTimer) return;
+      loadStatus();
+      pollTimer = setInterval(loadStatus, 5000);
+    }
+    function stopPolling(){
+      if(pollTimer){ clearInterval(pollTimer); pollTimer = null; }
+    }
+    function hideAllScreens(){
+      document.getElementById("landing").classList.add("hidden");
       document.getElementById("guest").classList.add("hidden");
+      document.getElementById("staff").classList.add("hidden");
+    }
+    function showLanding(push){
+      hideAllScreens();
+      document.body.classList.add("landing-bg");
+      document.getElementById("landing").classList.remove("hidden");
+      stopPolling();
+      if(push !== false) history.pushState({s:"landing"}, "", "/");
+    }
+    function showBoard(push){
+      hideAllScreens();
+      document.body.classList.remove("landing-bg");
+      document.getElementById("guest").classList.remove("hidden");
+      startPolling();
+      if(push !== false) history.pushState({s:"board"}, "", "/board");
+    }
+    function showStaff(push){
+      hideAllScreens();
+      document.body.classList.remove("landing-bg");
       document.getElementById("staff").classList.remove("hidden");
       const authed = !!token;
       document.getElementById("loginBox").classList.toggle("hidden", authed);
       document.getElementById("panelBox").classList.toggle("hidden", !authed);
-      if(authed) fillSettings();
+      if(authed){ fillSettings(); }
+      startPolling();
+      if(push !== false) history.pushState({s:"staff"}, "", "/staff");
     }
-    function showGuest(){
-      document.getElementById("staff").classList.add("hidden");
-      document.getElementById("guest").classList.remove("hidden");
+    // «← Гостевое табло» из кассы ведёт на скрытое табло /board.
+    function showGuest(push){ showBoard(push); }
+
+    // Стартовый экран берём из адреса страницы (/board, /staff, иначе лендинг).
+    function routeFromPath(){
+      const p = location.pathname;
+      if(p === "/board"){ showBoard(false); }
+      else if(p === "/staff"){ showStaff(false); }
+      else { showLanding(false); }
     }
+    window.addEventListener("popstate", routeFromPath);
 
     // ---------- авторизация ----------
     async function doLogin(){
@@ -509,8 +746,7 @@
     }
 
     // ---------- старт ----------
-    loadStatus();
-    setInterval(loadStatus, 5000);
+    routeFromPath();
   </script>
 </body>
 </html>

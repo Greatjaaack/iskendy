@@ -128,6 +128,18 @@ if FRONTEND_DIR.exists():
 
     @app.get("/")
     def index() -> FileResponse:
+        """Лендинг-мультиссылка (главная)."""
         return FileResponse(FRONTEND_DIR / "index.html")
+
+    @app.get("/board")
+    def board() -> FileResponse:
+        """Табло партий — скрытая вкладка (ссылок с лендинга нет)."""
+        return FileResponse(FRONTEND_DIR / "index.html")
+
+    @app.get("/staff")
+    def staff() -> FileResponse:
+        """Экран персонала / касса — ВРЕМЕННО ОТКЛЮЧЁН (отдаём 404).
+        Чтобы включить обратно: вернуть `return FileResponse(... index.html)`."""
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Not Found")
 
     app.mount("/", StaticFiles(directory=FRONTEND_DIR), name="frontend")
