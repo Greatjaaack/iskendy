@@ -333,3 +333,106 @@ def get_events(date: str | None = None) -> list[dict]:
             (date,),
         ).fetchall()
     return [dict(r) for r in rows]
+
+
+# ---------- Аналитика (операционные метрики по временам статусов) ----------
+# created_at = приём, ready_at = готово, served_at = выдано. Метки могут быть с
+# tz-сдвигом (ручные) или без (из iiko) — приводим к naive (все в поясе точки).
+
+def _parse_naive(s: str | None) -> datetime | None:
+    if not s:
+        return None
+    try:
+        return datetime.fromisoformat(s).replace(tzinfo=None)
+    except ValueError:
+        return None
+
+
+def _avg_sec(values: list[float]) -> int | None:
+    return round(sum(values) / len(values)) if values else None
+
+
+def stats_days() -> list[dict]:
+    """Сводка по дням: заказов (всего/выдано) и средние времена этапов (сек).
+
+    prep = приём→готово, wait = готово→выдано, total = приём→выдано.
+    """
+    from collections import defaultdict
+
+    with _connect() as conn:
+        rows = conn.execute(
+            "SELECT date, status, created_at, ready_at, served_at FROM orders"
+        ).fetchall()
+
+    days: dict[str, dict] = defaultdict(
+        lambda: {"total": 0, "served": 0, "prep": [], "wait": [], "full": []}
+    )
+    for r in rows:
+        d = days[r["date"]]
+        d["total"] += 1
+        if r["status"] == "served":
+            d["served"] += 1
+        c = _parse_naive(r["created_at"])
+        rd = _parse_naive(r["ready_at"])
+        sv = _parse_naive(r["served_at"])
+        if c and rd and rd >= c:
+            d["prep"].append((rd - c).total_seconds())
+        if rd and sv and sv >= rd:
+            d["wait"].append((sv - rd).total_seconds())
+        if c and sv and sv >= c:
+            d["full"].append((sv - c).total_seconds())
+
+    out = []
+    for date in sorted(days, reverse=True):
+        d = days[date]
+        out.append(
+            {
+                "date": date,
+                "total": d["total"],
+                "served": d["served"],
+                "avgPrepSec": _avg_sec(d["prep"]),
+                "avgWaitSec": _avg_sec(d["wait"]),
+                "avgTotalSec": _avg_sec(d["full"]),
+            }
+        )
+    return out
+
+
+def stats_hours(date: str | None = None) -> list[dict]:
+    """Разбивка по часам за день: заказов и средние времена этапов (сек).
+
+    Группировка по часу ПРИЁМА (created_at). Для каждого часа — среднее время
+    готовки (приём→готово) и до выдачи (готово→выдано).
+    """
+    from collections import defaultdict
+
+    date = date or today()
+    with _connect() as conn:
+        rows = conn.execute(
+            "SELECT created_at, ready_at, served_at FROM orders WHERE date = ?",
+            (date,),
+        ).fetchall()
+
+    hours: dict[int, dict] = defaultdict(lambda: {"count": 0, "prep": [], "wait": []})
+    for r in rows:
+        c = _parse_naive(r["created_at"])
+        if not c:
+            continue
+        h = hours[c.hour]
+        h["count"] += 1
+        rd = _parse_naive(r["ready_at"])
+        sv = _parse_naive(r["served_at"])
+        if rd and rd >= c:
+            h["prep"].append((rd - c).total_seconds())
+        if rd and sv and sv >= rd:
+            h["wait"].append((sv - rd).total_seconds())
+
+    return [
+        {
+            "hour": hr,
+            "count": hours[hr]["count"],
+            "avgPrepSec": _avg_sec(hours[hr]["prep"]),
+            "avgWaitSec": _avg_sec(hours[hr]["wait"]),
+        }
+        for hr in sorted(hours)
+    ]

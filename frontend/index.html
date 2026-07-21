@@ -340,6 +340,24 @@
     .log-num { color: var(--amber); font-family: "Bebas Neue", sans-serif; font-size: 18px; flex: 0 0 52px; }
     .log-text { flex: 1; color: var(--text); }
 
+    /* Таблицы аналитики (/stats) */
+    .tbl-wrap { overflow-x: auto; }
+    .stat-tbl { width: 100%; border-collapse: collapse; font-size: 13px; }
+    .stat-tbl th {
+      text-align: right; color: var(--muted); font-weight: 600; font-size: 10px;
+      text-transform: uppercase; letter-spacing: 1px; padding: 6px 8px;
+      border-bottom: 1px solid var(--line); white-space: nowrap;
+    }
+    .stat-tbl th:first-child, .stat-tbl td:first-child { text-align: left; }
+    .stat-tbl td {
+      padding: 9px 8px; border-bottom: 1px dashed var(--line);
+      font-family: "IBM Plex Mono", monospace; text-align: right;
+      white-space: nowrap; color: var(--text);
+    }
+    .stat-tbl tbody tr { cursor: pointer; }
+    .stat-tbl tbody tr:last-child td { border-bottom: 0; }
+    .link-a { color: var(--copper); cursor: pointer; text-decoration: underline; }
+
     /* ---------- Лендинг (мультиссылка) ---------- */
     .hero { text-align: center; padding: 4px 0 20px; }
     .banner {
@@ -541,6 +559,14 @@
     body.brand .st-ready .order-st { color: #2e8b2e; font-weight: 700; }
     body.brand button.mini.ok { background: #34a853; color: #fff; }
     body.brand button.mini.x { background: transparent; border: 1px solid rgba(200, 60, 60, .5); color: #c0392b; }
+    /* Журнал и таблицы аналитики на белых карточках */
+    body.brand .log-time { color: #9a7b52; }
+    body.brand .log-num { color: #f7621e; }
+    body.brand .log-text { color: #201400; }
+    body.brand .log-row { border-bottom-color: rgba(0, 0, 0, .1); }
+    body.brand .stat-tbl th { color: #a15a12; border-bottom-color: rgba(0, 0, 0, .15); }
+    body.brand .stat-tbl td { color: #201400; border-bottom-color: rgba(0, 0, 0, .1); }
+    body.brand .link-a { color: #b0600f; }
 
     /* Плашки и метки */
     body.brand .plaque.before { background: #fff; border: 0; }
@@ -695,7 +721,32 @@
           </div>
         </div>
 
-        <div class="staff-line"><a onclick="showGuest()">← Гостевое табло</a> · <a onclick="logout()">Выйти</a></div>
+        <div class="staff-line"><a onclick="showGuest()">← Гостевое табло</a> · <a onclick="showStats()">Аналитика</a> · <a onclick="logout()">Выйти</a></div>
+      </div>
+    </div>
+
+    <!-- ========================= АНАЛИТИКА (/stats) ========================= -->
+    <div id="stats" class="hidden">
+      <div class="brand">
+        <h1>ИСКЕНДИ</h1>
+        <div class="sub">аналитика</div>
+      </div>
+
+      <div class="card" id="statsAuthNote">
+        <div class="muted-note">Нужен вход кассы. <a class="link-a" onclick="showStaff()">Войти →</a></div>
+      </div>
+
+      <div id="statsContent" class="hidden">
+        <div class="card">
+          <div class="board-label" style="margin-bottom:12px;">По дням</div>
+          <div class="tbl-wrap"><div id="daysTable"></div></div>
+        </div>
+        <div class="card">
+          <div class="board-label" style="margin-bottom:12px;">По часам · <span id="hoursDate"></span></div>
+          <div class="tbl-wrap"><div id="hoursTable"></div></div>
+          <div class="muted-note" style="margin-top:10px;">Тапни день в таблице выше, чтобы посмотреть его по часам.</div>
+        </div>
+        <div class="staff-line"><a onclick="showStaff()">← Касса</a></div>
       </div>
     </div>
   </div>
@@ -754,6 +805,7 @@
       document.getElementById("landing").classList.add("hidden");
       document.getElementById("guest").classList.add("hidden");
       document.getElementById("staff").classList.add("hidden");
+      document.getElementById("stats").classList.add("hidden");
     }
     function showLanding(push){
       hideAllScreens();
@@ -796,12 +848,13 @@
     // «← Гостевое табло» из кассы ведёт на скрытое табло /board.
     function showGuest(push){ showBoard(push); }
 
-    // Стартовый экран берём из адреса страницы (/board, /tv, /staff, иначе лендинг).
+    // Стартовый экран берём из адреса страницы (/board, /tv, /staff, /stats, иначе лендинг).
     function routeFromPath(){
       const p = location.pathname;
       if(p === "/board"){ showBoard(false, false); }
       else if(p === "/tv"){ showBoard(false, true); }
       else if(p === "/staff"){ showStaff(false); }
+      else if(p === "/stats"){ showStats(false); }
       else { showLanding(false); }
     }
     window.addEventListener("popstate", routeFromPath);
@@ -921,6 +974,74 @@
       return '<div class="log-row"><span class="log-time">' + t + '</span>'
            +   '<span class="log-num">' + num + '</span>'
            +   '<span class="log-text">' + text + '</span></div>';
+    }
+
+    // ---------- аналитика (/stats) ----------
+    function showStats(push){
+      hideAllScreens();
+      document.body.classList.remove("landing-bg");
+      document.body.classList.add("brand");
+      document.body.classList.remove("board-view", "tv");
+      document.getElementById("stats").classList.remove("hidden");
+      const authed = !!token;
+      document.getElementById("statsAuthNote").classList.toggle("hidden", authed);
+      document.getElementById("statsContent").classList.toggle("hidden", !authed);
+      stopPolling();
+      if(authed) loadStatsDays();
+      if(push !== false) history.pushState({s:"stats"}, "", "/stats");
+    }
+
+    async function statsGet(path){
+      const r = await fetch(API + path, { headers: { "Authorization": "Bearer " + token } });
+      if(r.status === 401){ logout(); showStats(); throw new Error("401"); }
+      return r.json();
+    }
+
+    async function loadStatsDays(){
+      try {
+        const d = await statsGet("/api/stats/days");
+        const days = d.days || [];
+        document.getElementById("daysTable").innerHTML = renderDays(days);
+        if(days.length){ loadStatsHours(days[0].date); }
+        else { document.getElementById("hoursTable").innerHTML = '<div class="muted-note">Нет данных</div>'; document.getElementById("hoursDate").textContent = ""; }
+      } catch(e){}
+    }
+
+    async function loadStatsHours(date){
+      document.getElementById("hoursDate").textContent = fmtDate(date);
+      try {
+        const d = await statsGet("/api/stats/hours?date=" + date);
+        document.getElementById("hoursTable").innerHTML = renderHours(d.hours || []);
+      } catch(e){}
+    }
+
+    function statMin(sec){ return (sec == null) ? "—" : (sec / 60).toFixed(1) + " мин"; }
+    function pad2(n){ return String(n).padStart(2, "0"); }
+    function fmtDate(iso){ const p = iso.split("-"); return p[2] + "." + p[1]; }
+
+    function renderDays(days){
+      if(!days.length) return '<div class="muted-note">Пока нет данных</div>';
+      let h = '<table class="stat-tbl"><thead><tr><th>Дата</th><th>Заказов</th><th>Готовка</th><th>Выдача</th><th>Всего</th></tr></thead><tbody>';
+      h += days.map(d =>
+        '<tr onclick="loadStatsHours(\'' + d.date + '\')"><td>' + fmtDate(d.date) + '</td>'
+        + '<td>' + d.served + '/' + d.total + '</td>'
+        + '<td>' + statMin(d.avgPrepSec) + '</td>'
+        + '<td>' + statMin(d.avgWaitSec) + '</td>'
+        + '<td>' + statMin(d.avgTotalSec) + '</td></tr>'
+      ).join("");
+      return h + '</tbody></table>';
+    }
+
+    function renderHours(hours){
+      if(!hours.length) return '<div class="muted-note">Нет заказов за этот день</div>';
+      let h = '<table class="stat-tbl"><thead><tr><th>Час</th><th>Заказов</th><th>Готовка</th><th>Выдача</th></tr></thead><tbody>';
+      h += hours.map(x =>
+        '<tr><td>' + pad2(x.hour) + '–' + pad2((x.hour + 1) % 24) + '</td>'
+        + '<td>' + x.count + '</td>'
+        + '<td>' + statMin(x.avgPrepSec) + '</td>'
+        + '<td>' + statMin(x.avgWaitSec) + '</td></tr>'
+      ).join("");
+      return h + '</tbody></table>';
     }
 
     // ---------- панель кассы ----------

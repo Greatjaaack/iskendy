@@ -122,6 +122,22 @@ def events(
     return {"date": day, "events": db.get_events(day), "now": db.now_hm()}
 
 
+@app.get("/api/stats/days")
+def stats_days(_: dict = Depends(require_staff)) -> dict:
+    """Аналитика по дням: заказов и средние времена этапов (для персонала)."""
+    return {"days": db.stats_days()}
+
+
+@app.get("/api/stats/hours")
+def stats_hours(
+    date: str | None = Query(default=None, pattern=r"^\d{4}-\d{2}-\d{2}$"),
+    _: dict = Depends(require_staff),
+) -> dict:
+    """Разбивка по часам за день: заказов и средние времена этапов."""
+    day = date or db.today()
+    return {"date": day, "hours": db.stats_hours(day)}
+
+
 @app.post("/api/day/reset")
 def day_reset(_: dict = Depends(require_staff)) -> dict:
     """Очистить все заказы за сегодня (новый день)."""
@@ -164,6 +180,11 @@ if FRONTEND_DIR.exists():
     @app.get("/staff")
     def staff() -> FileResponse:
         """Экран кассы — заносить заказы и двигать их статусы."""
+        return FileResponse(FRONTEND_DIR / "index.html")
+
+    @app.get("/stats")
+    def stats() -> FileResponse:
+        """Аналитика по дням/часам — под паролем кассы (для персонала)."""
         return FileResponse(FRONTEND_DIR / "index.html")
 
     app.mount("/", StaticFiles(directory=FRONTEND_DIR), name="frontend")
