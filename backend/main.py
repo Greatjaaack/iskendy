@@ -118,12 +118,16 @@ def day_reset(_: dict = Depends(require_staff)) -> dict:
 
 
 @app.get("/api/qr")
-def qr(data: str = Query(max_length=512)) -> Response:
-    """SVG QR-кода для произвольной строки (обычно URL табло) — для печати
-    таблички/наклейки. Генерится локально, без внешних сервисов."""
+def qr(
+    data: str = Query(max_length=512),
+    border: int = Query(default=2, ge=0, le=8),
+) -> Response:
+    """SVG QR-кода для произвольной строки (обычно URL табло). `border` — «тихая
+    зона» в модулях (белая рамка): 2 для печати, поменьше для экрана табло.
+    Генерится локально, без внешних сервисов."""
     buff = io.BytesIO()
     segno.make(data, error="m").save(
-        buff, kind="svg", scale=8, border=2, dark="#17130f", light="#ffffff"
+        buff, kind="svg", scale=8, border=border, dark="#17130f", light="#ffffff"
     )
     return Response(content=buff.getvalue(), media_type="image/svg+xml")
 

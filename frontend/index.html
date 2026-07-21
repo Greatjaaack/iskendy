@@ -210,13 +210,16 @@
     #qrBox .cap { font-size: 12px; color: var(--muted); margin-top: 8px; word-break: break-all; }
 
     /* ---------- Табло заказов (две колонки) ---------- */
-    /* На большом экране (телик) табло шире — под-колонкам номеров есть куда
-       расти вбок. На мобилке ширина ограничена экраном, так что не влияет. */
-    body.board-view .wrap { max-width: 900px; }
-    .board-cols { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 14px; }
+    /* Табло тянется по содержимому: мало заказов — узко (как раньше), много —
+       колонки растут вбок (до ширины экрана). Мобилка ограничена экраном. */
+    body.board-view .wrap { width: fit-content; max-width: 96vw; }
+    .board-cols {
+      display: grid; grid-template-columns: auto auto;
+      justify-content: center; gap: 12px; margin-bottom: 14px;
+    }
     .col {
       background: var(--card); border: 1px solid var(--line);
-      border-radius: 18px; padding: 16px 12px; min-height: 180px;
+      border-radius: 18px; padding: 16px 12px; min-height: 180px; min-width: 160px;
     }
     .col-ready { background: var(--ok-bg); border-color: var(--ok-line); }
     .col-head {
@@ -256,8 +259,8 @@
       margin: 2px 0 14px;
     }
     .board-qr img {
-      width: 64px; height: 64px; flex: 0 0 64px;
-      background: #fff; border-radius: 10px; padding: 6px;
+      width: 104px; height: 104px; flex: 0 0 104px;
+      background: #fff; border-radius: 8px; padding: 2px;
     }
     .board-qr-cap b {
       font-family: "Bebas Neue", sans-serif; font-size: 20px;
@@ -279,7 +282,11 @@
       font-family: "IBM Plex Mono", monospace;
       display: flex; flex-direction: column; gap: 2px;
     }
-    .st-ready .order-st { color: #a7d68a; }
+    /* Цвет статуса — виден по номеру и подписи (не читая): открытый=синий,
+       готовится=янтарь, готово=зелёный. */
+    .st-open .order-num,      .st-open .order-st      { color: #6aa6ff; }
+    .st-preparing .order-num, .st-preparing .order-st { color: var(--amber); }
+    .st-ready .order-num,     .st-ready .order-st     { color: #6cd06c; }
     .order-times { font-size: 11px; color: var(--muted); opacity: .8; }
 
     /* Счётчики заказов по статусам (касса) */
@@ -296,6 +303,10 @@
       width: auto; font-size: 14px; font-weight: 600;
       padding: 9px 12px; border-radius: 10px;
     }
+    /* Кнопки-статусы по цветам: открытый=синий, готовится=янтарь, готово=зелёный */
+    button.mini.b-open  { background: #3d7de0; color: #fff; }
+    button.mini.b-prep  { background: var(--amber); color: #17130f; }
+    button.mini.b-ready { background: #35a854; color: #fff; }
     button.mini.ok { background: var(--ok-line); color: var(--text); }
     button.mini.x  { background: transparent; border: 1px solid #5a2a2a; color: #d98a8a; padding: 9px 11px; }
 
@@ -488,6 +499,10 @@
     body.brand .order-num { color: #f7621e; }
     body.brand .order-st { color: #6a4a08; }
     body.brand .order-times { color: #9a7b52; }
+    /* Цвета статусов на белых карточках кассы (читаемые оттенки) */
+    body.brand .st-open .order-num,      body.brand .st-open .order-st      { color: #2f6fd6; }
+    body.brand .st-preparing .order-num, body.brand .st-preparing .order-st { color: #d9800f; }
+    body.brand .st-ready .order-num,     body.brand .st-ready .order-st     { color: #2f9e46; }
     body.brand .stat { background: #fff3e0; border-color: rgba(0, 0, 0, .08); }
     body.brand .stat b { color: #201400; }
     body.brand .stat span { color: #6a4a08; }
@@ -717,9 +732,10 @@
       document.body.classList.add("brand");
       document.body.classList.add("board-view");
       document.getElementById("guest").classList.remove("hidden");
-      // QR ведёт на это же табло — гость сканирует с телика и следит в телефоне
+      // QR ведёт на это же табло — гость сканирует с телика и следит в телефоне.
+      // border=1 — минимальная белая рамка, чтобы сам код был крупнее.
       const qr = document.getElementById("boardQr");
-      if(qr && !qr.src){ qr.src = "/api/qr?data=" + encodeURIComponent(location.origin + "/board"); }
+      if(qr && !qr.src){ qr.src = "/api/qr?border=1&data=" + encodeURIComponent(location.origin + "/board"); }
       startPolling();
       if(push !== false) history.pushState({s:"board"}, "", "/board");
     }
@@ -853,11 +869,11 @@
       const n = o.number;
       let acts;
       if(o.status === "open"){
-        acts = '<button class="mini amber" onclick="setStatus(' + n + ',\'preparing\')">Готовить →</button>';
+        acts = '<button class="mini b-open" onclick="setStatus(' + n + ',\'preparing\')">Готовить →</button>';
       } else if(o.status === "preparing"){
-        acts = '<button class="mini amber" onclick="setStatus(' + n + ',\'ready\')">Готово →</button>';
+        acts = '<button class="mini b-prep" onclick="setStatus(' + n + ',\'ready\')">Готово →</button>';
       } else {
-        acts = '<button class="mini ok" onclick="setStatus(' + n + ',\'served\')">Выдано ✓</button>'
+        acts = '<button class="mini b-ready" onclick="setStatus(' + n + ',\'served\')">Выдано ✓</button>'
              + '<button class="mini ghost" onclick="setStatus(' + n + ',\'preparing\')" title="Вернуть в готовку">←</button>';
       }
       acts += '<button class="mini x" onclick="delOrder(' + n + ')" title="Удалить">✕</button>';
