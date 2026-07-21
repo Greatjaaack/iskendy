@@ -5,11 +5,15 @@
 Выданные заказы уходят с табло. Одна таблица `orders`.
 """
 
+import logging
 import sqlite3
 from datetime import datetime
 from zoneinfo import ZoneInfo
 
 from config import settings
+
+# Журнал событий заказов (создание/смена статуса/удаление) — в логи и в БД.
+audit = logging.getLogger("orders")
 
 # Разрешённые статусы и их порядок:
 # open (открытый — приехал из iiko, ещё не взяли в работу) → preparing (готовится)
@@ -58,6 +62,53 @@ def init_db() -> None:
             conn.execute(
                 "ALTER TABLE orders ADD COLUMN source TEXT NOT NULL DEFAULT 'manual'"
             )
+        # Журнал событий заказов (аудит): создание, смена статуса, удаление, сброс.
+        # Переживает передеплой (в отличие от docker logs) — история по дням.
+        conn.execute(
+            """
+            CREATE TABLE IF NOT EXISTS order_events (
+                id          INTEGER PRIMARY KEY AUTOINCREMENT,
+                date        TEXT    NOT NULL,
+                number      INTEGER,
+                event       TEXT    NOT NULL,
+                from_status TEXT,
+                to_status   TEXT,
+                source      TEXT,
+                at          TEXT    NOT NULL
+            )
+            """
+        )
+        conn.execute(
+            "CREATE INDEX IF NOT EXISTS idx_events_date ON order_events (date)"
+        )
+
+
+def _log_event(
+    conn: sqlite3.Connection,
+    date: str,
+    event: str,
+    number: int | None = None,
+    from_status: str | None = None,
+    to_status: str | None = None,
+    source: str | None = None,
+) -> None:
+    """Записать событие заказа в журнал (БД) и в логи (docker logs)."""
+    conn.execute(
+        """
+        INSERT INTO order_events
+            (date, number, event, from_status, to_status, source, at)
+        VALUES (?, ?, ?, ?, ?, ?, ?)
+        """,
+        (date, number, event, from_status, to_status, source, _now()),
+    )
+    if event == "status":
+        audit.info("ЗАКАЗ %s: %s → %s", number, from_status, to_status)
+    elif event == "created":
+        audit.info("ЗАКАЗ %s: создан (%s, %s)", number, to_status, source)
+    elif event == "deleted":
+        audit.info("ЗАКАЗ %s: удалён (был %s)", number, from_status)
+    elif event == "reset":
+        audit.info("СБРОС ДНЯ: убрано активных %s", number)
 
 
 def today() -> str:
@@ -166,6 +217,7 @@ def add_order(number: int) -> dict:
             """,
             (date, number, now, now),
         )
+        _log_event(conn, date, "created", number, to_status="preparing", source="manual")
     return get_board(date)
 
 
@@ -193,6 +245,7 @@ def ingest_iiko_order(number: int, opened_at: str | None = None) -> bool:
             """,
             (date, number, opened_at or now, now),
         )
+        _log_event(conn, date, "created", number, to_status="open", source="iiko")
     return True
 
 
@@ -203,9 +256,17 @@ def set_status(number: int, new_status: str) -> dict:
     date = today()
     now = _now()
     with _connect() as conn:
-        oid = _active_id(conn, date, number)
-        if oid is None:
+        row = conn.execute(
+            """
+            SELECT id, status FROM orders
+             WHERE date = ? AND number = ? AND status IN ('open', 'preparing', 'ready')
+             ORDER BY id DESC LIMIT 1
+            """,
+            (date, number),
+        ).fetchone()
+        if row is None:
             raise ValueError(f"Активного заказа №{number} нет")
+        oid, old_status = row["id"], row["status"]
         # Метку времени ставим для статуса, в который переходим. Приём
         # (created_at) не трогаем — он фиксирует первое занесение заказа.
         stamp = {"ready": "ready_at", "served": "served_at"}.get(new_status)
@@ -220,6 +281,7 @@ def set_status(number: int, new_status: str) -> dict:
                 "UPDATE orders SET status = ?, updated_at = ? WHERE id = ?",
                 (new_status, now, oid),
             )
+        _log_event(conn, date, "status", number, from_status=old_status, to_status=new_status)
     return get_board(date)
 
 
@@ -227,10 +289,18 @@ def delete_order(number: int) -> dict:
     """Удалить активный заказ (ошибочно занесён)."""
     date = today()
     with _connect() as conn:
-        oid = _active_id(conn, date, number)
-        if oid is None:
+        row = conn.execute(
+            """
+            SELECT id, status FROM orders
+             WHERE date = ? AND number = ? AND status IN ('open', 'preparing', 'ready')
+             ORDER BY id DESC LIMIT 1
+            """,
+            (date, number),
+        ).fetchone()
+        if row is None:
             raise ValueError(f"Активного заказа №{number} нет")
-        conn.execute("DELETE FROM orders WHERE id = ?", (oid,))
+        conn.execute("DELETE FROM orders WHERE id = ?", (row["id"],))
+        _log_event(conn, date, "deleted", number, from_status=row["status"])
     return get_board(date)
 
 
@@ -242,9 +312,24 @@ def reset_day() -> dict:
     """
     date = today()
     with _connect() as conn:
-        conn.execute(
+        cur = conn.execute(
             "DELETE FROM orders WHERE date = ? AND status IN "
             "('open', 'preparing', 'ready')",
             (date,),
         )
+        _log_event(conn, date, "reset", number=cur.rowcount)
     return get_board(date)
+
+
+def get_events(date: str | None = None) -> list[dict]:
+    """Журнал событий заказов за день (для персонала): что и когда менялось."""
+    date = date or today()
+    with _connect() as conn:
+        rows = conn.execute(
+            """
+            SELECT number, event, from_status, to_status, source, at
+              FROM order_events WHERE date = ? ORDER BY id
+            """,
+            (date,),
+        ).fetchall()
+    return [dict(r) for r in rows]

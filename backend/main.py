@@ -111,6 +111,17 @@ def history(
     return {"date": day, "orders": db.get_history(day), "now": db.now_hm()}
 
 
+@app.get("/api/events")
+def events(
+    date: str | None = Query(default=None, pattern=r"^\d{4}-\d{2}-\d{2}$"),
+    _: dict = Depends(require_staff),
+) -> dict:
+    """Журнал событий заказов за день (создание/смена статуса/удаление/сброс) —
+    для аудита: кто когда что переключил. `date` (YYYY-MM-DD) — по умолчанию сегодня."""
+    day = date or db.today()
+    return {"date": day, "events": db.get_events(day), "now": db.now_hm()}
+
+
 @app.post("/api/day/reset")
 def day_reset(_: dict = Depends(require_staff)) -> dict:
     """Очистить все заказы за сегодня (новый день)."""
