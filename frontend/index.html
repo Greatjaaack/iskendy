@@ -363,6 +363,18 @@
     .sum-k { color: var(--muted); }
     .sum-v { font-family: "IBM Plex Mono", monospace; color: var(--text); font-weight: 600; }
 
+    /* KPI-плашки и инлайн-графики аналитики */
+    .kpi-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+    .kpi { background: #17110c; border: 1px solid var(--line); border-radius: 14px; padding: 14px 8px; text-align: center; }
+    .kpi b { display: block; font-family: "Bebas Neue", sans-serif; font-size: 32px; color: var(--amber); line-height: 1; }
+    .kpi b em { font-family: "IBM Plex Sans", sans-serif; font-style: normal; font-size: 13px; color: var(--muted); font-weight: 400; }
+    .kpi span { display: block; margin-top: 5px; font-size: 11px; color: var(--muted); font-family: "IBM Plex Mono", monospace; text-transform: uppercase; letter-spacing: 1px; }
+    .cv-legend { display: flex; gap: 18px; justify-content: center; font-size: 12px; color: var(--muted); margin-bottom: 6px; }
+    .cv-legend span { display: inline-flex; align-items: center; gap: 6px; }
+    .cv-dot { width: 11px; height: 11px; border-radius: 3px; display: inline-block; }
+    .cv-val { font-family: "IBM Plex Mono", monospace; font-size: 11px; fill: var(--text); }
+    .cv-lbl { font-family: "IBM Plex Mono", monospace; font-size: 11px; fill: var(--muted); }
+
     /* ---------- Лендинг (мультиссылка) ---------- */
     .hero { text-align: center; padding: 4px 0 20px; }
     .banner {
@@ -576,6 +588,13 @@
     body.brand .sum-line { border-bottom-color: rgba(0, 0, 0, .1); }
     body.brand .sum-k { color: #6a4a08; }
     body.brand .sum-v { color: #201400; }
+    body.brand .kpi { background: #fff3e0; border-color: rgba(0, 0, 0, .08); }
+    body.brand .kpi b { color: #201400; }
+    body.brand .kpi b em { color: #9a7b52; }
+    body.brand .kpi span { color: #6a4a08; }
+    body.brand .cv-legend { color: #6a4a08; }
+    body.brand .cv-val { fill: #201400; }
+    body.brand .cv-lbl { fill: #9a7b52; }
 
     /* Плашки и метки */
     body.brand .plaque.before { background: #fff; border: 0; }
@@ -747,17 +766,25 @@
 
       <div id="statsContent" class="hidden">
         <div class="card">
-          <div class="board-label" style="margin-bottom:6px;">По дням</div>
-          <div class="muted-note" style="margin-bottom:10px;">Тапни дни, чтобы выбрать — один или несколько.</div>
+          <div class="board-label" style="margin-bottom:6px;">Выбери дни</div>
+          <div class="muted-note" style="margin-bottom:10px;">Тапни день — один или несколько.</div>
           <div class="tbl-wrap"><div id="daysTable"></div></div>
         </div>
         <div class="card">
-          <div class="board-label" style="margin-bottom:12px;">Итог по выбранным</div>
-          <div id="statsSummary"></div>
+          <div class="board-label" id="sumLabel" style="margin-bottom:12px;">Итог</div>
+          <div class="kpi-row" id="kpiRow"></div>
         </div>
         <div class="card">
-          <div class="board-label" style="margin-bottom:12px;">По часам</div>
-          <div class="tbl-wrap"><div id="hoursTable"></div></div>
+          <div class="board-label" style="margin-bottom:12px;">Заказы по часам</div>
+          <div class="tbl-wrap" id="chartOrders"></div>
+        </div>
+        <div class="card">
+          <div class="board-label" style="margin-bottom:10px;">Среднее время по часам, мин</div>
+          <div class="cv-legend">
+            <span><i class="cv-dot" style="background:#D97706"></i>готовка</span>
+            <span><i class="cv-dot" style="background:#2563EB"></i>до выдачи</span>
+          </div>
+          <div class="tbl-wrap" id="chartTimes"></div>
         </div>
         <div class="staff-line"><a onclick="showStaff()">← Касса</a></div>
       </div>
@@ -1036,12 +1063,13 @@
       const dates = [...selectedDates];
       try {
         const d = await statsGet("/api/stats/range?dates=" + dates.join(","));
-        renderSummary(d.summary || {}, dates);
-        document.getElementById("hoursTable").innerHTML = renderHours(d.hours || []);
+        renderKpis(d.summary || {}, dates);
+        document.getElementById("chartOrders").innerHTML = ordersChart(d.hours || []);
+        document.getElementById("chartTimes").innerHTML = timesChart(d.hours || []);
       } catch(e){}
     }
 
-    function statMin(sec){ return (sec == null) ? "—" : (sec / 60).toFixed(1) + " мин"; }
+    function statMin(sec){ return (sec == null) ? "—" : (sec / 60).toFixed(1); }
     function pad2(n){ return String(n).padStart(2, "0"); }
     function fmtDate(iso){ const p = iso.split("-"); return p[2] + "." + p[1]; }
     function weekdayOf(date){ const d = statsDaysCache.find(x => x.date === date); return d ? d.weekday : ""; }
@@ -1050,45 +1078,84 @@
       document.getElementById("daysTable").innerHTML = renderDays(statsDaysCache);
     }
 
+    // Компактный выбор дней (галочка · дата · день недели · заказов)
     function renderDays(days){
       if(!days.length) return '<div class="muted-note">Пока нет данных</div>';
-      let h = '<table class="stat-tbl"><thead><tr><th></th><th>Дата</th><th>День</th><th>Заказов</th><th>Готовка</th><th>Выдача</th><th>Всего</th></tr></thead><tbody>';
+      let h = '<table class="stat-tbl"><thead><tr><th></th><th>Дата</th><th>День</th><th>Заказов</th></tr></thead><tbody>';
       h += days.map(d => {
         const sel = selectedDates.has(d.date);
         return '<tr class="' + (sel ? "sel" : "") + '" onclick="toggleDay(\'' + d.date + '\')">'
           + '<td>' + (sel ? "✓" : "") + '</td>'
           + '<td>' + fmtDate(d.date) + '</td>'
           + '<td>' + (d.weekday || "") + '</td>'
-          + '<td>' + d.served + '/' + d.total + '</td>'
-          + '<td>' + statMin(d.avgPrepSec) + '</td>'
-          + '<td>' + statMin(d.avgWaitSec) + '</td>'
-          + '<td>' + statMin(d.avgTotalSec) + '</td></tr>';
+          + '<td>' + d.served + '/' + d.total + '</td></tr>';
       }).join("");
       return h + '</tbody></table>';
     }
 
-    function renderSummary(s, dates){
+    // KPI-плашки по выбранным дням (крупные числа вместо таблицы)
+    function renderKpis(s, dates){
       const n = dates.length;
-      const label = (n === 1) ? (fmtDate(dates[0]) + (weekdayOf(dates[0]) ? " · " + weekdayOf(dates[0]) : "")) : (n + " дн.");
-      const line = (k, v) => '<div class="sum-line"><span class="sum-k">' + k + '</span><span class="sum-v">' + v + '</span></div>';
-      document.getElementById("statsSummary").innerHTML =
-          line("Выбрано", label)
-        + line("Заказов", (s.served || 0) + "/" + (s.total || 0))
-        + line("Ср. готовка", statMin(s.avgPrepSec))
-        + line("Ср. до выдачи", statMin(s.avgWaitSec))
-        + line("Ср. полное", statMin(s.avgTotalSec));
+      document.getElementById("sumLabel").textContent = "Итог · " +
+        (n === 1 ? (fmtDate(dates[0]) + (weekdayOf(dates[0]) ? " · " + weekdayOf(dates[0]) : "")) : (n + " дн."));
+      const tile = (v, unit, k) => '<div class="kpi"><b>' + v + (unit ? '<em>' + unit + '</em>' : '') + '</b><span>' + k + '</span></div>';
+      document.getElementById("kpiRow").innerHTML =
+          tile((s.served || 0) + "/" + (s.total || 0), "", "заказов")
+        + tile(statMin(s.avgPrepSec), " мин", "готовка")
+        + tile(statMin(s.avgWaitSec), " мин", "до выдачи")
+        + tile(statMin(s.avgTotalSec), " мин", "полное");
     }
 
-    function renderHours(hours){
-      if(!hours.length) return '<div class="muted-note">Нет заказов за этот день</div>';
-      let h = '<table class="stat-tbl"><thead><tr><th>Час</th><th>Заказов</th><th>Готовка</th><th>Выдача</th></tr></thead><tbody>';
-      h += hours.map(x =>
-        '<tr><td>' + pad2(x.hour) + '–' + pad2((x.hour + 1) % 24) + '</td>'
-        + '<td>' + x.count + '</td>'
-        + '<td>' + statMin(x.avgPrepSec) + '</td>'
-        + '<td>' + statMin(x.avgWaitSec) + '</td></tr>'
-      ).join("");
-      return h + '</tbody></table>';
+    // ---- Инлайн-SVG графики (без внешних библиотек) ----
+    // Один ряд столбиков: data = [{label, value, valueText}]
+    function barsChart(data, color){
+      if(!data.length) return '<div class="muted-note">Нет данных за выбранные дни</div>';
+      const max = Math.max.apply(null, data.map(d => d.value).concat([1]));
+      const bw = 30, gap = 14, padX = 6, chartH = 130, valH = 18, lblH = 20;
+      const W = padX * 2 + data.length * bw + (data.length - 1) * gap;
+      const H = valH + chartH + lblH, y0 = valH + chartH;
+      let s = "";
+      data.forEach((d, i) => {
+        const x = padX + i * (bw + gap);
+        const bh = d.value > 0 ? Math.max(3, Math.round(d.value / max * chartH)) : 0;
+        const y = y0 - bh;
+        if(bh) s += '<rect x="' + x + '" y="' + y + '" width="' + bw + '" height="' + bh + '" rx="4" fill="' + color + '"/>';
+        s += '<text x="' + (x + bw / 2) + '" y="' + (y - 5) + '" class="cv-val" text-anchor="middle">' + (d.valueText != null ? d.valueText : d.value) + '</text>';
+        s += '<text x="' + (x + bw / 2) + '" y="' + (y0 + 15) + '" class="cv-lbl" text-anchor="middle">' + d.label + '</text>';
+      });
+      return '<svg viewBox="0 0 ' + W + ' ' + H + '" class="cv" preserveAspectRatio="xMinYMid meet" style="width:100%;max-width:' + W + 'px;height:auto;">' + s + '</svg>';
+    }
+
+    function ordersChart(hours){
+      const data = hours.map(h => ({ label: pad2(h.hour), value: h.count }));
+      return barsChart(data, "#D97706");
+    }
+
+    // Сгруппированные столбики: готовка (оранж) + до выдачи (синий), минуты
+    function timesChart(hours){
+      const data = hours.filter(h => h.avgPrepSec != null || h.avgWaitSec != null);
+      if(!data.length) return '<div class="muted-note">Нет данных за выбранные дни</div>';
+      const toMin = sec => sec == null ? null : sec / 60;
+      const max = Math.max.apply(null, data.flatMap(h => [toMin(h.avgPrepSec) || 0, toMin(h.avgWaitSec) || 0]).concat([1]));
+      const bw = 15, ing = 3, gg = 16, padX = 6, chartH = 120, valH = 16, lblH = 20;
+      const grpW = bw * 2 + ing;
+      const W = padX * 2 + data.length * grpW + (data.length - 1) * gg;
+      const H = valH + chartH + lblH, y0 = valH + chartH;
+      let s = "";
+      data.forEach((h, i) => {
+        const gx = padX + i * (grpW + gg);
+        [["#D97706", h.avgPrepSec], ["#2563EB", h.avgWaitSec]].forEach((sr, j) => {
+          const m = toMin(sr[1]);
+          if(m == null) return;
+          const x = gx + j * (bw + ing);
+          const bh = Math.max(3, Math.round(m / max * chartH));
+          const y = y0 - bh;
+          s += '<rect x="' + x + '" y="' + y + '" width="' + bw + '" height="' + bh + '" rx="3" fill="' + sr[0] + '"/>';
+          s += '<text x="' + (x + bw / 2) + '" y="' + (y - 4) + '" class="cv-val" text-anchor="middle">' + Math.round(m) + '</text>';
+        });
+        s += '<text x="' + (gx + grpW / 2) + '" y="' + (y0 + 15) + '" class="cv-lbl" text-anchor="middle">' + pad2(h.hour) + '</text>';
+      });
+      return '<svg viewBox="0 0 ' + W + ' ' + H + '" class="cv" preserveAspectRatio="xMinYMid meet" style="width:100%;max-width:' + W + 'px;height:auto;">' + s + '</svg>';
     }
 
     // ---------- панель кассы ----------
