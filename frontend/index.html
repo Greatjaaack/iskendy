@@ -210,6 +210,9 @@
     #qrBox .cap { font-size: 12px; color: var(--muted); margin-top: 8px; word-break: break-all; }
 
     /* ---------- Табло заказов (две колонки) ---------- */
+    /* На большом экране (телик) табло шире — под-колонкам номеров есть куда
+       расти вбок. На мобилке ширина ограничена экраном, так что не влияет. */
+    body.board-view .wrap { max-width: 900px; }
     .board-cols { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 14px; }
     .col {
       background: var(--card); border: 1px solid var(--line);
@@ -221,12 +224,19 @@
       text-transform: uppercase; color: var(--muted); text-align: center; margin-bottom: 14px;
     }
     .col-ready .col-head { color: #a7d68a; }
-    /* Номера — построчно, каждый отдельной плашкой (чтобы не сливались). */
-    .nums { display: flex; flex-direction: column; gap: 8px; }
+    /* Номера — плашками по 5 в столбик; при >5 колонка растёт ВБОК (новая
+       под-колонка справа), а не вниз. Grid: 5 строк, поток по столбцам. */
+    .nums {
+      display: grid;
+      grid-auto-flow: column;
+      grid-template-rows: repeat(5, auto);
+      gap: 8px 10px;
+      justify-content: center;
+    }
     .num {
       font-family: "Bebas Neue", sans-serif; font-size: 34px; line-height: 1;
       color: var(--text); letter-spacing: 1px; text-align: center;
-      padding: 10px 8px; border-radius: 12px;
+      padding: 10px 8px; border-radius: 12px; min-width: 68px;
       background: #17110c; border: 1px solid var(--line);
     }
     .num.hot {
@@ -696,6 +706,7 @@
       hideAllScreens();
       document.body.classList.add("landing-bg");
       document.body.classList.remove("brand");
+      document.body.classList.remove("board-view");
       document.getElementById("landing").classList.remove("hidden");
       stopPolling();
       if(push !== false) history.pushState({s:"landing"}, "", "/");
@@ -704,6 +715,7 @@
       hideAllScreens();
       document.body.classList.remove("landing-bg");
       document.body.classList.add("brand");
+      document.body.classList.add("board-view");
       document.getElementById("guest").classList.remove("hidden");
       // QR ведёт на это же табло — гость сканирует с телика и следит в телефоне
       const qr = document.getElementById("boardQr");
@@ -715,6 +727,7 @@
       hideAllScreens();
       document.body.classList.remove("landing-bg");
       document.body.classList.add("brand");
+      document.body.classList.remove("board-view");
       document.getElementById("staff").classList.remove("hidden");
       const authed = !!token;
       document.getElementById("loginBox").classList.toggle("hidden", authed);
