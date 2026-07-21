@@ -267,6 +267,24 @@
       line-height: 1.05; color: var(--text); letter-spacing: .5px;
     }
 
+    /* ---------- ТВ-режим (/tv): крупная раскладка на весь экран телевизора.
+       Тот же контент, что /board, но большими блоками — читать через весь зал.
+       (Правила ниже board-view, чтобы перекрывать его по каскаду.) ---------- */
+    body.tv { padding: 22px 30px calc(22px + env(safe-area-inset-bottom)); }
+    body.tv .wrap { width: 100%; max-width: 100%; }
+    body.tv .brand { margin-bottom: 8px; }
+    body.tv .brand h1 { font-size: 68px; }
+    body.tv .brand .sub { font-size: 15px; letter-spacing: 4px; }
+    body.tv .board-qr { margin: 0 0 14px; gap: 16px; }
+    body.tv .board-qr img { width: 128px; height: 128px; flex: 0 0 128px; }
+    body.tv .board-qr-cap b { font-size: 30px; }
+    body.tv .board-cols { grid-template-columns: 1fr 1fr; gap: 22px; }
+    body.tv .col { min-width: 0; padding: 22px 18px; border-radius: 24px; }
+    body.tv .col-head { font-size: 22px; margin-bottom: 20px; letter-spacing: 3px; }
+    body.tv .nums { grid-template-rows: repeat(6, auto); gap: 12px 16px; }
+    body.tv .num { font-size: 58px; min-width: 118px; padding: 16px 16px; border-radius: 16px; }
+    body.tv .num-empty { font-size: 46px; }
+
     /* ---------- Список заказов в кассе ---------- */
     .order-row {
       display: flex; align-items: center; gap: 10px;
@@ -720,30 +738,34 @@
     function showLanding(push){
       hideAllScreens();
       document.body.classList.add("landing-bg");
-      document.body.classList.remove("brand");
-      document.body.classList.remove("board-view");
+      document.body.classList.remove("brand", "board-view", "tv");
       document.getElementById("landing").classList.remove("hidden");
       stopPolling();
       if(push !== false) history.pushState({s:"landing"}, "", "/");
     }
-    function showBoard(push){
+    // tv=true — крупная раскладка для телевизора (маршрут /tv). Контент тот же.
+    function showBoard(push, tv){
       hideAllScreens();
       document.body.classList.remove("landing-bg");
       document.body.classList.add("brand");
       document.body.classList.add("board-view");
+      document.body.classList.toggle("tv", !!tv);
       document.getElementById("guest").classList.remove("hidden");
-      // QR ведёт на это же табло — гость сканирует с телика и следит в телефоне.
+      // QR всегда ведёт на /board (телефон гостя), даже если открыт ТВ-режим.
       // border=1 — минимальная белая рамка, чтобы сам код был крупнее.
       const qr = document.getElementById("boardQr");
       if(qr && !qr.src){ qr.src = "/api/qr?border=1&data=" + encodeURIComponent(location.origin + "/board"); }
       startPolling();
-      if(push !== false) history.pushState({s:"board"}, "", "/board");
+      if(push !== false){
+        const path = tv ? "/tv" : "/board";
+        history.pushState({s: tv ? "tv" : "board"}, "", path);
+      }
     }
     function showStaff(push){
       hideAllScreens();
       document.body.classList.remove("landing-bg");
       document.body.classList.add("brand");
-      document.body.classList.remove("board-view");
+      document.body.classList.remove("board-view", "tv");
       document.getElementById("staff").classList.remove("hidden");
       const authed = !!token;
       document.getElementById("loginBox").classList.toggle("hidden", authed);
@@ -754,10 +776,11 @@
     // «← Гостевое табло» из кассы ведёт на скрытое табло /board.
     function showGuest(push){ showBoard(push); }
 
-    // Стартовый экран берём из адреса страницы (/board, /staff, иначе лендинг).
+    // Стартовый экран берём из адреса страницы (/board, /tv, /staff, иначе лендинг).
     function routeFromPath(){
       const p = location.pathname;
-      if(p === "/board"){ showBoard(false); }
+      if(p === "/board"){ showBoard(false, false); }
+      else if(p === "/tv"){ showBoard(false, true); }
       else if(p === "/staff"){ showStaff(false); }
       else { showLanding(false); }
     }

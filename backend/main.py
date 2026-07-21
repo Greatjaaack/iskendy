@@ -156,6 +156,11 @@ if FRONTEND_DIR.exists():
         """Табло заказов — скрытая вкладка (ссылок с лендинга нет)."""
         return FileResponse(FRONTEND_DIR / "index.html")
 
+    @app.get("/tv")
+    def tv() -> FileResponse:
+        """ТВ-режим табло — крупная раскладка для телевизора в зале (для персонала)."""
+        return FileResponse(FRONTEND_DIR / "index.html")
+
     @app.get("/staff")
     def staff() -> FileResponse:
         """Экран кассы — заносить заказы и двигать их статусы."""
