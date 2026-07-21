@@ -12,6 +12,7 @@ import logging
 import re
 from pathlib import Path
 
+import backup
 import db
 import segno
 from auth import issue_token, require_staff, verify_password
@@ -34,6 +35,8 @@ async def _startup() -> None:
     db.init_db()
     # Фоновый поллер заказов из iiko (если настроен URL/токен аналитики).
     asyncio.create_task(run_poller())
+    # Ежедневный бэкап БД.
+    asyncio.create_task(backup.run_backup_loop())
 
 
 def _payload(board: dict) -> dict:
@@ -140,6 +143,25 @@ def stats_range(
     if not valid:
         valid = [db.today()]
     return {"dates": valid, **db.stats_range(valid)}
+
+
+@app.get("/api/backup/list")
+def backup_list(_: dict = Depends(require_staff)) -> dict:
+    """Список бэкапов БД (имя + размер) — для персонала."""
+    files = sorted(backup.backups_dir().glob("iskendy-*.db.gz"), reverse=True)
+    return {"backups": [{"name": f.name, "size": f.stat().st_size} for f in files]}
+
+
+@app.get("/api/backup/latest")
+def backup_latest(_: dict = Depends(require_staff)) -> FileResponse:
+    """Скачать последний бэкап БД (gzip) — чтобы держать копию вне сервера."""
+    latest = backup.latest_backup()
+    if latest is None:
+        # ещё нет за сегодня — снимем прямо сейчас
+        latest = backup.make_backup() or backup.latest_backup()
+    if latest is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Нет бэкапов")
+    return FileResponse(latest, media_type="application/gzip", filename=latest.name)
 
 
 @app.post("/api/day/reset")

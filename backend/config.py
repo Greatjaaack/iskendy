@@ -34,5 +34,10 @@ class Settings(BaseSettings):
     # при старте/перезапуске не залить табло старыми уже готовыми заказами.
     iiko_ingest_window_min: int = 20
 
+    # --- Ежедневный бэкап БД (ночью) ---
+    backup_enabled: bool = True
+    backup_keep: int = 30  # сколько последних ежедневных копий хранить (0 — не ротировать)
+    backup_night_hour: int = 3  # час ночи (по поясу точки), когда снимать суточный бэкап
+
 
 settings = Settings()
