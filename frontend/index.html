@@ -81,6 +81,8 @@
       color: var(--copper);
       line-height: 1;
     }
+    /* Оригинальная фирменная надпись «ИСКЕНДИ» (белая, для шапок на градиенте) */
+    .brand .wordmark { display: block; margin: 0 auto; height: 42px; width: auto; max-width: 82%; }
     .brand .sub {
       font-family: "IBM Plex Mono", monospace;
       font-size: 12px;
@@ -275,6 +277,7 @@
     body.tv .wrap { width: 100%; max-width: 100%; }
     body.tv .brand { margin-bottom: 6px; }
     body.tv .brand h1 { font-size: 48px; }
+    body.tv .brand .wordmark { height: 54px; }
     body.tv .brand .sub { font-size: 13px; letter-spacing: 3px; }
     body.tv .board-qr { margin: 0 0 10px; gap: 14px; }
     body.tv .board-qr img { width: 92px; height: 92px; flex: 0 0 92px; }
@@ -673,7 +676,7 @@
     <!-- ========================= ТАБЛО ЗАКАЗОВ (скрытая вкладка /board) ========================= -->
     <div id="guest" class="hidden">
       <div class="brand">
-        <h1>ИСКЕНДИ</h1>
+        <img class="wordmark" src="/assets/iskendi_wordmark_white.png" alt="ИСКЕНДИ" />
         <div class="sub">табло заказов</div>
       </div>
 
@@ -702,7 +705,7 @@
     <!-- ЭКРАН ПЕРСОНАЛА (/staff) -->
     <div id="staff" class="hidden">
       <div class="brand">
-        <h1>ИСКЕНДИ</h1>
+        <img class="wordmark" src="/assets/iskendi_wordmark_white.png" alt="ИСКЕНДИ" />
         <div class="sub">касса · экран персонала</div>
       </div>
       <!-- вход -->
@@ -766,7 +769,7 @@
     <!-- ========================= АНАЛИТИКА (/stats) ========================= -->
     <div id="stats" class="hidden">
       <div class="brand">
-        <h1>ИСКЕНДИ</h1>
+        <img class="wordmark" src="/assets/iskendi_wordmark_white.png" alt="ИСКЕНДИ" />
         <div class="sub">аналитика</div>
       </div>
 
