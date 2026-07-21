@@ -239,22 +239,19 @@
       text-align: center; background: none; border: 0; padding: 6px 0;
     }
 
-    /* QR на табло — сканируй с телика, следи за заказом в телефоне */
+    /* QR на табло (вверху) — сканируй с телика, следи за заказом в телефоне.
+       Компактный, чтобы не толкать заказы вниз. */
     .board-qr {
-      display: flex; align-items: center; justify-content: center; gap: 16px;
-      margin-top: 18px;
+      display: flex; align-items: center; justify-content: center; gap: 12px;
+      margin: 2px 0 14px;
     }
     .board-qr img {
-      width: 128px; height: 128px; flex: 0 0 128px;
-      background: #fff; border-radius: 12px; padding: 8px;
+      width: 64px; height: 64px; flex: 0 0 64px;
+      background: #fff; border-radius: 10px; padding: 6px;
     }
     .board-qr-cap b {
-      display: block; font-family: "Bebas Neue", sans-serif; font-size: 26px;
+      font-family: "Bebas Neue", sans-serif; font-size: 20px;
       line-height: 1.05; color: var(--text); letter-spacing: .5px;
-    }
-    .board-qr-cap span {
-      display: block; margin-top: 6px; font-size: 13px; color: var(--muted);
-      font-family: "IBM Plex Mono", monospace;
     }
 
     /* ---------- Список заказов в кассе ---------- */
@@ -561,6 +558,11 @@
         <div class="sub">табло заказов</div>
       </div>
 
+      <div class="board-qr">
+        <img id="boardQr" alt="QR — следи за заказом в телефоне" />
+        <div class="board-qr-cap"><b>Следи за заказом в телефоне</b></div>
+      </div>
+
       <div class="board-cols">
         <div class="col col-prep">
           <div class="col-head">Готовятся</div>
@@ -575,14 +577,6 @@
       <div class="card plaque before hidden" id="boardEmpty">
         <div class="plaque-big">Пока пусто</div>
         <div class="plaque-sub">Заказы появятся здесь, как только их примут на кухне.</div>
-      </div>
-
-      <div class="board-qr">
-        <img id="boardQr" alt="QR — следи за заказом в телефоне" />
-        <div class="board-qr-cap">
-          <b>Следи за заказом<br>в телефоне</b>
-          <span>Наведи камеру на QR-код</span>
-        </div>
       </div>
     </div>
 
