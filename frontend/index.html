@@ -374,6 +374,16 @@
     .cv-dot { width: 11px; height: 11px; border-radius: 3px; display: inline-block; }
     .cv-val { font-family: "IBM Plex Mono", monospace; font-size: 11px; fill: var(--text); }
     .cv-lbl { font-family: "IBM Plex Mono", monospace; font-size: 11px; fill: var(--muted); }
+    .cv-big .cv-val { font-size: 14px; }
+    .cv-big .cv-lbl { font-size: 13px; }
+
+    /* Аналитика просторнее на большом экране (десктоп). Мобилка — ограничена экраном. */
+    body.stats-view .wrap { max-width: 1000px; }
+    @media (min-width: 760px) {
+      body.stats-view .kpi-row { grid-template-columns: repeat(4, 1fr); }
+      body.stats-view .kpi b { font-size: 42px; }
+      body.stats-view .s-charts { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; align-items: start; }
+    }
 
     /* ---------- Лендинг (мультиссылка) ---------- */
     .hero { text-align: center; padding: 4px 0 20px; }
@@ -774,17 +784,19 @@
           <div class="board-label" id="sumLabel" style="margin-bottom:12px;">Итог</div>
           <div class="kpi-row" id="kpiRow"></div>
         </div>
-        <div class="card">
-          <div class="board-label" style="margin-bottom:12px;">Заказы по часам</div>
-          <div class="tbl-wrap" id="chartOrders"></div>
-        </div>
-        <div class="card">
-          <div class="board-label" style="margin-bottom:10px;">Среднее время по часам, мин</div>
-          <div class="cv-legend">
-            <span><i class="cv-dot" style="background:#D97706"></i>готовка</span>
-            <span><i class="cv-dot" style="background:#2563EB"></i>до выдачи</span>
+        <div class="s-charts">
+          <div class="card">
+            <div class="board-label" style="margin-bottom:12px;">Заказы по часам</div>
+            <div class="tbl-wrap" id="chartOrders"></div>
           </div>
-          <div class="tbl-wrap" id="chartTimes"></div>
+          <div class="card">
+            <div class="board-label" style="margin-bottom:10px;">Среднее время по часам, мин</div>
+            <div class="cv-legend">
+              <span><i class="cv-dot" style="background:#D97706"></i>готовка</span>
+              <span><i class="cv-dot" style="background:#2563EB"></i>до выдачи</span>
+            </div>
+            <div class="tbl-wrap" id="chartTimes"></div>
+          </div>
         </div>
         <div class="staff-line"><a onclick="showStaff()">← Касса</a></div>
       </div>
@@ -850,7 +862,7 @@
     function showLanding(push){
       hideAllScreens();
       document.body.classList.add("landing-bg");
-      document.body.classList.remove("brand", "board-view", "tv");
+      document.body.classList.remove("brand", "board-view", "tv", "stats-view");
       document.getElementById("landing").classList.remove("hidden");
       stopPolling();
       if(push !== false) history.pushState({s:"landing"}, "", "/");
@@ -861,6 +873,7 @@
       document.body.classList.remove("landing-bg");
       document.body.classList.add("brand");
       document.body.classList.add("board-view");
+      document.body.classList.remove("stats-view");
       document.body.classList.toggle("tv", !!tv);
       document.getElementById("guest").classList.remove("hidden");
       // QR всегда ведёт на /board (телефон гостя), даже если открыт ТВ-режим.
@@ -877,7 +890,7 @@
       hideAllScreens();
       document.body.classList.remove("landing-bg");
       document.body.classList.add("brand");
-      document.body.classList.remove("board-view", "tv");
+      document.body.classList.remove("board-view", "tv", "stats-view");
       document.getElementById("staff").classList.remove("hidden");
       const authed = !!token;
       document.getElementById("loginBox").classList.toggle("hidden", authed);
@@ -898,6 +911,14 @@
       else { showLanding(false); }
     }
     window.addEventListener("popstate", routeFromPath);
+
+    // Перерисовать графики аналитики при смене размера окна (десктоп ↔ мобилка).
+    let statsResizeT = null;
+    window.addEventListener("resize", function(){
+      if(document.getElementById("stats").classList.contains("hidden")) return;
+      clearTimeout(statsResizeT);
+      statsResizeT = setTimeout(function(){ if(token) loadStatsRange(); }, 200);
+    });
 
     // ---------- авторизация ----------
     async function doLogin(){
@@ -1022,6 +1043,7 @@
       document.body.classList.remove("landing-bg");
       document.body.classList.add("brand");
       document.body.classList.remove("board-view", "tv");
+      document.body.classList.add("stats-view");
       document.getElementById("stats").classList.remove("hidden");
       const authed = !!token;
       document.getElementById("statsAuthNote").classList.toggle("hidden", authed);
@@ -1107,11 +1129,16 @@
     }
 
     // ---- Инлайн-SVG графики (без внешних библиотек) ----
+    // Крупнее на широком экране (десктоп), чтобы не мельчить.
+    function isWide(){ return typeof window !== "undefined" && window.innerWidth >= 760; }
+
     // Один ряд столбиков: data = [{label, value, valueText}]
     function barsChart(data, color){
       if(!data.length) return '<div class="muted-note">Нет данных за выбранные дни</div>';
+      const big = isWide();
       const max = Math.max.apply(null, data.map(d => d.value).concat([1]));
-      const bw = 30, gap = 14, padX = 6, chartH = 130, valH = 18, lblH = 20;
+      const bw = big ? 48 : 30, gap = big ? 26 : 14, padX = 8;
+      const chartH = big ? 210 : 130, valH = big ? 26 : 18, lblH = big ? 28 : 20;
       const W = padX * 2 + data.length * bw + (data.length - 1) * gap;
       const H = valH + chartH + lblH, y0 = valH + chartH;
       let s = "";
@@ -1120,10 +1147,10 @@
         const bh = d.value > 0 ? Math.max(3, Math.round(d.value / max * chartH)) : 0;
         const y = y0 - bh;
         if(bh) s += '<rect x="' + x + '" y="' + y + '" width="' + bw + '" height="' + bh + '" rx="4" fill="' + color + '"/>';
-        s += '<text x="' + (x + bw / 2) + '" y="' + (y - 5) + '" class="cv-val" text-anchor="middle">' + (d.valueText != null ? d.valueText : d.value) + '</text>';
-        s += '<text x="' + (x + bw / 2) + '" y="' + (y0 + 15) + '" class="cv-lbl" text-anchor="middle">' + d.label + '</text>';
+        s += '<text x="' + (x + bw / 2) + '" y="' + (y - 6) + '" class="cv-val" text-anchor="middle">' + (d.valueText != null ? d.valueText : d.value) + '</text>';
+        s += '<text x="' + (x + bw / 2) + '" y="' + (y0 + (big ? 20 : 15)) + '" class="cv-lbl" text-anchor="middle">' + d.label + '</text>';
       });
-      return '<svg viewBox="0 0 ' + W + ' ' + H + '" class="cv" preserveAspectRatio="xMinYMid meet" style="width:100%;max-width:' + W + 'px;height:auto;">' + s + '</svg>';
+      return '<svg viewBox="0 0 ' + W + ' ' + H + '" class="cv' + (big ? ' cv-big' : '') + '" preserveAspectRatio="xMinYMid meet" style="width:100%;max-width:' + W + 'px;height:auto;">' + s + '</svg>';
     }
 
     function ordersChart(hours){
@@ -1135,9 +1162,11 @@
     function timesChart(hours){
       const data = hours.filter(h => h.avgPrepSec != null || h.avgWaitSec != null);
       if(!data.length) return '<div class="muted-note">Нет данных за выбранные дни</div>';
+      const big = isWide();
       const toMin = sec => sec == null ? null : sec / 60;
       const max = Math.max.apply(null, data.flatMap(h => [toMin(h.avgPrepSec) || 0, toMin(h.avgWaitSec) || 0]).concat([1]));
-      const bw = 15, ing = 3, gg = 16, padX = 6, chartH = 120, valH = 16, lblH = 20;
+      const bw = big ? 26 : 15, ing = big ? 6 : 3, gg = big ? 28 : 16, padX = 8;
+      const chartH = big ? 200 : 120, valH = big ? 24 : 16, lblH = big ? 28 : 20;
       const grpW = bw * 2 + ing;
       const W = padX * 2 + data.length * grpW + (data.length - 1) * gg;
       const H = valH + chartH + lblH, y0 = valH + chartH;
@@ -1151,11 +1180,11 @@
           const bh = Math.max(3, Math.round(m / max * chartH));
           const y = y0 - bh;
           s += '<rect x="' + x + '" y="' + y + '" width="' + bw + '" height="' + bh + '" rx="3" fill="' + sr[0] + '"/>';
-          s += '<text x="' + (x + bw / 2) + '" y="' + (y - 4) + '" class="cv-val" text-anchor="middle">' + Math.round(m) + '</text>';
+          s += '<text x="' + (x + bw / 2) + '" y="' + (y - 5) + '" class="cv-val" text-anchor="middle">' + Math.round(m) + '</text>';
         });
-        s += '<text x="' + (gx + grpW / 2) + '" y="' + (y0 + 15) + '" class="cv-lbl" text-anchor="middle">' + pad2(h.hour) + '</text>';
+        s += '<text x="' + (gx + grpW / 2) + '" y="' + (y0 + (big ? 20 : 15)) + '" class="cv-lbl" text-anchor="middle">' + pad2(h.hour) + '</text>';
       });
-      return '<svg viewBox="0 0 ' + W + ' ' + H + '" class="cv" preserveAspectRatio="xMinYMid meet" style="width:100%;max-width:' + W + 'px;height:auto;">' + s + '</svg>';
+      return '<svg viewBox="0 0 ' + W + ' ' + H + '" class="cv' + (big ? ' cv-big' : '') + '" preserveAspectRatio="xMinYMid meet" style="width:100%;max-width:' + W + 'px;height:auto;">' + s + '</svg>';
     }
 
     // ---------- панель кассы ----------
