@@ -268,22 +268,23 @@
     }
 
     /* ---------- ТВ-режим (/tv): крупная раскладка на весь экран телевизора.
-       Тот же контент, что /board, но большими блоками — читать через весь зал.
-       (Правила ниже board-view, чтобы перекрывать его по каскаду.) ---------- */
-    body.tv { padding: 22px 30px calc(22px + env(safe-area-inset-bottom)); }
+       Подогнано под Xiaomi 32" HD = 1366×768. Высота 768 ограничена, поэтому
+       фикс 5 номеров в столбик, дальше рост ВБОК (ширины 1366 хватает) — высота
+       остаётся постоянной, заказы вниз не убегают. Правила ниже board-view. ---- */
+    body.tv { padding: 16px 26px calc(16px + env(safe-area-inset-bottom)); }
     body.tv .wrap { width: 100%; max-width: 100%; }
-    body.tv .brand { margin-bottom: 8px; }
-    body.tv .brand h1 { font-size: 68px; }
-    body.tv .brand .sub { font-size: 15px; letter-spacing: 4px; }
-    body.tv .board-qr { margin: 0 0 14px; gap: 16px; }
-    body.tv .board-qr img { width: 128px; height: 128px; flex: 0 0 128px; }
-    body.tv .board-qr-cap b { font-size: 30px; }
-    body.tv .board-cols { grid-template-columns: 1fr 1fr; gap: 22px; }
-    body.tv .col { min-width: 0; padding: 22px 18px; border-radius: 24px; }
-    body.tv .col-head { font-size: 22px; margin-bottom: 20px; letter-spacing: 3px; }
-    body.tv .nums { grid-template-rows: repeat(6, auto); gap: 12px 16px; }
-    body.tv .num { font-size: 58px; min-width: 118px; padding: 16px 16px; border-radius: 16px; }
-    body.tv .num-empty { font-size: 46px; }
+    body.tv .brand { margin-bottom: 6px; }
+    body.tv .brand h1 { font-size: 48px; }
+    body.tv .brand .sub { font-size: 13px; letter-spacing: 3px; }
+    body.tv .board-qr { margin: 0 0 10px; gap: 14px; }
+    body.tv .board-qr img { width: 92px; height: 92px; flex: 0 0 92px; }
+    body.tv .board-qr-cap b { font-size: 24px; }
+    body.tv .board-cols { grid-template-columns: 1fr 1fr; gap: 20px; }
+    body.tv .col { min-width: 0; padding: 16px 14px; border-radius: 22px; }
+    body.tv .col-head { font-size: 20px; margin-bottom: 14px; letter-spacing: 3px; }
+    body.tv .nums { grid-template-rows: repeat(5, auto); gap: 10px 14px; }
+    body.tv .num { font-size: 52px; min-width: 104px; padding: 12px 14px; border-radius: 14px; }
+    body.tv .num-empty { font-size: 42px; }
 
     /* ---------- Список заказов в кассе ---------- */
     .order-row {
@@ -327,6 +328,17 @@
     button.mini.b-ready { background: #35a854; color: #fff; }
     button.mini.ok { background: var(--ok-line); color: var(--text); }
     button.mini.x  { background: transparent; border: 1px solid #5a2a2a; color: #d98a8a; padding: 9px 11px; }
+
+    /* Журнал событий (касса) */
+    .log-list { max-height: 320px; overflow-y: auto; margin-top: 12px; }
+    .log-row {
+      display: flex; gap: 10px; align-items: baseline;
+      padding: 7px 0; border-bottom: 1px dashed var(--line); font-size: 13px;
+    }
+    .log-row:last-child { border-bottom: 0; }
+    .log-time { color: var(--muted); font-family: "IBM Plex Mono", monospace; font-size: 12px; flex: 0 0 60px; }
+    .log-num { color: var(--amber); font-family: "Bebas Neue", sans-serif; font-size: 18px; flex: 0 0 52px; }
+    .log-text { flex: 1; color: var(--text); }
 
     /* ---------- Лендинг (мультиссылка) ---------- */
     .hero { text-align: center; padding: 4px 0 20px; }
@@ -675,6 +687,14 @@
           </div>
         </div>
 
+        <div class="card">
+          <div class="board-label" style="margin-bottom:14px;">Журнал событий</div>
+          <button class="ghost" id="logBtn" onclick="toggleLog()">Показать журнал за сегодня</button>
+          <div id="logBox" class="hidden">
+            <div id="logList" class="log-list"></div>
+          </div>
+        </div>
+
         <div class="staff-line"><a onclick="showGuest()">← Гостевое табло</a> · <a onclick="logout()">Выйти</a></div>
       </div>
     </div>
@@ -863,6 +883,44 @@
       document.getElementById("qrImg").src = API + "/api/qr?data=" + encodeURIComponent(url);
       document.getElementById("qrUrl").textContent = url;
       box.classList.remove("hidden");
+    }
+
+    // ---------- журнал событий (сворачиваемый) ----------
+    let logOpen = false;
+    function toggleLog(){
+      logOpen = !logOpen;
+      document.getElementById("logBox").classList.toggle("hidden", !logOpen);
+      document.getElementById("logBtn").textContent =
+        logOpen ? "Скрыть журнал" : "Показать журнал за сегодня";
+      if(logOpen) loadLog();
+    }
+    async function loadLog(){
+      try {
+        const r = await fetch(API + "/api/events", { headers: { "Authorization": "Bearer " + token } });
+        if(r.status === 401){ logout(); showStaff(); return; }
+        const d = await r.json();
+        const ev = d.events || [];
+        document.getElementById("logList").innerHTML = ev.length
+          ? ev.slice().reverse().map(logRow).join("")   // новые сверху
+          : '<div class="muted-note">Событий сегодня пока нет</div>';
+      } catch(e){}
+    }
+    function logRow(e){
+      const t = e.at ? e.at.slice(11,19) : "";
+      let text;
+      if(e.event === "status"){
+        text = (STATUS_LABEL[e.from_status] || e.from_status) + " → " + (STATUS_LABEL[e.to_status] || e.to_status);
+      } else if(e.event === "created"){
+        text = e.source === "iiko" ? "принят из кассы (открытый)" : "заведён вручную";
+      } else if(e.event === "deleted"){
+        text = "удалён (был " + (STATUS_LABEL[e.from_status] || e.from_status) + ")";
+      } else if(e.event === "reset"){
+        text = "сброс табло" + (e.number != null ? " (" + e.number + ")" : "");
+      } else { text = e.event; }
+      const num = e.number != null ? ("№" + e.number) : "";
+      return '<div class="log-row"><span class="log-time">' + t + '</span>'
+           +   '<span class="log-num">' + num + '</span>'
+           +   '<span class="log-text">' + text + '</span></div>';
     }
 
     // ---------- панель кассы ----------
