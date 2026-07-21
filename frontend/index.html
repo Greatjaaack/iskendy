@@ -601,12 +601,13 @@
     let token = localStorage.getItem("iskendy_staff_token") || "";
 
     // ---------- гостевое табло ----------
-    // Две колонки: «Готовятся» (открытые + в готовке) и «Готово ✓».
-    // Выданные заказы уже не в state.
+    // Две колонки: «Готовятся» (реально в готовке) и «Готово ✓». Заказы в статусе
+    // «Открытый» (касса ещё не взяла в работу) гостю НЕ показываем — их видит
+    // только касса. Выданные заказы уже не в state.
     function renderGuest(){
       if(!state) return;
       const orders = state.orders || [];
-      const prep  = orders.filter(o => o.status === "open" || o.status === "preparing").map(o => o.number);
+      const prep  = orders.filter(o => o.status === "preparing").map(o => o.number);
       const ready = orders.filter(o => o.status === "ready").map(o => o.number);
 
       document.getElementById("prepNums").innerHTML = prep.length
@@ -616,7 +617,9 @@
         ? ready.map(n => '<span class="num hot">' + n + '</span>').join("")
         : '<span class="num-empty">—</span>';
 
-      show("boardEmpty", orders.length === 0);
+      // «Пока пусто» — когда гостю нечего показать (нет готовящихся и готовых);
+      // «Открытые» заказы для гостя невидимы, поэтому в счёт не идут.
+      show("boardEmpty", prep.length === 0 && ready.length === 0);
     }
 
     function show(id, on){ document.getElementById(id).classList.toggle("hidden", !on); }
