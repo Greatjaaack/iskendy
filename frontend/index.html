@@ -256,6 +256,16 @@
     }
     .st-ready .order-st { color: #a7d68a; }
     .order-times { font-size: 11px; color: var(--muted); opacity: .8; }
+
+    /* Счётчики заказов по статусам (касса) */
+    .stat-row { display: flex; gap: 8px; margin-bottom: 14px; }
+    .stat {
+      flex: 1; text-align: center; border-radius: 12px; padding: 10px 6px;
+      background: #17110c; border: 1px solid var(--line);
+    }
+    .stat b { display: block; font-family: "Bebas Neue", sans-serif; font-size: 30px; line-height: 1; color: var(--text); }
+    .stat span { display: block; font-size: 11px; color: var(--muted); margin-top: 3px; font-family: "IBM Plex Mono", monospace; }
+    .stat-ready b { color: var(--amber); }
     .order-acts { display: flex; gap: 6px; flex: 0 0 auto; }
     button.mini {
       width: auto; font-size: 14px; font-weight: 600;
@@ -451,6 +461,11 @@
     body.brand .order-num { color: #f7621e; }
     body.brand .order-st { color: #6a4a08; }
     body.brand .order-times { color: #9a7b52; }
+    body.brand .stat { background: #fff3e0; border-color: rgba(0, 0, 0, .08); }
+    body.brand .stat b { color: #201400; }
+    body.brand .stat span { color: #6a4a08; }
+    body.brand .stat-open b { color: #a15a12; }
+    body.brand .stat-ready b { color: #b06a00; }
     body.brand .st-ready .order-st { color: #2e8b2e; font-weight: 700; }
     body.brand button.mini.ok { background: #34a853; color: #fff; }
     body.brand button.mini.x { background: transparent; border: 1px solid rgba(200, 60, 60, .5); color: #c0392b; }
@@ -573,6 +588,11 @@
 
         <div class="card">
           <div class="board-label" style="margin-bottom:14px;">Заказы сегодня</div>
+          <div class="stat-row">
+            <div class="stat stat-open"><b id="cntOpen">0</b><span>открытых</span></div>
+            <div class="stat stat-prep"><b id="cntPrep">0</b><span>готовятся</span></div>
+            <div class="stat stat-ready"><b id="cntReady">0</b><span>готовы</span></div>
+          </div>
           <div id="orderList"></div>
           <div class="muted-note" id="emptyNote">Заказов пока нет</div>
           <div style="height:14px"></div>
@@ -781,6 +801,12 @@
       });
       document.getElementById("orderList").innerHTML = orders.map(orderRow).join("");
       show("emptyNote", orders.length === 0);
+      // счётчики по статусам на текущий момент
+      const cnt = { open: 0, preparing: 0, ready: 0 };
+      orders.forEach(o => { if(o.status in cnt) cnt[o.status]++; });
+      document.getElementById("cntOpen").textContent = cnt.open;
+      document.getElementById("cntPrep").textContent = cnt.preparing;
+      document.getElementById("cntReady").textContent = cnt.ready;
       const n = state.servedCount || 0;
       document.getElementById("servedNote").textContent = n ? ("Выдано сегодня: " + n) : "";
     }
