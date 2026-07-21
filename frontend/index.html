@@ -356,7 +356,12 @@
     }
     .stat-tbl tbody tr { cursor: pointer; }
     .stat-tbl tbody tr:last-child td { border-bottom: 0; }
+    .stat-tbl tbody tr.sel td { background: rgba(232, 169, 58, .14); }
     .link-a { color: var(--copper); cursor: pointer; text-decoration: underline; }
+    .sum-line { display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px dashed var(--line); font-size: 14px; }
+    .sum-line:last-child { border-bottom: 0; }
+    .sum-k { color: var(--muted); }
+    .sum-v { font-family: "IBM Plex Mono", monospace; color: var(--text); font-weight: 600; }
 
     /* ---------- Лендинг (мультиссылка) ---------- */
     .hero { text-align: center; padding: 4px 0 20px; }
@@ -566,7 +571,11 @@
     body.brand .log-row { border-bottom-color: rgba(0, 0, 0, .1); }
     body.brand .stat-tbl th { color: #a15a12; border-bottom-color: rgba(0, 0, 0, .15); }
     body.brand .stat-tbl td { color: #201400; border-bottom-color: rgba(0, 0, 0, .1); }
+    body.brand .stat-tbl tbody tr.sel td { background: #fff1d6; }
     body.brand .link-a { color: #b0600f; }
+    body.brand .sum-line { border-bottom-color: rgba(0, 0, 0, .1); }
+    body.brand .sum-k { color: #6a4a08; }
+    body.brand .sum-v { color: #201400; }
 
     /* Плашки и метки */
     body.brand .plaque.before { background: #fff; border: 0; }
@@ -738,13 +747,17 @@
 
       <div id="statsContent" class="hidden">
         <div class="card">
-          <div class="board-label" style="margin-bottom:12px;">По дням</div>
+          <div class="board-label" style="margin-bottom:6px;">По дням</div>
+          <div class="muted-note" style="margin-bottom:10px;">Тапни дни, чтобы выбрать — один или несколько.</div>
           <div class="tbl-wrap"><div id="daysTable"></div></div>
         </div>
         <div class="card">
-          <div class="board-label" style="margin-bottom:12px;">По часам · <span id="hoursDate"></span></div>
+          <div class="board-label" style="margin-bottom:12px;">Итог по выбранным</div>
+          <div id="statsSummary"></div>
+        </div>
+        <div class="card">
+          <div class="board-label" style="margin-bottom:12px;">По часам</div>
           <div class="tbl-wrap"><div id="hoursTable"></div></div>
-          <div class="muted-note" style="margin-top:10px;">Тапни день в таблице выше, чтобы посмотреть его по часам.</div>
         </div>
         <div class="staff-line"><a onclick="showStaff()">← Касса</a></div>
       </div>
@@ -997,20 +1010,33 @@
       return r.json();
     }
 
+    let selectedDates = new Set();
+    let statsDaysCache = [];
+
     async function loadStatsDays(){
       try {
         const d = await statsGet("/api/stats/days");
-        const days = d.days || [];
-        document.getElementById("daysTable").innerHTML = renderDays(days);
-        if(days.length){ loadStatsHours(days[0].date); }
-        else { document.getElementById("hoursTable").innerHTML = '<div class="muted-note">Нет данных</div>'; document.getElementById("hoursDate").textContent = ""; }
+        statsDaysCache = d.days || [];
+        // держим выбор в актуальных днях; по умолчанию — самый свежий день
+        selectedDates = new Set([...selectedDates].filter(dt => statsDaysCache.some(x => x.date === dt)));
+        if(selectedDates.size === 0 && statsDaysCache.length) selectedDates.add(statsDaysCache[0].date);
+        renderDaysTable();
+        loadStatsRange();
       } catch(e){}
     }
 
-    async function loadStatsHours(date){
-      document.getElementById("hoursDate").textContent = fmtDate(date);
+    function toggleDay(date){
+      if(selectedDates.has(date)) selectedDates.delete(date); else selectedDates.add(date);
+      if(selectedDates.size === 0 && statsDaysCache.length) selectedDates.add(statsDaysCache[0].date); // минимум один
+      renderDaysTable();
+      loadStatsRange();
+    }
+
+    async function loadStatsRange(){
+      const dates = [...selectedDates];
       try {
-        const d = await statsGet("/api/stats/hours?date=" + date);
+        const d = await statsGet("/api/stats/range?dates=" + dates.join(","));
+        renderSummary(d.summary || {}, dates);
         document.getElementById("hoursTable").innerHTML = renderHours(d.hours || []);
       } catch(e){}
     }
@@ -1018,18 +1044,39 @@
     function statMin(sec){ return (sec == null) ? "—" : (sec / 60).toFixed(1) + " мин"; }
     function pad2(n){ return String(n).padStart(2, "0"); }
     function fmtDate(iso){ const p = iso.split("-"); return p[2] + "." + p[1]; }
+    function weekdayOf(date){ const d = statsDaysCache.find(x => x.date === date); return d ? d.weekday : ""; }
+
+    function renderDaysTable(){
+      document.getElementById("daysTable").innerHTML = renderDays(statsDaysCache);
+    }
 
     function renderDays(days){
       if(!days.length) return '<div class="muted-note">Пока нет данных</div>';
-      let h = '<table class="stat-tbl"><thead><tr><th>Дата</th><th>Заказов</th><th>Готовка</th><th>Выдача</th><th>Всего</th></tr></thead><tbody>';
-      h += days.map(d =>
-        '<tr onclick="loadStatsHours(\'' + d.date + '\')"><td>' + fmtDate(d.date) + '</td>'
-        + '<td>' + d.served + '/' + d.total + '</td>'
-        + '<td>' + statMin(d.avgPrepSec) + '</td>'
-        + '<td>' + statMin(d.avgWaitSec) + '</td>'
-        + '<td>' + statMin(d.avgTotalSec) + '</td></tr>'
-      ).join("");
+      let h = '<table class="stat-tbl"><thead><tr><th></th><th>Дата</th><th>День</th><th>Заказов</th><th>Готовка</th><th>Выдача</th><th>Всего</th></tr></thead><tbody>';
+      h += days.map(d => {
+        const sel = selectedDates.has(d.date);
+        return '<tr class="' + (sel ? "sel" : "") + '" onclick="toggleDay(\'' + d.date + '\')">'
+          + '<td>' + (sel ? "✓" : "") + '</td>'
+          + '<td>' + fmtDate(d.date) + '</td>'
+          + '<td>' + (d.weekday || "") + '</td>'
+          + '<td>' + d.served + '/' + d.total + '</td>'
+          + '<td>' + statMin(d.avgPrepSec) + '</td>'
+          + '<td>' + statMin(d.avgWaitSec) + '</td>'
+          + '<td>' + statMin(d.avgTotalSec) + '</td></tr>';
+      }).join("");
       return h + '</tbody></table>';
+    }
+
+    function renderSummary(s, dates){
+      const n = dates.length;
+      const label = (n === 1) ? (fmtDate(dates[0]) + (weekdayOf(dates[0]) ? " · " + weekdayOf(dates[0]) : "")) : (n + " дн.");
+      const line = (k, v) => '<div class="sum-line"><span class="sum-k">' + k + '</span><span class="sum-v">' + v + '</span></div>';
+      document.getElementById("statsSummary").innerHTML =
+          line("Выбрано", label)
+        + line("Заказов", (s.served || 0) + "/" + (s.total || 0))
+        + line("Ср. готовка", statMin(s.avgPrepSec))
+        + line("Ср. до выдачи", statMin(s.avgWaitSec))
+        + line("Ср. полное", statMin(s.avgTotalSec));
     }
 
     function renderHours(hours){

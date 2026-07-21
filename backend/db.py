@@ -352,6 +352,18 @@ def _avg_sec(values: list[float]) -> int | None:
     return round(sum(values) / len(values)) if values else None
 
 
+_WEEKDAYS = ("Пн", "Вт", "Ср", "Чт", "Пт", "Сб", "Вс")
+
+
+def _weekday(date: str) -> str:
+    from datetime import date as _date
+
+    try:
+        return _WEEKDAYS[_date.fromisoformat(date).weekday()]
+    except ValueError:
+        return ""
+
+
 def stats_days() -> list[dict]:
     """Сводка по дням: заказов (всего/выдано) и средние времена этапов (сек).
 
@@ -388,6 +400,7 @@ def stats_days() -> list[dict]:
         out.append(
             {
                 "date": date,
+                "weekday": _weekday(date),
                 "total": d["total"],
                 "served": d["served"],
                 "avgPrepSec": _avg_sec(d["prep"]),
@@ -398,41 +411,67 @@ def stats_days() -> list[dict]:
     return out
 
 
-def stats_hours(date: str | None = None) -> list[dict]:
-    """Разбивка по часам за день: заказов и средние времена этапов (сек).
+def stats_range(dates: list[str]) -> dict:
+    """Сводка + разбивка по часам за ВЫБРАННЫЕ дни (один или несколько).
 
-    Группировка по часу ПРИЁМА (created_at). Для каждого часа — среднее время
-    готовки (приём→готово) и до выдачи (готово→выдано).
+    summary — совокупные метрики по всем заказам выбранных дней; hours —
+    средние времена этапов по часу приёма (объединено по выбранным дням).
     """
     from collections import defaultdict
 
-    date = date or today()
+    empty = {"total": 0, "served": 0, "avgPrepSec": None, "avgWaitSec": None, "avgTotalSec": None}
+    if not dates:
+        return {"summary": empty, "hours": []}
+
+    placeholders = ",".join("?" * len(dates))
     with _connect() as conn:
         rows = conn.execute(
-            "SELECT created_at, ready_at, served_at FROM orders WHERE date = ?",
-            (date,),
+            f"SELECT status, created_at, ready_at, served_at FROM orders "
+            f"WHERE date IN ({placeholders})",
+            dates,
         ).fetchall()
 
+    total = served = 0
+    prep: list[float] = []
+    wait: list[float] = []
+    full: list[float] = []
     hours: dict[int, dict] = defaultdict(lambda: {"count": 0, "prep": [], "wait": []})
     for r in rows:
+        total += 1
+        if r["status"] == "served":
+            served += 1
         c = _parse_naive(r["created_at"])
-        if not c:
-            continue
-        h = hours[c.hour]
-        h["count"] += 1
         rd = _parse_naive(r["ready_at"])
         sv = _parse_naive(r["served_at"])
-        if rd and rd >= c:
-            h["prep"].append((rd - c).total_seconds())
+        if c and rd and rd >= c:
+            prep.append((rd - c).total_seconds())
         if rd and sv and sv >= rd:
-            h["wait"].append((sv - rd).total_seconds())
+            wait.append((sv - rd).total_seconds())
+        if c and sv and sv >= c:
+            full.append((sv - c).total_seconds())
+        if c:
+            h = hours[c.hour]
+            h["count"] += 1
+            if rd and rd >= c:
+                h["prep"].append((rd - c).total_seconds())
+            if rd and sv and sv >= rd:
+                h["wait"].append((sv - rd).total_seconds())
 
-    return [
-        {
-            "hour": hr,
-            "count": hours[hr]["count"],
-            "avgPrepSec": _avg_sec(hours[hr]["prep"]),
-            "avgWaitSec": _avg_sec(hours[hr]["wait"]),
-        }
-        for hr in sorted(hours)
-    ]
+    return {
+        "summary": {
+            "total": total,
+            "served": served,
+            "avgPrepSec": _avg_sec(prep),
+            "avgWaitSec": _avg_sec(wait),
+            "avgTotalSec": _avg_sec(full),
+        },
+        "hours": [
+            {
+                "hour": hr,
+                "count": hours[hr]["count"],
+                "avgPrepSec": _avg_sec(hours[hr]["prep"]),
+                "avgWaitSec": _avg_sec(hours[hr]["wait"]),
+            }
+            for hr in sorted(hours)
+        ],
+    }

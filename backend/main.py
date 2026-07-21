@@ -9,6 +9,7 @@
 import asyncio
 import io
 import logging
+import re
 from pathlib import Path
 
 import db
@@ -128,14 +129,17 @@ def stats_days(_: dict = Depends(require_staff)) -> dict:
     return {"days": db.stats_days()}
 
 
-@app.get("/api/stats/hours")
-def stats_hours(
-    date: str | None = Query(default=None, pattern=r"^\d{4}-\d{2}-\d{2}$"),
+@app.get("/api/stats/range")
+def stats_range(
+    dates: str = Query(default=""),
     _: dict = Depends(require_staff),
 ) -> dict:
-    """Разбивка по часам за день: заказов и средние времена этапов."""
-    day = date or db.today()
-    return {"date": day, "hours": db.stats_hours(day)}
+    """Сводка + разбивка по часам за выбранные дни. `dates` — список дат через
+    запятую (YYYY-MM-DD). Пустой — сегодня."""
+    valid = [d for d in dates.split(",") if re.fullmatch(r"\d{4}-\d{2}-\d{2}", d)]
+    if not valid:
+        valid = [db.today()]
+    return {"dates": valid, **db.stats_range(valid)}
 
 
 @app.post("/api/day/reset")
