@@ -365,6 +365,8 @@
     .sum-line:last-child { border-bottom: 0; }
     .sum-k { color: var(--muted); }
     .sum-v { font-family: "IBM Plex Mono", monospace; color: var(--text); font-weight: 600; }
+    .preset-row { display: flex; gap: 8px; margin-bottom: 8px; }
+    .preset { width: auto; flex: 1; font-size: 13px; padding: 9px 8px; }
 
     /* KPI-плашки и инлайн-графики аналитики */
     .kpi-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
@@ -629,17 +631,6 @@
 
       <h1 class="lk-head">Крутим айраны наливаем дюрюмы</h1>
 
-      <!-- Доставка через Яндекс Еду временно скрыта. Вернуть — раскомментировать.
-      <a class="lk-btn lk-eda" href="https://eda.yandex.ru/r/iskendi_restaurant?placeSlug=iskendi"
-         target="_blank" rel="noopener" onclick="ymGoal('yandex_eda')">
-        <img class="lk-thumb" src="/assets/eda_thumb.jpg" alt="" loading="lazy" />
-        <span class="lk-tx">
-          <b>Заказывайте у нас на Яндекс Еде!</b>
-          <span>Наши блюда уже ждут вас на Яндекс Еде — закажите за пару кликов!</span>
-        </span>
-      </a>
-      -->
-
       <a class="lk-btn lk-board" href="/board" onclick="ymGoal('board')">
         <span class="lk-board-ic" aria-hidden="true">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -780,7 +771,12 @@
       <div id="statsContent" class="hidden">
         <div class="card">
           <div class="board-label" style="margin-bottom:6px;">Выбери дни</div>
-          <div class="muted-note" style="margin-bottom:10px;">Тапни день — один или несколько.</div>
+          <div class="preset-row">
+            <button class="ghost preset" onclick="applyPreset(7)">7 дней</button>
+            <button class="ghost preset" onclick="applyPreset(30)">30 дней</button>
+            <button class="ghost preset" onclick="applyPreset(0)">Всё</button>
+          </div>
+          <div class="muted-note" style="margin:2px 0 10px;">…или тапни день вручную — один или несколько.</div>
           <div class="tbl-wrap"><div id="daysTable"></div></div>
         </div>
         <div class="card">
@@ -788,6 +784,14 @@
           <div class="kpi-row" id="kpiRow"></div>
         </div>
         <div class="s-charts">
+          <div class="card">
+            <div class="board-label" style="margin-bottom:12px;">Заказы по дням</div>
+            <div class="tbl-wrap" id="chartDays"></div>
+          </div>
+          <div class="card">
+            <div class="board-label" style="margin-bottom:12px;">По дням недели · ср. заказов</div>
+            <div class="tbl-wrap" id="chartWeekday"></div>
+          </div>
           <div class="card">
             <div class="board-label" style="margin-bottom:12px;">Заказы по часам</div>
             <div class="tbl-wrap" id="chartOrders"></div>
@@ -1073,6 +1077,7 @@
         selectedDates = new Set([...selectedDates].filter(dt => statsDaysCache.some(x => x.date === dt)));
         if(selectedDates.size === 0 && statsDaysCache.length) selectedDates.add(statsDaysCache[0].date);
         renderDaysTable();
+        renderWeekday();  // разрез по дням недели — по всей истории
         loadStatsRange();
       } catch(e){}
     }
@@ -1084,14 +1089,45 @@
       loadStatsRange();
     }
 
+    // Пресет периода: последние n дней (n=0 — все). Дни отсортированы новыми вперёд.
+    function applyPreset(n){
+      const pick = (n > 0 ? statsDaysCache.slice(0, n) : statsDaysCache).map(d => d.date);
+      selectedDates = new Set(pick);
+      if(selectedDates.size === 0 && statsDaysCache.length) selectedDates.add(statsDaysCache[0].date);
+      renderDaysTable();
+      loadStatsRange();
+    }
+
     async function loadStatsRange(){
       const dates = [...selectedDates];
+      renderTrend();  // тренд по дням — из выбранных (day-level, без запроса)
       try {
         const d = await statsGet("/api/stats/range?dates=" + dates.join(","));
         renderKpis(d.summary || {}, dates);
         document.getElementById("chartOrders").innerHTML = ordersChart(d.hours || []);
         document.getElementById("chartTimes").innerHTML = timesChart(d.hours || []);
       } catch(e){}
+    }
+
+    // Тренд «заказы по дням» — выбранные дни по возрастанию даты
+    function renderTrend(){
+      const sel = statsDaysCache.filter(d => selectedDates.has(d.date))
+        .slice().sort((a, b) => a.date < b.date ? -1 : 1);
+      const data = sel.map(d => ({ label: fmtDate(d.date), value: d.total }));
+      document.getElementById("chartDays").innerHTML = barsChart(data, "#D97706");
+    }
+
+    // «По дням недели» — средние заказы на каждый день недели по всей истории
+    function renderWeekday(){
+      const order = ["Пн", "Вт", "Ср", "Чт", "Пт", "Сб", "Вс"];
+      const agg = {};
+      statsDaysCache.forEach(d => {
+        if(!d.weekday) return;
+        (agg[d.weekday] = agg[d.weekday] || { sum: 0, cnt: 0 });
+        agg[d.weekday].sum += d.total; agg[d.weekday].cnt += 1;
+      });
+      const data = order.filter(w => agg[w]).map(w => ({ label: w, value: Math.round(agg[w].sum / agg[w].cnt) }));
+      document.getElementById("chartWeekday").innerHTML = barsChart(data, "#2563EB");
     }
 
     function statMin(sec){ return (sec == null) ? "—" : (sec / 60).toFixed(1); }
