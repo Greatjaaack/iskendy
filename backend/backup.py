@@ -52,7 +52,31 @@ def make_backup() -> Path | None:
     tmp.unlink(missing_ok=True)
     _rotate(d, settings.backup_keep)
     logger.info("бэкап БД: %s (%d Б)", dest.name, dest.stat().st_size)
+    _send_to_telegram(dest)
     return dest
+
+
+def _send_to_telegram(path: Path) -> None:
+    """Отправить копию бэкапа в Telegram (защита от смерти сервера). Best-effort."""
+    if not (settings.telegram_bot_token and settings.telegram_backup_chat_id):
+        return
+    try:
+        import httpx
+
+        url = f"https://api.telegram.org/bot{settings.telegram_bot_token}/sendDocument"
+        data = {
+            "chat_id": settings.telegram_backup_chat_id,
+            "caption": f"🗄 Бэкап Искенди · {path.name}",
+        }
+        if settings.telegram_backup_thread_id:
+            data["message_thread_id"] = settings.telegram_backup_thread_id
+        with open(path, "rb") as f:
+            files = {"document": (path.name, f, "application/gzip")}
+            r = httpx.post(url, data=data, files=files, timeout=30)
+        r.raise_for_status()
+        logger.info("бэкап отправлен в Telegram: %s", path.name)
+    except Exception as exc:  # noqa: BLE001 — отправка не должна ронять бэкап
+        logger.warning("бэкап: отправка в Telegram не удалась: %s", exc)
 
 
 def _rotate(d: Path, keep: int) -> None:
