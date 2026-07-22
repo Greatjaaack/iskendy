@@ -38,11 +38,6 @@ class Settings(BaseSettings):
     backup_enabled: bool = True
     backup_keep: int = 30  # сколько последних ежедневных копий хранить (0 — не ротировать)
     backup_night_hour: int = 3  # час ночи (по поясу точки), когда снимать суточный бэкап
-    # Отправка суточного бэкапа в Telegram (защита от смерти сервера). Пусто —
-    # выключено. Можно переиспользовать бота из durum_bot (BOT_TOKEN + чат).
-    telegram_bot_token: str = ""
-    telegram_backup_chat_id: str = ""
-    telegram_backup_thread_id: str = ""  # id темы (topic) в чате, если нужно
 
 
 settings = Settings()
