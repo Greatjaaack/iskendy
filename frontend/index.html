@@ -465,14 +465,101 @@
       font-size: 12px; color: var(--muted); line-height: 1.7;
     }
 
-    /* ---------- Лендинг в стиле оригинала LinkU ---------- */
+    /* ---------- Лендинг: дизайнерский, адаптивный (мобилка + десктоп) ---------- */
     body.landing-bg {
-      background: linear-gradient(150deg, #ffb418 6%, #f7621e 52%, #f73131 96%) fixed;
+      background:
+        radial-gradient(60% 45% at 85% 8%, rgba(255,255,255,.16), transparent 60%),
+        radial-gradient(55% 40% at 10% 95%, rgba(0,0,0,.14), transparent 60%),
+        linear-gradient(150deg, #ffb418 4%, #f7621e 50%, #f73131 98%) fixed;
     }
+    /* На десктопе лендинг центрируем по всему экрану (не «мобильная колонка»). */
+    body.landing-bg .wrap { max-width: 100%; padding: 0; }
     #landing {
       font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
-      padding-top: 6px;
+      min-height: 100dvh; box-sizing: border-box;
+      padding: 26px 18px calc(26px + env(safe-area-inset-bottom));
+      display: flex; flex-direction: column; justify-content: center;
     }
+    .nd-shell {
+      width: 100%; max-width: 440px; margin: 0 auto;
+      display: grid; grid-template-columns: 1fr; row-gap: 0;
+      grid-template-areas: "logo" "tag" "media" "cta" "social" "maps";
+    }
+    .nd-logo { grid-area: logo; display: block; width: 82%; max-width: 320px; margin: 6px auto 0; filter: drop-shadow(0 4px 14px rgba(0,0,0,.22)); }
+    .nd-tag {
+      grid-area: tag; text-align: center; color: #fff; font-weight: 700;
+      font-size: clamp(14px, 4vw, 16px); letter-spacing: .3px; line-height: 1.35;
+      margin: 12px 0 18px; text-shadow: 0 2px 12px rgba(0,0,0,.28);
+    }
+    .nd-media {
+      grid-area: media; border-radius: 24px; overflow: hidden; margin-bottom: 20px;
+      box-shadow: 0 16px 40px rgba(0,0,0,.30); border: 3px solid rgba(255,255,255,.5);
+    }
+    .nd-media img { display: block; width: 100%; }
+    .nd-cta {
+      grid-area: cta; display: flex; align-items: center; gap: 14px;
+      background: #F8D00F; color: #201400; border-radius: 20px;
+      padding: 15px 16px; text-decoration: none; margin-bottom: 16px;
+      box-shadow: 0 12px 28px rgba(0,0,0,.22);
+      transition: transform .06s ease, box-shadow .15s ease, filter .15s;
+    }
+    .nd-cta:hover { filter: brightness(1.03); box-shadow: 0 16px 34px rgba(0,0,0,.28); }
+    .nd-cta:active { transform: translateY(1px); }
+    .nd-cta-ic {
+      flex: 0 0 48px; width: 48px; height: 48px; border-radius: 15px;
+      background: #201400; color: #F8D00F; display: flex; align-items: center; justify-content: center;
+    }
+    .nd-cta-ic svg { width: 25px; height: 25px; }
+    .nd-cta-tx { flex: 1; min-width: 0; }
+    .nd-cta-tx b { display: block; font-size: 19px; font-weight: 800; letter-spacing: .2px; }
+    .nd-cta-tx span { display: block; font-size: 12.5px; color: #6a4a08; font-weight: 600; margin-top: 2px; }
+    .nd-arr { flex: 0 0 auto; color: #201400; opacity: .5; display: flex; }
+    .nd-arr svg { width: 22px; height: 22px; }
+    .nd-social { grid-area: social; display: flex; justify-content: center; gap: 16px; margin: 2px 0 16px; }
+    .nd-social a {
+      width: 56px; height: 56px; border-radius: 50%; background: #fff; color: #f7621e;
+      display: flex; align-items: center; justify-content: center;
+      box-shadow: 0 8px 18px rgba(0,0,0,.22); text-decoration: none;
+      transition: transform .06s ease, box-shadow .15s;
+    }
+    .nd-social a:hover { box-shadow: 0 10px 22px rgba(0,0,0,.28); }
+    .nd-social a:active { transform: translateY(1px); }
+    .nd-social a svg { width: 28px; height: 28px; }
+    .nd-vk { font-weight: 800; font-size: 20px; letter-spacing: .5px; }
+    .nd-maps {
+      grid-area: maps; display: flex; align-items: center; justify-content: center; gap: 10px;
+      background: rgba(255,255,255,.15); color: #fff; border: 1px solid rgba(255,255,255,.4);
+      border-radius: 16px; padding: 14px; text-decoration: none; font-weight: 700; font-size: 15px;
+      -webkit-backdrop-filter: blur(3px); backdrop-filter: blur(3px);
+      transition: background .15s;
+    }
+    .nd-maps:hover { background: rgba(255,255,255,.24); }
+    .nd-maps svg { width: 20px; height: 20px; }
+    .nd-foot { text-align: center; color: rgba(255,255,255,.82); font-size: 12px; letter-spacing: .4px; margin-top: 22px; }
+
+    /* Десктоп: герой в две колонки — контент слева, фото справа. */
+    @media (min-width: 900px) {
+      .nd-shell {
+        max-width: 940px;
+        grid-template-columns: 1.02fr 0.98fr;
+        column-gap: 54px; align-items: center;
+        grid-template-areas:
+          "logo   media"
+          "tag    media"
+          "cta    media"
+          "social media"
+          "maps   media";
+      }
+      .nd-logo { width: 100%; max-width: 380px; margin: 0 0 4px; }
+      .nd-tag { text-align: left; font-size: 19px; margin: 6px 0 22px; }
+      .nd-media { margin: 0; align-self: center; }
+      .nd-cta-tx b { font-size: 22px; }
+      .nd-social { justify-content: flex-start; margin: 6px 0 18px; }
+      .nd-maps { justify-content: flex-start; }
+      .nd-foot { text-align: left; max-width: 940px; margin: 26px auto 0; }
+    }
+
+    /* ---------- (старые lk-* стили лендинга — не используются) ---------- */
     .lk-banner {
       width: 100%; display: block; border-radius: 18px;
       box-shadow: 0 8px 24px rgba(0, 0, 0, .22);
@@ -626,42 +713,47 @@
   <div class="wrap">
     <!-- ========================= ЛЕНДИНГ (мультиссылка) ========================= -->
     <div id="landing">
-      <img class="lk-banner" src="/assets/banner_logo.jpg" alt="Искенди · Дюрюмная" />
-      <img class="lk-banner" src="/assets/banner_food.jpg" alt="Дюрюмы Искенди" loading="lazy" />
+     <div class="nd-shell">
+      <img class="nd-logo" src="/assets/logo_white.png" alt="Искенди · Дюрюмная" />
+      <p class="nd-tag">Крутим айраны · наливаем дюрюмы</p>
 
-      <h1 class="lk-head">Крутим айраны наливаем дюрюмы</h1>
+      <div class="nd-media">
+        <img src="/assets/banner_food.jpg" alt="Дюрюмы Искенди" loading="lazy" />
+      </div>
 
-      <a class="lk-btn lk-board" href="/board" onclick="ymGoal('board')">
-        <span class="lk-board-ic" aria-hidden="true">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <rect x="3" y="4" width="18" height="13" rx="2" /><path d="M8 21h8M12 17v4" />
-          </svg>
+      <a class="nd-cta" href="/board" onclick="ymGoal('board')">
+        <span class="nd-cta-ic" aria-hidden="true">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="13" rx="2" /><path d="M8 21h8M12 17v4" /></svg>
         </span>
-        <span class="lk-tx">
+        <span class="nd-cta-tx">
           <b>Табло заказов</b>
-          <span>Найди свой номер — покажем, когда заказ готов к выдаче</span>
+          <span>Смотри, готов ли твой заказ — по номеру</span>
+        </span>
+        <span class="nd-arr" aria-hidden="true">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6" /></svg>
         </span>
       </a>
 
-      <div class="lk-social">
+      <div class="nd-social">
         <a href="https://t.me/iskendy" target="_blank" rel="noopener" aria-label="Telegram" onclick="ymGoal('telegram')">
           <svg viewBox="0 0 24 24" fill="currentColor"><path d="M21.9 4.3 2.9 11.6c-1 .4-1 1.85.15 2.15l4.75 1.5 1.8 5.55c.28.82 1.3 1.05 1.9.42l2.55-2.5 4.68 3.45c.72.53 1.75.12 1.92-.72L23 5.35c.2-.9-.72-1.5-1.1-1.05z" /></svg>
         </a>
         <a href="https://vk.com/iskendy" target="_blank" rel="noopener" aria-label="ВКонтакте" onclick="ymGoal('vk')">
-          <span class="lk-vk">VK</span>
+          <span class="nd-vk">VK</span>
         </a>
         <a href="https://instagram.com/_iskendy_" target="_blank" rel="noopener" aria-label="Instagram" onclick="ymGoal('instagram')">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="5" /><circle cx="12" cy="12" r="4" /><circle cx="17.4" cy="6.6" r="1.15" fill="currentColor" stroke="none" /></svg>
         </a>
       </div>
 
-      <a class="lk-btn lk-maps" href="https://yandex.ru/maps/org/iskendi/52119597703"
+      <a class="nd-maps" href="https://yandex.ru/maps/org/iskendi/52119597703"
          target="_blank" rel="noopener" onclick="ymGoal('yandex_maps')">
-        <span class="lk-map-ic" aria-hidden="true">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21s7-5.6 7-11a7 7 0 1 0-14 0c0 5.4 7 11 7 11z" /><circle cx="12" cy="10" r="2.5" /></svg>
-        </span>
-        <span class="lk-tx"><b>Мы на Яндекс картах</b></span>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21s7-5.6 7-11a7 7 0 1 0-14 0c0 5.4 7 11 7 11z" /><circle cx="12" cy="10" r="2.5" /></svg>
+        <span>Мы на Яндекс Картах</span>
       </a>
+     </div>
+
+      <div class="nd-foot">© Искенди · дюрюмная</div>
     </div>
 
     <!-- ========================= ТАБЛО ЗАКАЗОВ (скрытая вкладка /board) ========================= -->
