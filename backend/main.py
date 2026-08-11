@@ -35,6 +35,21 @@ logging.getLogger("httpx").setLevel(logging.WARNING)
 
 app = FastAPI(title="Искенди — табло заказов")
 
+
+@app.middleware("http")
+async def security_headers(request: Request, call_next):
+    """Базовые защитные заголовки.
+
+    Ставим в приложении, а не в общем Caddyfile: тот обслуживает и соседние
+    стеки компании, и трогать его ради одного сайта рискованно.
+    """
+    response = await call_next(request)
+    # Кассу и аналитику нельзя встраивать в чужую страницу (кликджекинг).
+    response.headers["X-Frame-Options"] = "SAMEORIGIN"
+    response.headers["X-Content-Type-Options"] = "nosniff"
+    response.headers["Referrer-Policy"] = "same-origin"
+    return response
+
 FRONTEND_DIR = Path(__file__).resolve().parent.parent / "frontend"
 
 

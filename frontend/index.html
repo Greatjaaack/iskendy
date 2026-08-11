@@ -1674,11 +1674,25 @@
     // ---------- переключение экранов + опрос ----------
     // Опрос /api/status нужен только на табло и кассе — на лендинге молчим.
     let pollTimer = null;
+    // На скрытой вкладке опрашиваем реже: телефон гостя может лежать в кармане
+    // часами, а сервер один на все стеки точки. Совсем останавливать нельзя —
+    // иначе гость не узнает, что заказ готов.
+    const POLL_ACTIVE_MS = 5000, POLL_HIDDEN_MS = 20000;
+    function pollDelay(){
+      return document.visibilityState === "hidden" ? POLL_HIDDEN_MS : POLL_ACTIVE_MS;
+    }
     function startPolling(){
       if(pollTimer) return;
       loadStatus();
-      pollTimer = setInterval(loadStatus, 5000);
+      pollTimer = setInterval(loadStatus, pollDelay());
     }
+    // Вкладку свернули или вернули — переставляем интервал и сразу обновляемся.
+    document.addEventListener("visibilitychange", function(){
+      if(!pollTimer) return;
+      clearInterval(pollTimer);
+      pollTimer = setInterval(loadStatus, pollDelay());
+      if(document.visibilityState === "visible") loadStatus();
+    });
     function stopPolling(){
       if(pollTimer){ clearInterval(pollTimer); pollTimer = null; }
     }
@@ -2232,8 +2246,12 @@
       const c = String(o.contact).trim();
       let href = "";
       if(o.contactType === "telegram"){
-        href = c.indexOf("t.me/") >= 0 ? (c.indexOf("http") === 0 ? c : "https://" + c)
-                                       : "https://t.me/" + c.replace(/^@/, "");
+        // Ссылку собираем сами и только на t.me. Гость пишет в это поле что
+        // угодно, а кликать будет владелец, разбирая жалобу: строка вида
+        // «http://evil.example/t.me/pwned» уводила бы его на чужой сайт.
+        const foreign = c.indexOf("://") >= 0 && !/^https?:\/\/(www\.)?t\.me\//i.test(c);
+        const name = foreign ? null : c.match(/([A-Za-z][A-Za-z0-9_]{4,31})\s*$/);
+        href = name ? "https://t.me/" + name[1] : "";
       } else if(o.contactType === "phone"){
         href = "tel:" + c.replace(/[^\d+]/g, "");
       }

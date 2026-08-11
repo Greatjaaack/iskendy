@@ -34,6 +34,12 @@ def _connect() -> sqlite3.Connection:
 
 
 def init_db() -> None:
+    # WAL: читатели не ждут писателя. Кассир двигает статусы, iiko-поллер
+    # заводит заказы, гости шлют отзывы — всё это идёт одновременно, а в режиме
+    # по умолчанию любая запись блокирует чтение табло. Настройка живёт в самом
+    # файле БД, так что достаточно включить один раз.
+    with sqlite3.connect(settings.db_path) as pre:
+        pre.execute("PRAGMA journal_mode=WAL")
     with _connect() as conn:
         conn.execute(
             """
