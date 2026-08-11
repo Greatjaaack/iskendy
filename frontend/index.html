@@ -56,9 +56,36 @@
       --muted: #9c8a76;
       --ok-bg: #23331d;
       --ok-line: #4d6b3a;
+      /* Оттенки, которые в вёрстке и так были — вынесены в палитру, чтобы новые
+         экраны брали их отсюда, а не подбирали свои. */
+      --ok-text: #d7f0c6;   /* светлый текст на зелёном (плашка «готово») */
+      --ok-accent: #a7d68a; /* зелёный акцент (заголовок колонки «Готово ✓») */
+      --field: #17110c;     /* фон полей ввода и плашек с номерами */
+      --err-bg: #2c1717;    /* плашка ошибки */
+      --err-line: #5a2a2a;
+      --err-text: #f0b6b6;
+      /* Бренд-цвета «Искенди» — те же, что на лендинге и вывеске: терракота с
+         жёлтым отливом. Табло остаётся тёмным (оно для телевизора в зале), а
+         личный экран гостя одет в фирменное. */
+      --brand-1: #ffb418;
+      --brand-2: #f7621e;   /* основной терракотовый */
+      --brand-3: #f73131;
+      --brand-ink: #201400;    /* тёмно-коричневый текст на светлом */
+      --brand-yellow: #F8D00F; /* жёлтая кнопка */
+      --brand-cream: #fff8ec;  /* фон полей */
+      --brand-warm: #fff3e0;   /* тёплая плашка */
+      --brand-label: #a15a12;  /* подписи-метки */
+      --brand-sub: #6a4a08;    /* второстепенный текст */
+      /* Зелёный «готово» — тот же, что у статусов кассы в светлой теме. */
+      --go-1: #34a853;
+      --go-2: #2e8b2e;
     }
     * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
     html, body { margin: 0; overflow-x: hidden; }
+    /* Android-браузеры (в т.ч. Яндекс.Браузер на ТВ-приставке) сами раздувают
+       шрифт в текстовых блоках — «font boosting». На табло это ломает подгонку
+       под экран: плашки становятся крупнее расчётных. Отключаем. */
+    html { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
     body {
       background: radial-gradient(120% 80% at 50% -10%, #24190f 0%, var(--bg) 60%);
       color: var(--text);
@@ -145,6 +172,10 @@
       outline: none;
     }
     input:focus { border-color: var(--copper); }
+    /* Стрелки-крутилки у числовых полей: на телефоне бесполезны, на вид мусорны. */
+    input[type="number"]::-webkit-outer-spin-button,
+    input[type="number"]::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+    input[type="number"] { -moz-appearance: textfield; appearance: textfield; }
 
     button {
       font-family: "IBM Plex Sans", sans-serif;
@@ -177,7 +208,7 @@
     .result.show { display: block; }
     .result.ready { background: var(--ok-bg); border: 1px solid var(--ok-line); color: #d7f0c6; }
     .result.wait  { background: #2a2013; border: 1px solid #5a4327; color: var(--amber); }
-    .result.err   { background: #2c1717; border: 1px solid #5a2a2a; color: #f0b6b6; }
+    .result.err   { background: var(--err-bg); border: 1px solid var(--err-line); color: var(--err-text); }
     .result .hl { font-family: "Bebas Neue", sans-serif; font-size: 34px; display: block; letter-spacing: 1px; }
 
     .staff-line {
@@ -214,7 +245,10 @@
     /* ---------- Табло заказов (две колонки) ---------- */
     /* Табло тянется по содержимому: мало заказов — узко (как раньше), много —
        колонки растут вбок (до ширины экрана). Мобилка ограничена экраном. */
-    body.board-view .wrap { width: fit-content; max-width: 96vw; }
+    /* Табло тянется по содержимому. Потолок — именно 100% (ширина за вычетом
+       боковых отступов body), а не 96vw: vw их не учитывает, и широкая карточка
+       вылезала за правый край экрана. */
+    body.board-view .wrap { width: fit-content; max-width: 100%; }
     .board-cols {
       display: grid; grid-template-columns: auto auto;
       justify-content: center; gap: 12px; margin-bottom: 14px;
@@ -298,24 +332,402 @@
     }
 
     /* ---------- ТВ-режим (/tv): крупная раскладка на весь экран телевизора.
-       Подогнано под Xiaomi 32" HD = 1366×768. Высота 768 ограничена, поэтому
-       фикс 5 номеров в столбик, дальше рост ВБОК (ширины 1366 хватает) — высота
-       остаётся постоянной, заказы вниз не убегают. Правила ниже board-view. ---- */
-    body.tv { padding: 16px 26px calc(16px + env(safe-area-inset-bottom)); }
-    body.tv .wrap { width: 100%; max-width: 100%; }
-    body.tv .brand { margin-bottom: 6px; }
+       Базово подогнано под Xiaomi 32" HD = 1366×768. Экран телика не скроллится,
+       поэтому табло ЖЁСТКО вписано в высоту: страница = ровно 100dvh, колонки
+       занимают остаток высоты, а размер плашек и число строк подбирает
+       fitTvBoard() в JS — сколько бы заказов ни было, ничего не уезжает вниз.
+       Правила ниже board-view. ---------------------------------------------- */
+    body.tv {
+      padding: 16px 26px calc(16px + env(safe-area-inset-bottom));
+      /* vh — фолбэк для старых сборок Яндекс.Браузера (dvh есть с Chromium 108). */
+      height: 100vh; height: 100dvh; min-height: 0; overflow: hidden;
+      --tv-num-fs: 52px; --tv-gap-y: 10px; --tv-gap-x: 14px; --tv-rows: 5;
+    }
+    body.tv .wrap { width: 100%; max-width: 100%; height: 100%; display: flex; flex-direction: column; }
+    body.tv #guest { flex: 1 1 auto; min-height: 0; display: flex; flex-direction: column; }
+    body.tv .brand { margin-bottom: 6px; flex: 0 0 auto; }
     body.tv .brand h1 { font-size: 48px; }
     body.tv .brand .wordmark { height: 54px; }
     body.tv .brand .sub { font-size: 13px; letter-spacing: 3px; }
-    body.tv .board-qr { margin: 0 0 10px; gap: 14px; }
+    body.tv .board-qr { margin: 0 0 10px; gap: 14px; flex: 0 0 auto; }
     body.tv .board-qr img { width: 92px; height: 92px; flex: 0 0 92px; }
     body.tv .board-qr-cap b { font-size: 24px; }
-    body.tv .board-cols { grid-template-columns: 1fr 1fr; gap: 20px; }
-    body.tv .col { min-width: 0; padding: 16px 14px; border-radius: 22px; }
-    body.tv .col-head { font-size: 20px; margin-bottom: 14px; letter-spacing: 3px; }
-    body.tv .nums { grid-template-rows: repeat(5, auto); gap: 10px 14px; }
-    body.tv .num { font-size: 52px; min-width: 104px; padding: 12px 14px; border-radius: 14px; }
-    body.tv .num-empty { font-size: 42px; }
+    body.tv .board-cols {
+      grid-template-columns: 1fr 1fr; grid-template-rows: minmax(0, 1fr);
+      gap: 20px; flex: 1 1 auto; min-height: 0; margin-bottom: 0;
+    }
+    body.tv .col {
+      min-width: 0; min-height: 0; padding: 16px 14px; border-radius: 22px;
+      display: flex; flex-direction: column;
+    }
+    body.tv .col-head { font-size: 20px; margin-bottom: 14px; letter-spacing: 3px; flex: 0 0 auto; }
+    /* Плашки заполняют остаток колонки; всё, что не влезло бы, обрезано (overflow
+       hidden) — но fitTvBoard() до этого не доводит: он ужимает шрифт и добавляет
+       строки, пока список не поместится целиком. */
+    body.tv .nums {
+      flex: 1 1 auto; min-height: 0; overflow: hidden; align-content: start;
+      grid-template-rows: repeat(var(--tv-rows), max-content);
+      gap: var(--tv-gap-y) var(--tv-gap-x);
+    }
+    body.tv .num {
+      font-size: var(--tv-num-fs); min-width: calc(var(--tv-num-fs) * 2);
+      padding: calc(var(--tv-num-fs) * .23) calc(var(--tv-num-fs) * .27);
+      border-radius: calc(var(--tv-num-fs) * .27);
+    }
+    body.tv .num-empty { font-size: calc(var(--tv-num-fs) * .8); }
+    /* «+N» — счётчик остатка на случай, когда заказов больше, чем физически
+       влезает даже при минимальном размере плашки. */
+    body.tv .num.num-more { color: var(--muted); background: none; border-style: dashed; }
+
+    /* ---------- Подписка на свой заказ (только телефон гостя) -------------
+       Гость сканирует QR с телевизора, вводит номер с чека и переходит на
+       персональный экран заказа. На /tv не показывается. */
+    body.tv #subCard { display: none !important; }
+    /* QR на табло нужен телевизору: с него гость и сканирует. На телефоне гость
+       УЖЕ пришёл по этому QR — показывать его снова незачем. */
+    body.board-view:not(.tv) .board-qr { display: none; }
+
+    .sub-card {
+      position: relative; overflow: hidden; width: min(100%, 360px); margin: 0 auto 16px;
+      padding: 22px 18px 20px; border-radius: 22px;
+      container-type: inline-size;   /* от неё считается размер заголовка */
+    }
+    /* Та же изразцовая розетка оттиском — карточка сразу читается как «Искенди». */
+    .sub-card .sub-bg {
+      position: absolute; left: -30px; bottom: -34px; width: 140px; height: 140px;
+      color: var(--brand-2); opacity: .08; pointer-events: none;
+    }
+    .sub-card .sub-bg svg { width: 100%; height: 100%; display: block; }
+    .sub-title {
+      position: relative;
+      /* Строго одна строка. Размер считаем от ширины САМОЙ карточки (cqw), а не
+         экрана: карточка ограничена 360px, и привязка к vw на широком экране
+         выносила заголовок за её край. Первая строка — фолбэк для браузеров без
+         контейнерных запросов, вторая их перекрывает. */
+      font-family: "Bebas Neue", sans-serif;
+      font-size: clamp(17px, 4.6vw, 21px);
+      font-size: clamp(17px, 7.2cqw, 26px);
+      line-height: 1.1; letter-spacing: .5px; text-align: center; color: var(--brand-2);
+      white-space: nowrap; min-width: 0;
+    }
+    .sub-form { position: relative; }
+    .sub-form { margin-top: 16px; }
+    .sub-form input {
+      width: 100%; text-align: center; font-size: 27px; letter-spacing: 2px;
+      padding: 15px 14px; border-radius: 14px;
+    }
+    .sub-form input::placeholder {
+      font-size: 17px; letter-spacing: 0; color: var(--muted); opacity: .7;
+    }
+    .sub-form button { width: 100%; margin-top: 10px; padding: 16px; font-size: 17px; border-radius: 14px; }
+    .sub-err {
+      background: var(--err-bg); border: 1px solid var(--err-line); color: var(--err-text);
+      border-radius: 12px; padding: 11px; text-align: center; font-size: 14px; margin-top: 12px;
+    }
+
+    /* ---------- Персональный экран заказа --------------------------------
+       То, ради чего гость и сканирует QR: свой номер крупно, статус и путь
+       заказа. Звук и вибрация — при переходе в «готово». */
+    /* Табло тянется по содержимому (width: fit-content у .wrap), а личный экран
+       должен держать ширину телефона — иначе крупный номер распирает страницу. */
+    #myOrder { width: min(420px, 92vw); margin: 0 auto; }
+
+    /* Карточка живёт в фирменной светлой теме (body.brand): белая плитка на
+       терракотовом градиенте. Пока готовится — тёплая, готово — зелёная целиком:
+       карточка сама работает сигналом, видно с вытянутой руки. */
+    body.brand .my-card {
+      position: relative; overflow: hidden; text-align: center;
+      padding: 24px 20px 22px; border-radius: 24px; border: 0;
+      background: #fff; color: var(--brand-ink);
+      box-shadow: 0 10px 28px rgba(0, 0, 0, .2);
+      container-type: inline-size;
+      transition: background .35s ease, color .35s ease;
+    }
+    /* Изразцовая розетка «Искенди» — оттиском в углу, как клеймо на плитке. */
+    .my-card .my-bg {
+      position: absolute; right: -36px; top: -32px; width: 190px; height: 190px;
+      color: var(--brand-2); opacity: .09; pointer-events: none;
+    }
+    .my-card .my-bg svg { width: 100%; height: 100%; display: block; }
+
+    /* Клеймо: розетка в квадратной рамке — ровно как в логотипе на вывеске. */
+    .my-emblem {
+      position: relative; width: 52px; height: 52px; margin: 0 auto 12px;
+      color: var(--brand-2); border: 2px solid var(--brand-2); border-radius: 6px;
+      display: flex; align-items: center; justify-content: center; padding: 7px;
+    }
+    .my-emblem svg { width: 100%; height: 100%; display: block; }
+
+    body.brand .my-card .board-label { font-size: 11px; color: var(--brand-label); }
+    .my-num {
+      position: relative;
+      font-family: "Bebas Neue", sans-serif; font-size: clamp(62px, 21vw, 92px);
+      line-height: .92; color: var(--brand-2); margin: 4px 0 14px; letter-spacing: 1px;
+    }
+    /* Статус — «таблетка», а не просто строка: сразу видно состояние. */
+    .my-status {
+      position: relative; display: inline-block;
+      font-family: "Bebas Neue", sans-serif; font-size: 24px;
+      letter-spacing: 1.5px; line-height: 1; padding: 11px 22px 9px;
+      border-radius: 999px; color: var(--brand-label);
+      background: var(--brand-warm); border: 1px solid rgba(0, 0, 0, .08);
+    }
+    /* Готово: плитка остаётся белой, а сигналом становится статус — он
+       заливается фирменным оранжевым. Номер и клеймо цвет не меняют. */
+    .my-card.is-ready .my-status {
+      background: var(--brand-2); border-color: var(--brand-2); color: #fff;
+    }
+    .my-note {
+      position: relative; color: var(--brand-sub); font-size: 14px;
+      line-height: 1.5; margin-top: 14px;
+      text-align: center; white-space: pre-line;   /* \n в тексте = перенос строки */
+    }
+    
+    /* Путь заказа: принят → готовится → готово → выдан. Полоска-шаг: пройденные
+       залиты приглушённым цветом, текущий горит в полную силу и медленно
+       пульсирует — видно, что работа идёт именно здесь. */
+    .my-steps { position: relative; display: flex; justify-content: center; gap: 6px; margin: 22px 0 4px; }
+    .my-step { flex: 1; max-width: 86px; }
+    .my-step .dot {
+      height: 6px; border-radius: 3px; margin-bottom: 8px;
+      background: var(--brand-2); opacity: .16;
+      transition: opacity .3s ease, background .3s ease;
+    }
+    .my-step.done .dot { opacity: 1; }                      /* этап пройден — залит */
+    .my-step.now .dot { animation: stepGlow 1.8s ease-in-out infinite; }
+    @keyframes stepGlow { 0%, 100% { opacity: .3; } 50% { opacity: 1; } }
+    .my-step span {
+      display: block; font-size: 10px; font-family: "IBM Plex Mono", monospace;
+      letter-spacing: .3px; text-transform: uppercase; color: rgba(0, 0, 0, .3);
+    }
+    .my-step.done span { color: var(--brand-label); }
+    .my-step.now span { color: var(--brand-ink); font-weight: 600; }
+    /* Второстепенные действия не должны спорить с номером заказа. */
+    .my-actions { margin-top: 16px; }
+    .my-actions button { padding: 13px; font-size: 15px; border-radius: 13px; }
+    /* Кнопки под карточкой лежат на оранжевом фоне — им нужен белый текст. */
+    body.brand .my-actions button.ghost {
+      color: #fff; border-color: rgba(255, 255, 255, .55); background: transparent;
+    }
+    body.brand .my-unsub {
+      display: block; width: 100%; margin-top: 12px; background: none; border: 0;
+      box-shadow: none; color: rgba(255, 255, 255, .9); font-size: 13px;
+      text-decoration: underline; padding: 6px;
+    }
+
+    /* Пришло время оценки — карточка перестаёт быть трекером: путь заказа,
+       статус и подсказки уходят, остаётся номер и звёзды. Следующий шаг гостя
+       уже не «где мой заказ», а «как всё прошло». */
+    .my-card.is-rating .my-status,
+    .my-card.is-rating .my-steps,
+    .my-card.is-rating .my-note { display: none; }
+    .my-card.is-rating .my-rate { margin-top: 14px; padding-top: 0; border-top: 0; }
+    .my-card.is-rating .my-rate-cap { font-size: 27px; }
+    .my-card.is-rating .my-num { margin-bottom: 4px; }
+
+    /* Оценка прямо в карточке заказа, сразу под путём заказа. */
+    .my-rate {
+      position: relative; margin-top: 20px; padding-top: 18px;
+      border-top: 1px dashed rgba(0, 0, 0, .12);
+      transition: opacity .25s ease;
+    }
+    .my-card.is-ready .my-rate { border-top-color: rgba(0, 0, 0, .18); }
+    /* Заказ ещё не выдан — звёзды видны, но оценивать нечего. */
+    .my-rate.is-off { opacity: .45; pointer-events: none; }
+    .my-rate-cap {
+      font-family: "Bebas Neue", sans-serif; font-size: 21px; letter-spacing: .5px;
+      color: var(--brand-ink);
+    }
+    .my-rate-note {
+      font-size: 11.5px; font-family: "IBM Plex Mono", monospace;
+      color: var(--brand-sub); opacity: .8; margin-top: 2px;
+    }
+
+    /* Продолжение — отдельными карточками под заказом. */
+    .fb-block { text-align: left; margin-top: 14px; }
+    .fb-block .fb-title { margin: 0 0 2px; }
+
+    /* ---------- Отзыв гостя (docs/feedback-flow.md) ----------------------
+       Живёт ТОЛЬКО на телефоне гостя (/board). На телевизоре не показывается
+       ни при каких условиях: JS туда не заходит, а карточка подписки скрыта
+       правилом body.tv #subCard выше. */
+
+    /* Заказ, который гость отметил как свой. */
+    .num.mine { border-color: var(--copper); box-shadow: 0 0 0 2px rgba(193, 122, 61, .35); }
+
+    .fb-title {
+      font-family: "Bebas Neue", sans-serif; font-size: clamp(24px, 7vw, 30px); line-height: 1.08;
+      letter-spacing: .5px; text-align: center; margin: 4px 30px 2px; text-wrap: balance;
+    }
+    .fb-title b { color: var(--brand-2); font-weight: inherit; }
+    .fb-sub { text-align: center; color: var(--brand-sub); font-size: 14px; line-height: 1.5; margin-top: 8px; }
+
+    /* Звёзды: как на картах — ведёшь пальцем, подсветка идёт следом, отпустил на
+       нужной — оценка ушла. Кнопки «отправить» нет: лишний тап режет отклик. */
+    .fb-stars {
+      display: flex; justify-content: center; gap: 2px;
+      margin: 10px 0 6px; touch-action: none;
+    }
+    body.brand .fb-star {
+      width: auto; padding: 3px; background: none; border: 0; box-shadow: none;
+      color: #e6d6be; transition: color .12s ease, transform .12s ease;
+    }
+    .fb-star svg { display: block; width: clamp(44px, 15cqw, 58px); height: clamp(44px, 15cqw, 58px); pointer-events: none; }
+    body.brand .fb-star.on { background: none; color: var(--brand-yellow); transform: scale(1.06); }
+    .fb-star.on svg { filter: drop-shadow(0 4px 12px rgba(248, 208, 15, .5)); }
+    .fb-star:active { transform: scale(.94); }
+
+    /* Теги недовольства — мультивыбор в один тап. */
+    .fb-tags { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; margin: 4px 0 16px; }
+    body.brand .fb-tag {
+      width: auto; font-size: 14px; font-weight: 500; padding: 9px 14px;
+      border-radius: 999px; background: var(--brand-warm); color: var(--brand-ink);
+      border: 1px solid rgba(0, 0, 0, .1); box-shadow: none;
+    }
+    body.brand .fb-tag.on { background: var(--brand-2); color: #fff; border-color: var(--brand-2); }
+
+    .fb-field { margin-bottom: 14px; }
+    body.brand .fb-block textarea {
+      width: 100%; background: var(--brand-cream); border: 1px solid rgba(0, 0, 0, .15);
+      border-radius: 12px; color: var(--brand-ink); font-size: 16px;
+      font-family: "IBM Plex Sans", sans-serif; padding: 12px 14px;
+      outline: none; resize: vertical; min-height: 76px;
+    }
+    .fb-block textarea:focus, .fb-block input:focus { border-color: var(--brand-2); }
+
+    /* Ссылки на карты и соцсети — открываются в новой вкладке, табло не теряется. */
+    .fb-link {
+      display: flex; align-items: center; justify-content: center; gap: 9px;
+      text-decoration: none; padding: 15px; border-radius: 13px;
+      font-weight: 600; font-size: 16px; margin-bottom: 10px;
+      background: var(--brand-yellow); color: var(--brand-ink);
+      box-shadow: 0 6px 16px rgba(0, 0, 0, .14);
+    }
+    .fb-link:active { transform: translateY(1px); }
+    .fb-link.sec { background: transparent; border: 1px solid rgba(0, 0, 0, .18); color: var(--brand-sub); box-shadow: none; }
+    .fb-link.mini { padding: 12px; font-size: 14px; margin-bottom: 0; }
+    .fb-links-row { display: flex; gap: 10px; }
+    .fb-links-row > * { flex: 1; }
+    .fb-hr { border-top: 1px dashed rgba(0, 0, 0, .14); margin: 18px 0 14px; }
+
+    /* «Ошиблись?» — неброская ссылка: нужна редко, но должна быть под рукой. */
+    body.brand .fb-fix {
+      display: block; width: 100%; margin-top: 14px; padding: 8px;
+      background: none; border: 0; box-shadow: none;
+      color: var(--brand-sub); font-size: 13px; text-decoration: underline;
+    }
+
+    .fb-err {
+      background: var(--err-bg); border: 1px solid var(--err-line); color: var(--err-text);
+      border-radius: 12px; padding: 12px; text-align: center; font-size: 15px;
+      line-height: 1.4; margin-top: 12px;
+    }
+
+    /* ---------- Оценки в аналитике ---------- */
+    /* Строка заказа раскрывается в карточку: комментарий гостя в узкую колонку
+       не влезает, а читать его надо целиком. */
+    .paths .pth-row { cursor: pointer; }
+    .paths .pth-row:hover td { background: #fff6e8; }
+    .paths .pth-row.open td { background: #fff1d6; }
+    .paths .pth-det td { background: #fffaf2; padding: 16px 14px; }
+    .det-grid {
+      display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+      gap: 12px 18px; margin-bottom: 14px;
+    }
+    /* Длинные значения («выдан · занесён вручную») должны переноситься внутри
+       своей колонки, а не наезжать на соседнюю. */
+    /* Ячейка таблицы запрещает переносы (колонки времени должны быть в строку),
+       но внутри раскрытой карточки текст обязан переноситься. */
+    .paths .pth-det td { white-space: normal; }
+    .det-pair { min-width: 0; }
+    .det-pair b { display: block; overflow-wrap: anywhere; line-height: 1.35; }
+    .det-pair span {
+      display: block; font-size: 11px; letter-spacing: .5px; text-transform: uppercase;
+      color: #a15a12; font-family: "IBM Plex Mono", monospace;
+    }
+    .det-pair b { font-size: 14px; color: #201400; }
+    .det-none { color: #9a7b52; font-size: 13px; }
+    /* Лента переходов: точка статуса, название, время и сколько в нём пролежал. */
+    .det-tl { margin: 0 0 16px; max-width: 420px; }
+    .det-tl-cap {
+      font-size: 11px; letter-spacing: .5px; text-transform: uppercase; color: #a15a12;
+      font-family: "IBM Plex Mono", monospace; margin-bottom: 8px;
+    }
+    .det-tl-row {
+      display: flex; align-items: center; gap: 10px; position: relative;
+      padding: 5px 0 5px 4px; font-size: 13px;
+    }
+    /* Вертикальная нить между точками — видно, что это один путь. */
+    .det-tl-row:not(.last)::before {
+      content: ""; position: absolute; left: 8px; top: 20px; bottom: -4px;
+      width: 2px; background: rgba(0, 0, 0, .12);
+    }
+    .tl-dot {
+      width: 9px; height: 9px; border-radius: 50%; flex: 0 0 9px; margin-left: 4px;
+      background: #9a7b52; z-index: 1;
+    }
+    .tl-dot.st-open { background: #64748B; }
+    .tl-dot.st-preparing { background: #D97706; }
+    .tl-dot.st-ready { background: #2563EB; }
+    .tl-dot.st-served { background: #2e8b2e; }
+    .tl-name { flex: 1; color: #201400; }
+    .tl-at { font-family: "IBM Plex Mono", monospace; color: #201400; }
+    .tl-dur {
+      flex: 0 0 62px; text-align: right; font-family: "IBM Plex Mono", monospace;
+      color: #9a7b52; font-size: 12px;
+    }
+    .det-fb { border-left: 3px solid #2e8b2e; padding: 2px 0 2px 12px; }
+    .det-fb.bad { border-left-color: #c0392b; }
+    .det-stars { font-size: 17px; color: #d9800f; letter-spacing: 2px; }
+    .det-stars b { color: #201400; font-size: 15px; margin-left: 6px; letter-spacing: 0; }
+    .det-work {
+      margin-left: 10px; font-size: 11px; letter-spacing: .5px; text-transform: uppercase;
+      color: #6a4a08; background: #fff3e0; border-radius: 999px; padding: 3px 9px;
+      font-family: "IBM Plex Mono", monospace;
+    }
+    .det-tags { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+    .det-tags span {
+      font-size: 12px; background: #fff3e0; border: 1px solid rgba(0,0,0,.08);
+      border-radius: 999px; padding: 4px 10px; color: #201400;
+    }
+    /* Комментарий целиком, с переносами — ради него всё и раскрывается. */
+    .det-text {
+      margin-top: 10px; font-size: 14px; line-height: 1.5; color: #201400;
+      white-space: pre-wrap; word-break: break-word; max-width: 640px;
+    }
+    .det-contact { margin-top: 10px; font-size: 13px; color: #6a4a08; }
+    .det-contact .rate-contact { display: inline; font-size: 13px; }
+    .det-nocontact { margin-top: 10px; font-size: 13px; color: #9a7b52; }
+    .rate-cell { white-space: nowrap; }
+    .rate { font-weight: 700; color: #2e8b2e; }
+    .rate.bad { color: #c0392b; }
+    .rate-none { color: #b9a58f; }
+    /* Теги и текст отзыва рядом с оценкой: обрезаем, полный текст — в подсказке. */
+    .rate-why {
+      display: block; max-width: 220px; overflow: hidden; text-overflow: ellipsis;
+      white-space: nowrap; font-size: 11.5px; color: #9a7b52;
+    }
+    /* Контакт гостя: по нему звонят и пишут, поэтому ссылка, а не текст. */
+    .rate-contact {
+      display: block; font-size: 12px; font-weight: 600; color: #f7621e;
+      text-decoration: none; margin-top: 2px;
+    }
+    .rate-contact:hover { text-decoration: underline; }
+    .fbs-split { display: grid; grid-template-columns: 1fr; gap: 18px; margin-top: 16px; }
+    @media (min-width: 760px) { .fbs-split { grid-template-columns: 1.2fr 1fr; gap: 26px; } }
+    .fbs-cap {
+      font-family: "IBM Plex Mono", monospace; font-size: 11px; letter-spacing: 1.5px;
+      text-transform: uppercase; color: #a15a12; margin-bottom: 10px;
+    }
+    /* Корзина ожидания: подпись, полоска средней оценки и сама оценка. */
+    .fbs-row { display: flex; align-items: center; gap: 10px; margin-bottom: 9px; font-size: 13px; }
+    .fbs-row .k { flex: 0 0 74px; color: #6a4a08; }
+    .fbs-row .bar { flex: 1; height: 8px; border-radius: 4px; background: rgba(0,0,0,.07); overflow: hidden; }
+    .fbs-row .bar i { display: block; height: 100%; border-radius: 4px; background: #2e8b2e; }
+    .fbs-row .bar i.bad { background: #c0392b; }
+    .fbs-row .v { flex: 0 0 58px; text-align: right; font-family: "IBM Plex Mono", monospace; color: #201400; }
+    .fbs-row .n { flex: 0 0 42px; text-align: right; color: #9a7b52; font-size: 12px; }
+    .fbs-empty { color: #9a7b52; font-size: 13px; }
 
     /* ---------- Список заказов в кассе ---------- */
     .order-row {
@@ -395,6 +807,14 @@
     .sum-v { font-family: "IBM Plex Mono", monospace; color: var(--text); font-weight: 600; }
     .preset-row { display: flex; gap: 8px; margin-bottom: 8px; }
     .preset { width: auto; flex: 1; font-size: 13px; padding: 9px 8px; }
+    body.brand button.ghost.preset.on { border-color: var(--copper); color: #6a4a08; background: rgba(232, 169, 58, .18); }
+
+    /* Путь заказа: полоска долей статусов (открыт · готовка · до выдачи) */
+    .pth { display: flex; width: 120px; height: 8px; border-radius: 4px; overflow: hidden; background: var(--line); }
+    .pth i { display: block; height: 100%; }
+    .stat-tbl td.pth-cell { padding-right: 0; }
+    .stat-tbl.paths tbody tr { cursor: default; }
+    .stat-tbl.paths tbody tr.act td { opacity: .62; }
 
     /* KPI-плашки и инлайн-графики аналитики */
     .kpi-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
@@ -738,6 +1158,20 @@
   </style>
 </head>
 <body>
+  <script>
+    // Тему (фон, цвет текста) навешивает роутер, но он отрабатывает уже после
+    // разбора страницы — и гость успевает увидеть тёмный фон, который тут же
+    // прыгает в фирменный оранжевый. Ставим классы сразу по адресу, до отрисовки:
+    // роутер потом выставит те же самые.
+    (function(){
+      var p = location.pathname, c = "landing-bg";
+      if(p === "/tv") c = "brand board-view tv";
+      else if(p === "/board") c = "brand board-view";
+      else if(p === "/staff") c = "brand";
+      else if(p === "/stats") c = "brand stats-view";
+      document.body.className = c;
+    })();
+  </script>
   <div class="wrap">
     <!-- ========================= ЛЕНДИНГ (мультиссылка) ========================= -->
     <div id="landing">
@@ -796,6 +1230,20 @@
         <div class="board-qr-cap"><b>Следи за заказом в телефоне</b></div>
       </div>
 
+      <!-- Подписка на свой заказ. На /tv скрыта правилом body.tv #subCard. -->
+      <div class="card sub-card hidden" id="subCard">
+        <div class="sub-bg" id="subBg" aria-hidden="true"></div>
+        <div class="sub-title">Подпишись на свой Балык</div>
+
+        <div class="sub-form">
+          <input id="subNum" type="number" inputmode="numeric" min="1" placeholder="номер заказа"
+                 onkeydown="if(event.key==='Enter')subSubmit()" />
+          <button onclick="subSubmit()">Следить за заказом</button>
+        </div>
+
+        <div class="sub-err hidden" id="subErr"></div>
+      </div>
+
       <div class="board-cols">
         <div class="col col-prep">
           <div class="col-head">Готовятся</div>
@@ -816,6 +1264,75 @@
       <div id="boardToast" class="board-toast" aria-live="polite"></div>
     </div>
 
+    <!-- ===== ПЕРСОНАЛЬНЫЙ ЭКРАН ЗАКАЗА (/board?my=1, только телефон) =====
+         Гость подписался на свой номер и следит за ним здесь. На /tv этот
+         экран недостижим: туда ведёт только подписка с телефона. -->
+    <div id="myOrder" class="hidden">
+      <div class="brand">
+        <img class="wordmark" src="/assets/iskendi_wordmark_white.png" alt="ИСКЕНДИ" />
+        <div class="sub">ваш заказ</div>
+      </div>
+
+      <div class="card my-card" id="myCard">
+        <!-- Фирменная изразцовая розетка: фоном и клеймом, как на вывеске. -->
+        <div class="my-bg" id="myBg" aria-hidden="true"></div>
+        <div class="my-emblem" id="myEmblem" aria-hidden="true"></div>
+        <div class="my-num" id="myNum">—</div>
+        <div class="my-status" id="myStatus">Ждём кухню</div>
+        <div class="my-note" id="myNote">Как только заказ будет готов — телефон звякнет</div>
+
+        <div class="my-steps" id="mySteps"></div>
+
+        <!-- Оценка живёт здесь же: тап по звезде — и всё. Пока заказ не выдан,
+             звёзды показаны, но приглушены и не нажимаются. -->
+        <div class="my-rate" id="myRate">
+          <div class="my-rate-cap" id="myRateCap">Как вам заказ?</div>
+          <div class="fb-stars" id="fbStars"></div>
+          <div class="my-rate-note" id="myRateNote"></div>
+        </div>
+      </div>
+
+      <!-- Что дальше: довольным — карты и соцсети, недовольным — форма. -->
+      <div id="myFeedback">
+        <div class="card fb-block hidden" id="fbStepThanks">
+          <div class="fb-title">Спасибо!<br>Нам это правда важно</div>
+          <div class="fb-sub">Расскажите о нас — это две минуты, а для нас много значит.</div>
+          <div style="height:18px"></div>
+          <div id="fbReviewLinks"></div>
+          <div class="fb-hr"></div>
+          <div class="fb-sub" style="margin-bottom:12px;">Следите за нашими новостями</div>
+          <div class="fb-links-row" id="fbSocialLinks"></div>
+        </div>
+
+        <div class="card fb-block hidden" id="fbStepSorry">
+          <div class="fb-title">Расскажите, что было не так?</div>
+          <div style="height:16px"></div>
+          <div class="fb-tags" id="fbTags"></div>
+          <div class="fb-field">
+            <label class="field" for="fbComment">Что случилось?</label>
+            <textarea id="fbComment" maxlength="1000" placeholder="Пара слов — нам хватит, чтобы разобраться"></textarea>
+          </div>
+          <div class="fb-field">
+            <label class="field" for="fbContact">Помогите нам стать лучше — как с вами связаться?</label>
+            <input id="fbContact" type="text" maxlength="120" placeholder="телефон или @телеграм" />
+          </div>
+          <button onclick="fbSendDetail()" id="fbSendBtn">Отправить</button>
+        </div>
+
+        <div class="card fb-block hidden" id="fbStepDone">
+          <div class="fb-title">Спасибо. Мы разберёмся сегодня же</div>
+          <div class="fb-sub">Если оставили контакт — свяжемся в течение дня.</div>
+        </div>
+
+        <div class="fb-err hidden" id="fbErr"></div>
+      </div>
+
+      <div class="my-actions">
+        <button class="ghost" onclick="showBoard()">← Всё табло</button>
+        <button class="my-unsub" onclick="subForget()">Отписаться от заказа</button>
+      </div>
+    </div>
+
     <!-- ЭКРАН ПЕРСОНАЛА (/staff) -->
     <div id="staff" class="hidden">
       <div class="brand">
@@ -834,16 +1351,6 @@
 
       <!-- панель -->
       <div id="panelBox" class="hidden">
-        <div class="card">
-          <label class="field" for="newNum">Новый заказ — номер с чека</label>
-          <div class="row">
-            <input id="newNum" type="number" inputmode="numeric" min="1" placeholder="напр. 14"
-                   onkeydown="if(event.key==='Enter')addOrder()" />
-            <button class="amber" style="flex:0 0 auto; width:auto; padding-left:22px; padding-right:22px;" onclick="addOrder()">Добавить</button>
-          </div>
-          <div class="result err" id="addErr"></div>
-        </div>
-
         <div class="card">
           <div class="board-label" style="margin-bottom:14px;">Заказы сегодня</div>
           <div class="stat-row">
@@ -906,6 +1413,22 @@
           <div class="board-label" id="sumLabel" style="margin-bottom:12px;">Итог</div>
           <div class="kpi-row" id="kpiRow"></div>
         </div>
+
+        <!-- Оценки гостей: сводка и главная связка «сколько ждал ↔ как оценил» -->
+        <div class="card" id="fbStatsCard">
+          <div class="board-label" style="margin-bottom:12px;">Оценки гостей</div>
+          <div class="kpi-row" id="fbKpiRow"></div>
+          <div class="fbs-split">
+            <div>
+              <div class="fbs-cap">Ожидание ↔ оценка</div>
+              <div id="fbBuckets"></div>
+            </div>
+            <div>
+              <div class="fbs-cap">Чаще всего в жалобах</div>
+              <div id="fbTagStats"></div>
+            </div>
+          </div>
+        </div>
         <div class="s-charts">
           <div class="card">
             <div class="board-label" style="margin-bottom:12px;">Заказы по дням</div>
@@ -928,9 +1451,26 @@
             <div class="tbl-wrap" id="chartTimes"></div>
           </div>
         </div>
+        <div class="card">
+          <div class="board-label" style="margin-bottom:6px;">Путь заказов</div>
+          <div class="muted-note" style="margin:2px 0 10px;">Строка — заказ, колонки — сколько он пролежал в каждом статусе (мин:сек).</div>
+          <div class="preset-row">
+            <button class="ghost preset" id="pathSortTime" onclick="setPathSort('time')">По времени приёма</button>
+            <button class="ghost preset" id="pathSortTotal" onclick="setPathSort('total')">Дольше всего</button>
+            <button class="ghost preset" id="pathSortRate" onclick="setPathSort('rating')">Сначала недовольные</button>
+          </div>
+          <div class="cv-legend">
+            <span><i class="cv-dot" style="background:#64748B"></i>открыт</span>
+            <span><i class="cv-dot" style="background:#D97706"></i>готовка</span>
+            <span><i class="cv-dot" style="background:#2563EB"></i>до выдачи</span>
+          </div>
+          <div class="tbl-wrap"><div id="pathTable"></div></div>
+          <div class="muted-note" id="pathNote" style="margin-top:8px;"></div>
+        </div>
         <div class="staff-line"><a onclick="showStaff()">← Касса</a></div>
       </div>
     </div>
+
   </div>
 
   <script>
@@ -959,21 +1499,102 @@
         ? new Set()
         : new Set([...readySet].filter(n => !prevReady.has(n)));
 
-      document.getElementById("prepNums").innerHTML = prep.length
-        ? prep.map(n => '<span class="num">' + n + '</span>').join("")
-        : '<span class="num-empty">—</span>';
-      document.getElementById("readyNums").innerHTML = ready.length
-        ? ready.map(n => '<span class="num hot' + (fresh.has(String(n)) ? ' just' : '') + '">' + n + '</span>').join("")
-        : '<span class="num-empty">—</span>';
+      lastNums = { prep: prep, ready: ready, fresh: fresh };
+      document.getElementById("prepNums").innerHTML = numsHtml(prep, false, fresh);
+      document.getElementById("readyNums").innerHTML = numsHtml(ready, true, fresh);
 
       // «Пока пусто» — когда гостю нечего показать (нет готовящихся и готовых);
       // «Открытые» заказы для гостя невидимы, поэтому в счёт не идут.
       show("boardEmpty", prep.length === 0 && ready.length === 0);
+      // Вписываем в экран телевизора уже после того, как «Пока пусто» скрыта или
+      // показана — иначе высота колонок считалась бы по прежней раскладке.
+      fitTvBoard();
 
-      // Уведомление о новых готовых заказах — только на табло /board (в ТВ-режиме молчим).
-      if(fresh.size && isBoardScreen()){ notifyReady([...fresh]); }
+      // Уведомление о новых готовых заказах — только на табло /board (в ТВ-режиме
+      // молчим). Если гость подписан на свой номер, общий трезвон выключаем: ему
+      // придёт персональное уведомление, а чужие заказы его не касаются.
+      if(fresh.size && isBoardScreen() && !fbMy()){ notifyReady([...fresh]); }
+      // Отзывы и слежение за своим заказом — только на телефоне гостя, и строго
+      // ПОСЛЕ fitTvBoard(): на телевизоре сюда не заходим, подгонку не задеваем.
+      if(isBoardScreen()){ fbMarkMine(); myWatch(); fbWatch(); }
       prevReady = readySet;
     }
+
+    // Разметка плашек с номерами. hot — колонка «Готово ✓», fresh — номера,
+    // только что ставшие готовыми (короткий «поп»).
+    function numsHtml(list, hot, fresh){
+      if(!list.length) return '<span class="num-empty">—</span>';
+      return list.map(function(n){
+        const just = hot && fresh && fresh.has(String(n)) ? " just" : "";
+        return '<span class="num' + (hot ? " hot" : "") + just + '">' + n + '</span>';
+      }).join("");
+    }
+
+    // ---------- Вписывание ТВ-табло в экран ----------
+    // Телевизор не скроллится: всё, что не влезло по высоте, гость просто не увидит.
+    // Поэтому подбираем размер плашки сверху вниз и число строк под фактическую
+    // высоту колонки, пока оба списка не поместятся целиком. Крайний случай (заказов
+    // больше, чем влезает даже при минимальном размере) закрываем плашкой «+N».
+    const TV_FS_MAX = 52, TV_FS_MIN = 20;
+    let lastNums = { prep: [], ready: [], fresh: new Set() };
+
+    function tvSetScale(fs){
+      const st = document.body.style;
+      st.setProperty("--tv-num-fs", fs + "px");
+      st.setProperty("--tv-gap-y", Math.round(fs * 0.2) + "px");
+      st.setProperty("--tv-gap-x", Math.round(fs * 0.27) + "px");
+    }
+    function tvFits(box){
+      return box.scrollWidth <= box.clientWidth + 1 && box.scrollHeight <= box.clientHeight + 1;
+    }
+    function fitTvBoard(){
+      if(!document.body.classList.contains("tv")) return;
+      const boxes = [document.getElementById("prepNums"), document.getElementById("readyNums")];
+      if(boxes.some(b => !b)) return;
+      // Пересчёт (resize/шрифты) мог прийти на уже усечённое табло — возвращаем
+      // полные списки, иначе «+N» закрепится навсегда.
+      if(boxes.some(b => b.querySelector(".num-more"))){
+        boxes[0].innerHTML = numsHtml(lastNums.prep, false, lastNums.fresh);
+        boxes[1].innerHTML = numsHtml(lastNums.ready, true, lastNums.fresh);
+      }
+
+      for(let fs = TV_FS_MAX; fs >= TV_FS_MIN; fs -= 2){
+        tvSetScale(fs);
+        // Сколько строк влезает по высоте — считаем по реальной высоте плашки.
+        const gapY = Math.round(fs * 0.2);
+        const cellH = Math.max.apply(null, boxes.map(function(b){
+          const c = b.firstElementChild;
+          return c ? c.getBoundingClientRect().height : fs * 1.5;
+        }));
+        // Если браузер не понял dvh/vh и колонка схлопнулась в ноль — не мельчим
+        // до минимума вслепую, а опираемся на высоту окна: пусть лучше табло
+        // будет крупным, чем 20-пиксельным из-за кривого замера.
+        let availH = Math.min(boxes[0].clientHeight, boxes[1].clientHeight);
+        if(availH < 80){ availH = Math.max(80, Math.round(window.innerHeight * 0.55)); }
+        const rows = Math.max(1, Math.floor((availH + gapY) / (cellH + gapY)));
+        document.body.style.setProperty("--tv-rows", rows);
+        if(boxes.every(tvFits)) return;   // влезло — дальше не мельчим
+      }
+      // Не влезло даже на минимуме — обрезаем хвост и показываем «+N».
+      tvTruncate(boxes[0], lastNums.prep, false);
+      tvTruncate(boxes[1], lastNums.ready, true);
+    }
+    function tvTruncate(box, list, hot){
+      if(tvFits(box)) return;
+      for(let k = list.length - 1; k >= 1; k--){
+        box.innerHTML = numsHtml(list.slice(0, k), hot, lastNums.fresh)
+          + '<span class="num num-more">+' + (list.length - k) + '</span>';
+        if(tvFits(box)) return;
+      }
+    }
+    // Пересчитываем при смене размера окна и после подгрузки шрифтов (метрики
+    // Bebas Neue отличаются от системного фолбэка — иначе первый расчёт врёт).
+    let tvFitTimer = null;
+    window.addEventListener("resize", function(){
+      clearTimeout(tvFitTimer);
+      tvFitTimer = setTimeout(fitTvBoard, 150);
+    });
+    if(document.fonts && document.fonts.ready){ document.fonts.ready.then(fitTvBoard); }
 
     // Табло /board (но НЕ ТВ-режим /tv — там звук осознанно не используем).
     function isBoardScreen(){
@@ -1064,6 +1685,7 @@
     function hideAllScreens(){
       document.getElementById("landing").classList.add("hidden");
       document.getElementById("guest").classList.add("hidden");
+      document.getElementById("myOrder").classList.add("hidden");
       document.getElementById("staff").classList.add("hidden");
       document.getElementById("stats").classList.add("hidden");
     }
@@ -1101,6 +1723,18 @@
         }, 3600 * 1000);
       }
       startPolling();
+      if(tv) fitTvBoard();   // если табло уже отрисовано — сразу вписать в экран
+      // Воронка отзывов и подписка — только телефон гостя. Телевизор остаётся
+      // чистым табло.
+      document.getElementById("subCard").classList.toggle("hidden", !!tv);
+      if(!tv){
+        const subBg = document.getElementById("subBg");
+        if(subBg && !subBg.innerHTML) subBg.innerHTML = rosette();
+        fbLoadConfig();
+        notifInit();
+        // Запасной QR со стойки выдачи: /board?rate=1 — просим номер руками.
+        if(/[?&]rate=1\b/.test(location.search)) fbOpenAsk();
+      }
       if(push !== false){
         const path = tv ? "/tv" : "/board";
         history.pushState({s: tv ? "tv" : "board"}, "", path);
@@ -1124,7 +1758,9 @@
     // Стартовый экран берём из адреса страницы (/board, /tv, /staff, /stats, иначе лендинг).
     function routeFromPath(){
       const p = location.pathname;
-      if(p === "/board"){ showBoard(false, false); }
+      // Гость, подписанный на свой заказ, возвращается на свой экран (/board?my=1).
+      if(p === "/board" && /[?&]my=1\b/.test(location.search) && fbMy()){ showMyOrder(false); }
+      else if(p === "/board"){ showBoard(false, false); }
       else if(p === "/tv"){ showBoard(false, true); }
       else if(p === "/staff"){ showStaff(false); }
       else if(p === "/stats"){ showStats(false); }
@@ -1182,25 +1818,6 @@
       state = data;
       renderGuest(); renderStaff();
       return data;
-    }
-
-    async function addOrder(){
-      const inp = document.getElementById("newNum");
-      const err = document.getElementById("addErr");
-      err.classList.remove("show");
-      const num = parseInt(inp.value, 10);
-      if(!num || num < 1){
-        err.className = "result err show";
-        err.textContent = "Введи номер заказа";
-        return;
-      }
-      try {
-        await api("/api/order", { number: num });
-        inp.value = ""; inp.focus();
-      } catch(e){
-        err.className = "result err show";
-        err.textContent = e.message || "Не удалось добавить";
-      }
     }
 
     function setStatus(num, status){ api("/api/order/status", { number: num, status }).catch(() => {}); }
@@ -1314,12 +1931,65 @@
     async function loadStatsRange(){
       const dates = [...selectedDates];
       renderTrend();  // тренд по дням — из выбранных (day-level, без запроса)
+      loadStatsPaths(dates);
+      loadStatsFeedback(dates);
       try {
         const d = await statsGet("/api/stats/range?dates=" + dates.join(","));
         renderKpis(d.summary || {}, dates);
         document.getElementById("chartOrders").innerHTML = ordersChart(d.hours || []);
         document.getElementById("chartTimes").innerHTML = timesChart(d.hours || []);
       } catch(e){}
+    }
+
+    // ---- Оценки гостей: сводка и связка «ожидание ↔ оценка» ----
+    // Ради последней всё и затевалось: она показывает, на какой минуте ожидания
+    // гость перестаёт быть довольным.
+    async function loadStatsFeedback(dates){
+      let d = null;
+      try { d = await statsGet("/api/stats/feedback?dates=" + dates.join(",")); } catch(e){}
+      renderFeedbackStats(d || {});
+    }
+
+    function renderFeedbackStats(d){
+      const kpi = document.getElementById("fbKpiRow");
+      const count = d.count || 0;
+      kpi.innerHTML = [
+        ["Отзывов", count + (d.orders ? " из " + d.orders : ""), d.coverage != null ? d.coverage + "% заказов" : ""],
+        ["Средняя", d.avgRating != null ? d.avgRating : "—", "по " + count + " отзывам"],
+        ["Пятёрок", d.share5 != null ? d.share5 + "%" : "—", "доля высших оценок"],
+        ["Негатив", d.negative || 0, (d.withContact || 0) + " с контактом"]
+      ].map(function(k){
+        return '<div class="kpi"><b>' + k[1] + '</b><span>' + k[0] + '</span>'
+             + (k[2] ? '<span>' + k[2] + '</span>' : "") + '</div>';
+      }).join("");
+
+      // Корзины ожидания: длина полоски — средняя оценка (из 5), красным — где
+      // среднее ушло в негатив.
+      const buckets = d.waitBuckets || [];
+      const box = document.getElementById("fbBuckets");
+      const has = buckets.some(function(b){ return b.count; });
+      box.innerHTML = !has
+        ? '<div class="fbs-empty">Пока нет отзывов с известным временем ожидания</div>'
+        : buckets.map(function(b){
+            const v = b.avgRating;
+            const w = v == null ? 0 : (v / 5 * 100);
+            return '<div class="fbs-row"><span class="k">' + b.label + '</span>'
+              + '<span class="bar"><i class="' + (v != null && v <= 3 ? "bad" : "") + '" style="width:'
+              + w.toFixed(0) + '%"></i></span>'
+              + '<span class="v">' + (v == null ? "—" : v.toFixed(2)) + '</span>'
+              + '<span class="n">' + (b.count || 0) + '</span></div>';
+          }).join("");
+
+      const tags = d.tags || [];
+      const tagBox = document.getElementById("fbTagStats");
+      const max = tags.length ? tags[0].count : 0;
+      tagBox.innerHTML = !tags.length
+        ? '<div class="fbs-empty">Жалоб с тегами пока нет</div>'
+        : tags.map(function(t){
+            return '<div class="fbs-row"><span class="k" style="flex-basis:96px">' + esc(t.tag) + '</span>'
+              + '<span class="bar"><i class="bad" style="width:' + (t.count / max * 100).toFixed(0) + '%"></i></span>'
+              + '<span class="n">' + t.count + '</span></div>';
+          }).join("");
     }
 
     // Тренд «заказы по дням» — выбранные дни по возрастанию даты
@@ -1439,6 +2109,195 @@
       return '<svg viewBox="0 0 ' + W + ' ' + H + '" class="cv' + (big ? ' cv-big' : '') + '" preserveAspectRatio="xMinYMid meet" style="width:100%;max-width:' + W + 'px;height:auto;">' + s + '</svg>';
     }
 
+    // ---- Путь заказов (строка = заказ, колонки = время в статусах) ----
+    // Бэкенд считает секунды по каждому статусу (журнал order_events), фронт
+    // только сортирует и рисует.
+    let pathCache = { orders: [], total: 0, truncated: false, dates: [] };
+    let pathSort = "time";
+
+    async function loadStatsPaths(dates){
+      try {
+        const d = await statsGet("/api/stats/orders?dates=" + dates.join(","));
+        pathCache = { orders: d.orders || [], total: d.total || 0, truncated: !!d.truncated, dates: dates };
+      } catch(e){
+        pathCache = { orders: [], total: 0, truncated: false, dates: dates };
+      }
+      renderPaths();
+    }
+
+    function setPathSort(mode){ pathSort = mode; renderPaths(); }
+
+    // Какая строка раскрыта. Ключ — дата+номер+время приёма: номер за день может
+    // повториться, и по одному номеру раскрывались бы сразу два заказа.
+    let pathOpen = null;
+    function togglePathRow(key){
+      pathOpen = (pathOpen === key ? null : key);
+      renderPaths();
+    }
+
+    // Лента переходов: во сколько заказ попал в каждый статус и сколько там
+    // пролежал. Отвечает на вопрос «когда именно он стал готов», которого нет
+    // ни в колонках таблицы, ни в общих итогах.
+    function timelineHtml(o){
+      const tl = o.timeline || [];
+      if(!tl.length) return "";
+      const label = { open: "открыт", preparing: "готовится", ready: "готово", served: "выдан" };
+      return '<div class="det-tl">'
+        + '<div class="det-tl-cap">Время по статусам</div>'
+        + tl.map(function(t, i){
+            const last = i === tl.length - 1;
+            return '<div class="det-tl-row' + (last ? " last" : "") + '">'
+              + '<span class="tl-dot st-' + t.status + '"></span>'
+              + '<span class="tl-name">' + (label[t.status] || t.status) + '</span>'
+              + '<span class="tl-at">' + fmtClock(t.at) + '</span>'
+              + '<span class="tl-dur">' + (t.sec == null ? "" : fmtDur(t.sec)) + '</span>'
+              + '</div>';
+          }).join("")
+        + '</div>';
+    }
+
+    // Полная карточка заказа: путь по этапам и отзыв целиком. Нужна потому, что
+    // комментарий гостя в узкую колонку не влезает — а читать его надо целиком.
+    function pathDetails(o){
+      const pair = function(k, v){
+        return v ? '<div class="det-pair"><span>' + k + '</span><b>' + v + '</b></div>' : "";
+      };
+      const src = o.source === "iiko" ? "из iiko" : "занесён вручную";
+      const st = { open: "открыт", preparing: "готовится", ready: "готово", served: "выдан" }[o.status] || o.status;
+      let left = '<div class="det-grid">'
+        + pair("Заказ", "№" + o.number + " · " + fmtDate(o.date))
+        + pair("Статус", st + " · " + src)
+        + pair("Принят", fmtClock(o.acceptedAt))
+        + pair("Выдан", fmtClock(o.doneAt))
+        + pair("Всего", fmtDur(o.totalSec))
+        + '</div>'
+        + timelineHtml(o);
+
+      if(o.rating == null){
+        return left + '<div class="det-none">Гость не оставил отзыв</div>';
+      }
+      const bad = o.rating <= 3;
+      const stars = "★★★★★".slice(0, o.rating) + "☆☆☆☆☆".slice(0, 5 - o.rating);
+      const work = { new: "новый", contacted: "связались", resolved: "отработан", visited: "гость пришёл" };
+      let right = '<div class="det-fb' + (bad ? " bad" : "") + '">'
+        + '<div class="det-stars">' + stars + ' <b>' + o.rating + '</b>'
+        + (o.feedbackStatus ? '<span class="det-work">' + (work[o.feedbackStatus] || o.feedbackStatus) + '</span>' : "")
+        + '</div>';
+      if((o.tags || []).length){
+        right += '<div class="det-tags">' + o.tags.map(function(t){
+          return '<span>' + esc(t) + '</span>'; }).join("") + '</div>';
+      }
+      if(o.comment){ right += '<div class="det-text">' + esc(o.comment) + '</div>'; }
+      right += o.contact
+        ? '<div class="det-contact">Контакт: ' + contactLink(o) + '</div>'
+        : '<div class="det-nocontact">Контакт не оставлен</div>';
+      return left + right + '</div>';
+    }
+
+    // Длительность как м:сс — на этапах заказа секунды важнее десятых минуты
+    function fmtDur(sec){
+      if(sec == null) return "—";
+      return Math.floor(sec / 60) + ":" + pad2(sec % 60);
+    }
+
+    function fmtClock(iso){ return iso ? iso.slice(11, 16) : "—"; }
+
+    // Доли статусов внутри заказа одной полоской (цвета — как в легенде)
+    function pathBar(o){
+      const parts = [["#64748B", o.openSec], ["#D97706", o.prepSec], ["#2563EB", o.readySec]];
+      const sum = parts.reduce((s, p) => s + (p[1] || 0), 0);
+      if(!sum) return '<div class="pth"></div>';
+      return '<div class="pth">' + parts.filter(p => p[1] > 0)
+        .map(p => '<i style="width:' + (p[1] / sum * 100).toFixed(1) + '%;background:' + p[0] + '"></i>').join("")
+        + '</div>';
+    }
+
+    // Оценка в строке заказа: цифра со звездой, ниже — теги и текст, если есть.
+    // Негатив красим — чтобы строки с жалобами находились взглядом, а не поиском.
+    function rateCell(o){
+      if(o.rating == null) return '<span class="rate-none">—</span>';
+      const bad = o.rating <= 3;
+      const bits = (o.tags || []).slice();
+      if(o.comment) bits.push("«" + o.comment + "»");
+      const title = bits.join(" · ");
+      return '<span class="rate' + (bad ? " bad" : "") + '">' + o.rating + '★</span>'
+        + (title ? '<span class="rate-why" title="' + esc(title) + '">' + esc(title) + '</span>' : "")
+        + contactLink(o);
+    }
+
+    // Контакт гостя — сразу кликабельный: по негативу надо звонить и писать, а
+    // не переписывать номер руками.
+    function contactLink(o){
+      if(!o.contact) return "";
+      const c = String(o.contact).trim();
+      let href = "";
+      if(o.contactType === "telegram"){
+        href = c.indexOf("t.me/") >= 0 ? (c.indexOf("http") === 0 ? c : "https://" + c)
+                                       : "https://t.me/" + c.replace(/^@/, "");
+      } else if(o.contactType === "phone"){
+        href = "tel:" + c.replace(/[^\d+]/g, "");
+      }
+      const inner = esc(c);
+      return href
+        ? '<a class="rate-contact" href="' + esc(href) + '" target="_blank" rel="noopener"'
+          + ' onclick="event.stopPropagation()">' + inner + '</a>'
+        : '<span class="rate-contact">' + inner + '</span>';
+    }
+
+    // Текст из отзыва — гостевой, в таблицу кассы попадает как есть: экранируем.
+    function esc(t){
+      return String(t).replace(/[&<>"]/g, function(c){
+        return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c];
+      });
+    }
+
+    function renderPaths(){
+      document.getElementById("pathSortTime").classList.toggle("on", pathSort === "time");
+      document.getElementById("pathSortTotal").classList.toggle("on", pathSort === "total");
+      document.getElementById("pathSortRate").classList.toggle("on", pathSort === "rating");
+      const el = document.getElementById("pathTable");
+      const note = document.getElementById("pathNote");
+      const rows = pathCache.orders.slice();
+      if(!rows.length){
+        el.innerHTML = '<div class="muted-note">Нет заказов за выбранные дни</div>';
+        note.textContent = "";
+        return;
+      }
+      // «Дольше всего» — по полному времени; невыданные (без итога) уходят вниз
+      if(pathSort === "total") rows.sort((a, b) => (b.totalSec == null ? -1 : b.totalSec) - (a.totalSec == null ? -1 : a.totalSec));
+      // «Недовольные» — сначала низкие оценки, заказы без отзыва в конце.
+      if(pathSort === "rating") rows.sort((a, b) => (a.rating == null ? 99 : a.rating) - (b.rating == null ? 99 : b.rating));
+      const multi = pathCache.dates.length > 1;
+      let h = '<table class="stat-tbl paths"><thead><tr>'
+        + (multi ? '<th>Дата</th>' : '')
+        + '<th>№</th><th>Приём</th><th>Выдан</th><th>Открыт</th><th>Готовка</th><th>До выдачи</th><th>Всего</th><th>Путь</th><th>Оценка</th>'
+        + '</tr></thead><tbody>';
+      const cols = (multi ? 1 : 0) + 9;
+      h += rows.map(o => {
+        const key = o.date + ":" + o.number + ":" + (o.acceptedAt || "");
+        const open = pathOpen === key;
+        return '<tr class="pth-row' + (o.totalSec == null ? " act" : "") + (open ? " open" : "")
+          + '" onclick="togglePathRow(\'' + key + '\')">'
+        + (multi ? '<td>' + fmtDate(o.date) + '</td>' : '')
+        + '<td>' + o.number + '</td>'
+        + '<td>' + fmtClock(o.acceptedAt) + '</td>'
+        + '<td>' + fmtClock(o.doneAt) + '</td>'
+        + '<td>' + fmtDur(o.openSec) + '</td>'
+        + '<td>' + fmtDur(o.prepSec) + '</td>'
+        + '<td>' + fmtDur(o.readySec) + '</td>'
+        + '<td>' + fmtDur(o.totalSec) + '</td>'
+        + '<td class="pth-cell">' + pathBar(o) + '</td>'
+        + '<td class="rate-cell">' + rateCell(o) + '</td></tr>'
+        + (open ? '<tr class="pth-det"><td colspan="' + cols + '">' + pathDetails(o) + '</td></tr>' : "");
+      }).join("");
+      el.innerHTML = h + '</tbody></table>';
+      const active = rows.some(o => o.totalSec == null);
+      note.textContent = (pathCache.truncated
+          ? "Показаны последние " + rows.length + " из " + pathCache.total + " — выбери меньше дней, чтобы увидеть остальные."
+          : "Заказов: " + rows.length + ", с оценкой: " + rows.filter(o => o.rating != null).length + ".")
+        + (active ? " Прочерк — заказ ещё не выдан." : "");
+    }
+
     // ---------- панель кассы ----------
     // порядок статусов в списке кассы: открытые сверху, затем в работе, готовые
     const STATUS_ORDER = { open: 0, preparing: 1, ready: 2 };
@@ -1488,6 +2347,673 @@
 
     // "2026-07-20T19:35:45[+03:00]" → "19:35" (для меток времени у кассы)
     function hhmm(iso){ return iso ? String(iso).slice(11,16) : "—"; }
+
+    // ==================== Подписка на свой заказ ====================
+    // Гость вводит номер с чека и переходит на персональный экран. Дальше телефон сам сообщает о готовности — звуком и
+    // вибрацией, — а после выдачи приглашает поставить оценку.
+    //
+    // Хранилище то же, что у воронки отзывов (FB_KEY): один заказ гостя — одна
+    // запись, чтобы подписка и оценка не разъезжались.
+
+    // Вибрация: Android умеет, iOS (Safari) не поддерживает вообще — там гость
+    // получит только звук и визуал. Молча деградируем, это не ошибка.
+    function buzz(pattern){
+      try { if(navigator.vibrate) navigator.vibrate(pattern); } catch(e){ /* нет мотора */ }
+    }
+
+    // ---------- системные уведомления ----------
+    // Показываются, даже когда гость свернул браузер или заблокировал экран, —
+    // в отличие от звука, который работает только на открытой вкладке.
+    // Требуют: разрешения гостя (спрашиваем ТОЛЬКО по тапу — иначе браузеры
+    // штрафуют сайт) и service worker: на Android иначе нельзя.
+    let swReg = null;
+
+    function notifSupported(){
+      return "Notification" in window && "serviceWorker" in navigator;
+    }
+    function notifState(){
+      return notifSupported() ? Notification.permission : "unsupported";
+    }
+
+    async function notifInit(){
+      if(!notifSupported()) return;
+      // Регистрируем воркер заранее, но разрешение не трогаем.
+      if(Notification.permission === "granted"){ await notifRegister(); }
+    }
+
+    async function notifRegister(){
+      if(swReg) return swReg;
+      try {
+        swReg = await navigator.serviceWorker.register("/sw.js");
+        await navigator.serviceWorker.ready;
+      } catch(e){
+        // Незащищённое соединение (http по IP) или запрет — не беда:
+        // звук и вибрация на открытой вкладке остаются.
+        swReg = null;
+      }
+      return swReg;
+    }
+
+    async function notifAsk(){
+      if(!notifSupported()) return;
+      try {
+        const res = await Notification.requestPermission();
+        if(res === "granted"){
+          await notifRegister();
+          unlockAudio();
+          buzz(30);
+          notifShow("Уведомления включены", "Скажем, когда заказ будет готов");
+        }
+      } catch(e){ /* гость отказал или браузер не дал — не беда */ }
+    }
+
+    // Показать системное уведомление. Через service worker, если он есть
+    // (Android), иначе — обычным конструктором (десктоп).
+    function notifShow(title, body){
+      if(notifState() !== "granted") return;
+      const opts = {
+        body: body, icon: "/assets/logo_white.png", badge: "/assets/logo_white.png",
+        vibrate: [90, 70, 90, 70, 160], tag: "iskendy-order", renotify: true
+      };
+      try {
+        if(swReg && swReg.showNotification){ swReg.showNotification(title, opts); return; }
+        new Notification(title, opts);
+      } catch(e){ /* не показалось — звук и плашка уже отработали */ }
+    }
+
+
+    async function subSubmit(){
+      const input = document.getElementById("subNum");
+      const err = document.getElementById("subErr");
+      const n = parseInt(input.value, 10);
+      err.classList.add("hidden");
+      if(!n || n < 1){
+        err.textContent = "Введите номер заказа с чека";
+        err.classList.remove("hidden");
+        return;
+      }
+      // Заказ на табло (готовится/готов/принят) — сразу подписываемся.
+      const orders = (state && state.orders) || [];
+      let onBoard = false;
+      for(let i = 0; i < orders.length; i++){ if(orders[i].number === n) onBoard = true; }
+      if(onBoard){ subTo(n); return; }
+      // Нет на табло: либо уже выдан (тогда сразу к оценке), либо номер неверный.
+      try {
+        const r = await fetch(API + "/api/feedback/check?number=" + n);
+        const d = await r.json();
+        if(d.ok){
+          // Заказ уже выдан — гость сразу попадает на свой экран со звёздами.
+          fbSaveMy({ n: n, d: (state && state.date) || todayLocal(), seen: true,
+                     servedAt: Date.now(), rated: false, done: false,
+                     promptedAt: Date.now(), lastStatus: "served" });
+          showMyOrder();
+          return;
+        }
+        if(d.reason === "already"){ subTo(n); return; }   // отзыв есть — просто следим
+        err.textContent = d.message || "Не нашли такой заказ за сегодня";
+        err.classList.remove("hidden");
+      } catch(e){
+        err.textContent = "Нет связи — попробуйте ещё раз";
+        err.classList.remove("hidden");
+      }
+    }
+
+    // Подписаться на номер и уйти на персональный экран.
+    function subTo(n){
+      fbSaveMy({ n: n, d: (state && state.date) || todayLocal(), seen: true,
+                 servedAt: 0, rated: false, done: false, lastStatus: "" });
+      document.getElementById("subNum").value = "";
+      buzz(30);                       // короткий отклик: подписка принята
+      unlockAudio();                  // тап по кнопке = разрешение на звук дальше
+      showMyOrder();
+      // Разрешение на уведомления просим здесь: гость только что нажал кнопку,
+      // то есть системный запрос для него — продолжение его же действия, а не
+      // случайная всплывашка на входе.
+      notifAsk();
+    }
+
+    function subForget(){
+      fbForget();
+      showBoard();
+    }
+
+    // ---------- персональный экран ----------
+    // Дата устройства (не UTC): по ней отсекаем вчерашнюю подписку ещё до
+    // первого ответа сервера.
+    function todayLocal(){
+      const d = new Date(), p = (n) => String(n).padStart(2, "0");
+      return d.getFullYear() + "-" + p(d.getMonth() + 1) + "-" + p(d.getDate());
+    }
+
+    function showMyOrder(push){
+      const my = fbMy();
+      if(my && my.d && my.d !== todayLocal()){ fbForget(); showBoard(push); return; }
+      if(!my){ showBoard(push); return; }
+      hideAllScreens();
+      document.body.classList.remove("landing-bg", "stats-view", "tv");
+      document.body.classList.add("brand", "board-view");
+      document.getElementById("myOrder").classList.remove("hidden");
+      myRender();
+      startPolling();
+      if(push !== false) history.pushState({s:"my"}, "", "/board?my=1");
+    }
+
+    function myOpen(){ return !document.getElementById("myOrder").classList.contains("hidden"); }
+
+
+    const MY_STEPS = [
+      { key: "open",      label: "принят" },
+      { key: "preparing", label: "готовится" },
+      { key: "ready",     label: "готово" },
+      { key: "served",    label: "выдан" }
+    ];
+
+    // Изразцовая розетка с эмблемы «Искенди»: лепестки-миндалины вокруг
+    // восьмиконечной сердцевины. Четыре больших по осям, четыре поменьше по
+    // диагоналям — как на вывеске. Рисуем один лепесток и поворачиваем его, так
+    // фигура остаётся симметричной при любом размере и не тащит лишнюю картинку.
+    function rosette(){
+      // Лепесток: остриё сверху, остриё у сердцевины, пухлый в середине.
+      const petal = function(top, bottom, w){
+        const mid = (top + bottom) / 2;
+        return "M50 " + top + " Q" + (50 + w) + " " + mid + " 50 " + bottom
+             + " Q" + (50 - w) + " " + mid + " 50 " + top + " Z";
+      };
+      let out = "";
+      for(let a = 0; a < 360; a += 90){
+        out += '<g transform="rotate(' + a + ' 50 50)"><path d="' + petal(3, 34, 16) + '"/></g>';
+      }
+      for(let a = 45; a < 360; a += 90){
+        out += '<g transform="rotate(' + a + ' 50 50)"><path d="' + petal(13, 36, 12) + '"/></g>';
+      }
+      // Сердцевина — восьмиконечная звезда с широкими лучами, как на плитке.
+      let star = "";
+      for(let i = 0; i < 16; i++){
+        const r = i % 2 ? 7 : 18;
+        const t = (Math.PI / 8) * i - Math.PI / 2;
+        star += (i ? "L" : "M") + (50 + r * Math.cos(t)).toFixed(1)
+              + " " + (50 + r * Math.sin(t)).toFixed(1);
+      }
+      return '<svg viewBox="0 0 100 100" fill="currentColor" aria-hidden="true">'
+           + out + '<path d="' + star + 'Z"/></svg>';
+    }
+
+    // Статус моего заказа по данным табло. Заказ ушёл из активных — считаем
+    // выданным только если это подтвердил бэкенд (кассир мог и удалить).
+    function myStatus(){
+      const my = fbMy();
+      if(!my) return null;
+      // Пока не пришёл первый ответ табло — статуса мы не знаем. Раньше здесь
+      // подставлялся «выдан» из прошлой сессии, и гость успевал увидеть чужой
+      // статус и подсказку «заказ ещё не появился» до первой загрузки.
+      if(!state) return "";
+      const orders = state.orders || [];
+      for(let i = 0; i < orders.length; i++){
+        if(orders[i].number === my.n) return orders[i].status;
+      }
+      // Заказа нет среди активных: он выдан, только если это подтвердил бэкенд
+      // (fbAskServed). До подтверждения держим последний известный статус —
+      // иначе на миг мигает «не появился на табло».
+      if(my.servedAt) return "served";
+      if(my.gone) return "gone";
+      return my.lastStatus || "";
+    }
+
+    function myRender(){
+      const my = fbMy();
+      if(!my || !myOpen()) return;
+      const st = myStatus();
+      // Первый тик опроса ещё не пришёл — оставляем экран как есть, чтобы не
+      // мигать промежуточными подписями.
+      if(!state && !my.lastStatus) return;
+      const card = document.getElementById("myCard");
+      const ready = st === "ready";
+      card.classList.toggle("is-ready", ready);
+      document.getElementById("myNum").textContent = String(my.n);
+
+      const text = {
+        open:      ["Принят", "Кухня вот-вот возьмёт заказ в работу"],
+        preparing: ["Готовится", "Как только заказ будет готов — телефон звякнет"],
+        ready:     ["Готово ✓", "Забирайте на выдаче — мы вас ждём"],
+        served:    ["Выдан", "Приятного аппетита!\nПожалуйста, поделитесь позже впечатлениями о заказе"],
+        gone:      ["Заказ снят", "Кассир убрал этот номер с табло.\nЕсли это ошибка — подойдите на выдачу"]
+      }[st] || ["Ждём кухню", "Заказ ещё не появился на табло — это нормально, подождите минуту"];
+      document.getElementById("myStatus").textContent = text[0];
+      document.getElementById("myNote").textContent = text[1];
+
+      // Путь заказа: пройденные шаги подсвечены, текущий — ярче.
+      const at = MY_STEPS.findIndex(function(s){ return s.key === st; });
+      let html = "";
+      for(let i = 0; i < MY_STEPS.length; i++){
+        const cls = at < 0 ? "" : (i < at ? " done" : (i === at ? " now" : ""));
+        html += '<div class="my-step' + cls + '"><div class="dot"></div><span>'
+              + MY_STEPS[i].label + '</span></div>';
+      }
+      document.getElementById("mySteps").innerHTML = html;
+
+      // Клеймо и фоновый оттиск рисуем один раз.
+      const emblem = document.getElementById("myEmblem");
+      if(emblem && !emblem.innerHTML){
+        emblem.innerHTML = rosette();
+        document.getElementById("myBg").innerHTML = rosette();
+      }
+
+      myRenderRating(my, st);
+    }
+
+    // Звёзды и то, что под ними. Всё на одном экране: гость видит номер,
+    // статус, путь заказа, оценку и продолжение подряд, без всплывающих окон.
+    function myRenderRating(my, st){
+      const box = document.getElementById("myRate");
+      const cap = document.getElementById("myRateCap");
+      const note = document.getElementById("myRateNote");
+      const fb = my.fb;
+      const served = st === "served";
+      // Карточка становится оценочной, когда заказ позади: либо гостя уже
+      // позвали оценить, либо оценка уже стоит.
+      document.getElementById("myCard").classList.toggle(
+        "is-rating", served && (!!my.promptedAt || !!fb));
+      // До выдачи звёзды видны, но приглушены: оценивать ещё нечего.
+      box.classList.toggle("is-off", !served && !fb);
+      fbStarsInit();
+      fbHighlight(fb ? fb.rating : 0);
+
+      if(!served && !fb){
+        cap.textContent = "Как вам заказ?";
+        note.textContent = "Оценить можно, когда заберёте заказ";
+      } else if(!fb){
+        cap.textContent = "Как вам заказ?";
+        note.textContent = "";
+      } else if(fb.detailSent){
+        cap.textContent = "Ваша оценка";
+        note.textContent = "Спасибо, мы всё прочитали";
+      } else {
+        cap.textContent = "Ваша оценка";
+        note.textContent = "";
+      }
+
+      // Блок под карточкой: карты для довольных, форма для недовольных.
+      if(!fb){ fbStep(null); return; }
+      if(fb.branch === "positive"){
+        if(document.getElementById("fbStepThanks").classList.contains("hidden")){
+          fbShowThanks(fbConfig.links);
+        }
+      } else if(fb.detailSent){
+        fbStep("fbStepDone");
+      } else if(document.getElementById("fbStepSorry").classList.contains("hidden")){
+        fbShowSorry();
+      }
+    }
+
+    // Заказ стал готов — самое важное событие для гостя: звук, вибрация, плашка.
+    function myNotifyReady(n){
+      buzz([90, 70, 90, 70, 160]);
+      chime();
+      notifShow("Заказ №" + n + " готов", "Забирайте на выдаче");
+      const host = document.getElementById("boardToast");
+      if(host){
+        const el = document.createElement("div");
+        el.className = "toast";
+        el.innerHTML = '<span class="bell">🔔</span><span>Ваш заказ готов</span><b>№ ' + n + '</b>';
+        host.appendChild(el);
+        setTimeout(function(){ el.remove(); }, 4300);
+      }
+    }
+
+    // Следим за сменой статуса своего заказа. Вызывается на каждом тике опроса,
+    // и на табло, и на персональном экране — уведомление придёт в обоих случаях.
+    function myWatch(){
+      const my = fbMy();
+      if(!my) return;
+      const st = myStatus();
+      if(st && my.lastStatus !== st){
+        const was = my.lastStatus;
+        my.lastStatus = st;
+        fbSaveMy(my);
+        // Звеним только на переходе в «готово» и только если раньше уже видели
+        // другой статус — иначе телефон звякнет при первом же заходе на страницу.
+        if(st === "ready" && was && was !== "ready"){ myNotifyReady(my.n); }
+      }
+      myRender();
+    }
+
+    // ==================== Отзыв гостя (docs/feedback-flow.md) ====================
+    // Всё ниже работает ТОЛЬКО на телефоне гостя (/board). На /tv не заходим
+    // никогда: там раскладку считает fitTvBoard(), и телевизор должен остаться
+    // чистым табло. Сторож — isBoardScreen() (board-view && !tv).
+    //
+    // Путь гостя: ввёл номер с чека → номер лёг в localStorage → заказ ушёл с
+    // табло → уточняем у бэкенда, выдан ли → через паузу зовём оценить (звук,
+    // вибрация, уведомление) → 4-5★ показывают карты, 1-3★ — форму «что не так».
+    // Всё это рисуется прямо на экране заказа, модальных окон нет.
+
+    const FB_KEY = "iskendi_my_order";
+    const FB_TAGS = ["долго ждали", "остыло", "не тот вкус", "мало положили",
+                     "персонал", "грязно", "цена", "другое"];
+    // Пауза и ссылки приезжают из .env через /api/feedback/config; до ответа
+    // живём на этих значениях.
+    let fbConfig = { promptDelaySec: 180, links: {}, loaded: false };
+    let fbState = { feedbackId: null, editToken: "", rating: 0, tags: [], busy: false };
+    let fbLastCheck = 0;
+
+    // ---------- «мой заказ» в localStorage ----------
+    // {n: номер, d: день, seen: висел на табло, servedAt: когда заметили выдачу,
+    //  rated: оценка есть, promptedAt: когда позвали оценить, gone: заказ снят
+    //  кассой, fb: {id, token, rating, branch, detailSent} — сам отзыв}
+    function fbMy(){
+      try { return JSON.parse(localStorage.getItem(FB_KEY) || "null"); } catch(e){ return null; }
+    }
+    function fbSaveMy(o){
+      try { localStorage.setItem(FB_KEY, JSON.stringify(o)); } catch(e){ /* приватный режим */ }
+    }
+    // Слить изменения в АКТУАЛЬНУЮ запись: пока шёл сетевой запрос, тик опроса
+    // мог сохранить свою версию (например, новый lastStatus), и запись целиком
+    // затёрла бы её устаревшей копией.
+    function fbPatchMy(n, patch){
+      const cur = fbMy();
+      if(!cur || cur.n !== n) return null;
+      const next = Object.assign({}, cur, patch);
+      fbSaveMy(next);
+      return next;
+    }
+    function fbForget(){
+      try { localStorage.removeItem(FB_KEY); } catch(e){ /* приватный режим */ }
+    }
+
+    async function fbLoadConfig(){
+      if(fbConfig.loaded) return;
+      try {
+        const r = await fetch(API + "/api/feedback/config");
+        const d = await r.json();
+        fbConfig = {
+          promptDelaySec: d.promptDelaySec || 180,
+          links: d.links || {},
+          loaded: true
+        };
+      } catch(e){ /* не ответил — работаем на значениях по умолчанию */ }
+    }
+
+    // Тапом по чужому номеру на табло в заказ НЕ проваливаются: иначе любой
+    // гость разглядывал бы, кто сколько ждёт, и сравнивал себя с соседями.
+    // Подписка — только по номеру со своего чека, через поле выше.
+
+    // Подсветить номер, отмеченный гостем. Вызывается после каждой перерисовки
+    // табло — innerHTML затирает классы.
+    function fbMarkMine(){
+      const my = fbMy();
+      const nums = document.querySelectorAll("#guest .num");
+      for(let i = 0; i < nums.length; i++){
+        const el = nums[i];
+        el.classList.toggle("mine", !!my && parseInt(el.textContent, 10) === my.n);
+      }
+    }
+
+    // ---------- слежение за заказом ----------
+    // Заказ пропал из активных → уточняем у бэкенда, выдан ли он (кассир мог и
+    // удалить ошибочный). Выдан — заводим паузу до экрана оценки.
+    function fbWatch(){
+      const my = fbMy();
+      if(!my) return;
+      // Новый день — старая привязка не нужна: оценку задним числом не принимаем.
+      if(state && state.date && my.d && my.d !== state.date){
+        fbForget();
+        if(myOpen()) showBoard();   // иначе на экране остался бы вчерашний номер
+        return;
+      }
+      if(my.rated || my.done) return;
+      const orders = (state && state.orders) || [];
+      let active = false;
+      for(let i = 0; i < orders.length; i++){ if(orders[i].number === my.n) active = true; }
+      if(active){
+        if(!my.seen){ my.seen = true; fbSaveMy(my); }
+        return;
+      }
+      if(!my.seen) return;                 // номер ни разу не висел на табло
+      if(my.servedAt){ fbMaybePrompt(my); return; }
+      fbAskServed(my);
+    }
+
+    async function fbAskServed(my){
+      const now = Date.now();
+      if(now - fbLastCheck < 20000) return;   // не чаще раза в 20 сек (rate-limit)
+      fbLastCheck = now;
+      try {
+        const r = await fetch(API + "/api/feedback/check?number=" + my.n);
+        const d = await r.json();
+        if(d.ok){
+          const upd = fbPatchMy(my.n, { servedAt: Date.now(), gone: false });
+          if(upd) fbMaybePrompt(upd);
+        } else if(d.reason === "already"){
+          fbPatchMy(my.n, { rated: true });   // отзыв уже есть — не переспрашиваем
+        } else if(d.reason === "not_found"){
+          // Заказа нет ни на табло, ни в базе за сегодня — кассир его снял.
+          // Молча держать «готовится» нельзя: гость будет ждать вечно.
+          fbPatchMy(my.n, { gone: true });
+        }
+        // not_served — заказ ещё в работе, просто ждём
+      } catch(e){ /* сеть моргнула — повторим на следующем тике опроса */ }
+    }
+
+
+
+
+    function fbMaybePrompt(my){
+      if(my.promptedAt) return;                       // уже звали
+      if(Date.now() - my.servedAt < (fbConfig.promptDelaySec || 180) * 1000) return;
+      my.promptedAt = Date.now();
+      fbSaveMy(my);
+      // Экран заказа гость и так видит; если он на табло — переводим к себе.
+      if(!myOpen()) showMyOrder();
+      myRender();
+      buzz([60, 60, 60]);
+      chime();
+      notifShow("Как вам заказ " + my.n + "?", "Оцените — это пять секунд");
+    }
+
+    // ---------- блоки отзыва на странице заказа ----------
+    // Модального окна больше нет: оценка и то, что после неё, живут прямо на
+    // экране заказа — гость видит номер, статус, звёзды и продолжение подряд.
+    function fbStep(id){
+      const blocks = document.querySelectorAll("#myFeedback .fb-block");
+      for(let i = 0; i < blocks.length; i++){ blocks[i].classList.add("hidden"); }
+      if(id) document.getElementById(id).classList.remove("hidden");
+      document.getElementById("fbErr").classList.add("hidden");
+    }
+    function fbFail(text){
+      const box = document.getElementById("fbErr");
+      box.textContent = text;
+      box.classList.remove("hidden");
+    }
+
+
+    // ---------- звёзды ----------
+    // Как на картах: ведёшь пальцем — подсветка идёт следом, отпустил на нужной —
+    // оценка ушла. Отдельной кнопки «отправить» нет: лишний тап режет отклик.
+    const FB_STAR_SVG = '<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">'
+      + '<path d="M12 2.4l2.95 5.98 6.6.96-4.78 4.66 1.13 6.57L12 17.47l-5.9 3.1 1.13-6.57L2.45 9.34l6.6-.96L12 2.4z"/></svg>';
+
+    function fbStarsInit(){
+      const box = document.getElementById("fbStars");
+      if(box.dataset.ready) return;
+      box.dataset.ready = "1";
+      let html = "";
+      for(let i = 1; i <= 5; i++){
+        html += '<button type="button" class="fb-star" data-v="' + i + '"'
+              + ' aria-label="Оценка ' + i + ' из 5">' + FB_STAR_SVG + '</button>';
+      }
+      box.innerHTML = html;
+      box.addEventListener("pointerdown", function(e){ fbHighlight(fbStarAt(e)); });
+      box.addEventListener("pointermove", function(e){
+        // Палец на экране (или курсор с зажатой кнопкой) — тянем подсветку.
+        if(e.pointerType === "mouse" && e.buttons === 0){ fbHighlight(fbStarAt(e)); return; }
+        if(e.pointerType !== "mouse" && e.buttons === 0) return;
+        fbHighlight(fbStarAt(e));
+      });
+      box.addEventListener("pointerleave", function(){
+        const my = fbMy();
+        fbHighlight(my && my.fb ? my.fb.rating : (fbState.rating || 0));
+      });
+      box.addEventListener("pointerup", function(e){
+        const v = fbStarAt(e);
+        if(v) fbSendRating(v);
+      });
+      // Клавиатура и скринридеры: обычная активация кнопки тоже отправляет.
+      box.addEventListener("keydown", function(e){
+        if(e.key !== "Enter" && e.key !== " ") return;
+        const b = e.target.closest(".fb-star");
+        if(!b) return;
+        e.preventDefault();
+        fbSendRating(parseInt(b.dataset.v, 10));
+      });
+    }
+
+    // Звезда под пальцем/курсором. elementFromPoint — потому что на тач-экране
+    // событие остаётся привязанным к той кнопке, где палец коснулся первой.
+    function fbStarAt(e){
+      const el = document.elementFromPoint(e.clientX, e.clientY);
+      const btn = el && el.closest ? el.closest(".fb-star") : null;
+      return btn ? parseInt(btn.dataset.v, 10) : 0;
+    }
+
+    function fbHighlight(v){
+      const stars = document.querySelectorAll("#fbStars .fb-star");
+      for(let i = 0; i < stars.length; i++){
+        stars[i].classList.toggle("on", parseInt(stars[i].dataset.v, 10) <= v);
+      }
+    }
+
+    async function fbSendRating(rating){
+      const my = fbMy();
+      if(!my || fbState.busy) return;
+      // Оценка возможна только после выдачи — до этого звёзды приглушены.
+      if(myStatus() !== "served" && !my.fb){
+        fbHighlight(my.fb ? my.fb.rating : 0);
+        return;
+      }
+      // Переставить оценку можно, пока отзыв не закрыт отправкой деталей.
+      if(my.fb && my.fb.detailSent){ fbHighlight(my.fb.rating); return; }
+      fbState.busy = true;
+      fbHighlight(rating);
+      try {
+        // Отзыв уже стоит — значит гость исправляет промах по звезде.
+        const fix = my.fb && my.fb.id;
+        const r = await fetch(API + (fix ? "/api/feedback/rate" : "/api/feedback"), {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(fix
+            ? { feedback_id: my.fb.id, edit_token: my.fb.token || "", rating: rating }
+            : { number: my.n, rating: rating })
+        });
+        const d = await r.json();
+        if(!d.ok){
+          // Отзыв уже принят / заказ не тот — показываем причину и закрываем тему.
+          fbFail(d.message || "Не получилось сохранить оценку");
+          fbPatchMy(my.n, { rated: true });
+          if(my.fb) fbHighlight(my.fb.rating);   // вернуть подсветку прежней оценки
+          return;
+        }
+        // Кладём отзыв в localStorage: гость может перезагрузить страницу или
+        // случайно закрыть вкладку между оценкой и деталями — и вернуться сюда.
+        const upd = fbPatchMy(my.n, {
+          rated: true,
+          fb: {
+            id: d.feedbackId || (my.fb && my.fb.id),
+            token: d.editToken || (my.fb && my.fb.token) || "",
+            rating: rating, branch: d.branch,
+            detailSent: (my.fb && my.fb.detailSent) || false
+          }
+        });
+        if(!upd) return;                       // гость успел отписаться
+        fbState.feedbackId = upd.fb.id;
+        fbState.editToken = upd.fb.token;
+        fbMarkMine();
+        fbState.rating = rating;
+        // Ветка могла смениться (двойка → пятёрка): перерисовываем блок под
+        // карточкой с нуля, а не дописываем поверх прежнего.
+        fbStep(null);
+        if(d.branch === "positive"){ fbShowThanks(d.links || fbConfig.links); } else { fbShowSorry(); }
+        myRender();
+      } catch(e){
+        fbFail("Нет связи — попробуйте ещё раз");
+      } finally {
+        fbState.busy = false;
+      }
+    }
+
+    // ---------- ветка 4–5★ ----------
+    function fbShowThanks(links){
+      links = links || fbConfig.links || {};
+      document.getElementById("fbReviewLinks").innerHTML = [
+        links.yandex ? fbLink(links.yandex, "Отзыв на Яндекс.Картах", "", "review_yandex") : "",
+        links["2gis"] ? fbLink(links["2gis"], "Отзыв в 2ГИС", "sec", "review_2gis") : ""
+      ].join("");
+      // Telegram — основная кнопка. Instagram мельче: в России заблокирован, без
+      // VPN у большинства не откроется. Появится VK — добавится сам, из конфига.
+      document.getElementById("fbSocialLinks").innerHTML = [
+        links.telegram ? fbLink(links.telegram, "Telegram", "mini", "review_telegram") : "",
+        links.vk ? fbLink(links.vk, "ВКонтакте", "mini", "review_vk") : "",
+        links.instagram ? fbLink(links.instagram, "Instagram", "mini", "review_instagram") : ""
+      ].join("");
+      fbStep("fbStepThanks");
+    }
+
+    function fbLink(url, label, cls, goal){
+      return '<a class="fb-link ' + (cls || "") + '" href="' + encodeURI(url) + '"'
+        + ' target="_blank" rel="noopener" onclick="ymGoal(\'' + goal + '\')">' + label + '</a>';
+    }
+
+    // ---------- ветка 1–3★ ----------
+    function fbShowSorry(){
+      const box = document.getElementById("fbTags");
+      let html = "";
+      for(let i = 0; i < FB_TAGS.length; i++){
+        html += '<button type="button" class="fb-tag" onclick="fbToggleTag(this)">'
+              + FB_TAGS[i] + '</button>';
+      }
+      box.innerHTML = html;
+      fbState.tags = [];
+      document.getElementById("fbComment").value = "";
+      document.getElementById("fbContact").value = "";
+      fbStep("fbStepSorry");
+    }
+
+    function fbToggleTag(btn){
+      const tag = btn.textContent;
+      const on = btn.classList.toggle("on");
+      const at = fbState.tags.indexOf(tag);
+      if(on && at === -1) fbState.tags.push(tag);
+      if(!on && at !== -1) fbState.tags.splice(at, 1);
+    }
+
+    async function fbSendDetail(){
+      if(fbState.busy || !fbState.feedbackId) return;
+      const btn = document.getElementById("fbSendBtn");
+      fbState.busy = true;
+      btn.disabled = true;
+      try {
+        await fetch(API + "/api/feedback/detail", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            feedback_id: fbState.feedbackId,
+            edit_token: fbState.editToken || "",
+            tags: fbState.tags,
+            comment: document.getElementById("fbComment").value,
+            contact: document.getElementById("fbContact").value
+          })
+        });
+        const cur = fbMy();
+        if(cur && cur.fb){
+          fbPatchMy(cur.n, { fb: Object.assign({}, cur.fb, { detailSent: true }) });
+        }
+        fbStep("fbStepDone");
+      } catch(e){
+        fbFail("Нет связи — попробуйте ещё раз");
+      } finally {
+        fbState.busy = false;
+        btn.disabled = false;
+      }
+    }
 
     // ---------- старт ----------
     routeFromPath();

@@ -5,7 +5,10 @@
 Выданные заказы уходят с табло. Одна таблица `orders`.
 """
 
+import hmac
 import logging
+import re
+import secrets
 import sqlite3
 from datetime import datetime
 from zoneinfo import ZoneInfo
@@ -80,6 +83,42 @@ def init_db() -> None:
         )
         conn.execute(
             "CREATE INDEX IF NOT EXISTS idx_events_date ON order_events (date)"
+        )
+        # Отзывы гостей (docs/feedback-flow.md). Один заказ — один отзыв, правило
+        # держит уникальный индекс по order_id, а не аккуратность вызывающего кода.
+        conn.execute(
+            """
+            CREATE TABLE IF NOT EXISTS feedbacks (
+                id            INTEGER PRIMARY KEY AUTOINCREMENT,
+                date          TEXT    NOT NULL,
+                order_id      INTEGER NOT NULL,
+                number        INTEGER NOT NULL,
+                rating        INTEGER NOT NULL,
+                tags          TEXT,
+                comment       TEXT,
+                contact       TEXT,
+                contact_type  TEXT,
+                wait_seconds  INTEGER,
+                status        TEXT    NOT NULL DEFAULT 'new',
+                staff_note    TEXT,
+                created_at    TEXT    NOT NULL,
+                updated_at    TEXT    NOT NULL,
+                ua_hash       TEXT
+            )
+            """
+        )
+        # Ключ на дописывание деталей: выдаётся автору отзыва и без него чужой
+        # отзыв не переписать (id-то предсказуемый — они идут подряд).
+        fb_cols = [r[1] for r in conn.execute("PRAGMA table_info(feedbacks)")]
+        if "edit_token" not in fb_cols:
+            conn.execute("ALTER TABLE feedbacks ADD COLUMN edit_token TEXT")
+        conn.execute(
+            "CREATE UNIQUE INDEX IF NOT EXISTS idx_feedback_order "
+            "ON feedbacks (order_id)"
+        )
+        conn.execute(
+            "CREATE INDEX IF NOT EXISTS idx_feedback_date "
+            "ON feedbacks (date, rating)"
         )
 
 
@@ -474,4 +513,551 @@ def stats_range(dates: list[str]) -> dict:
             }
             for hr in sorted(hours)
         ],
+    }
+
+
+# ---------- Путь заказа (сколько он пролежал в каждом статусе) ----------
+# В `orders` нет метки перехода open→preparing (штампуются только ready/served),
+# поэтому путь собираем из журнала order_events, а метки orders используем как
+# опору (приём) и как запасной вариант для заказов старше журнала.
+
+# Сколько заказов отдаём за раз: за месяц их тысячи, а таблица столько не нужна.
+ORDERS_PATH_LIMIT = 400
+
+
+def _event_chains(events: list[sqlite3.Row]) -> list[list[sqlite3.Row]]:
+    """Разбить события одного (дата, номер) на цепочки: новая — с каждого `created`.
+
+    Номер за день может быть переиспользован (заказ удалили и завели заново),
+    и тогда событий на один номер несколько независимых серий.
+    """
+    chains: list[list[sqlite3.Row]] = []
+    for e in events:
+        if e["event"] == "created" or not chains:
+            chains.append([])
+        chains[-1].append(e)
+    return chains
+
+
+def _pick_chain(chains: list[list[sqlite3.Row]], created: datetime | None) -> list[sqlite3.Row]:
+    """Цепочка событий, начавшаяся ближе всего к времени приёма заказа."""
+    if not chains:
+        return []
+    if created is None:
+        return chains[-1]
+
+    def gap(chain: list[sqlite3.Row]) -> float:
+        at = _parse_naive(chain[0]["at"])
+        return abs((at - created).total_seconds()) if at else 1e12
+
+    return min(chains, key=gap)
+
+
+def _order_path(row: sqlite3.Row, events: list[sqlite3.Row]) -> dict:
+    """Путь одного заказа: время в каждом статусе (сек) и метки начала/конца."""
+    created = _parse_naive(row["created_at"])
+    ready = _parse_naive(row["ready_at"])
+    served = _parse_naive(row["served_at"])
+
+    chain = _pick_chain(_event_chains(events), created)
+    # Стартовый статус: из журнала, иначе по источнику (iiko заводит «открытый»).
+    start = "open" if row["source"] == "iiko" else "preparing"
+    if chain and chain[0]["event"] == "created" and chain[0]["to_status"]:
+        start = chain[0]["to_status"]
+
+    seq: list[tuple[str, datetime]] = []
+    if created:
+        seq.append((start, created))
+    for e in chain:
+        at = _parse_naive(e["at"])
+        if e["event"] != "status" or not e["to_status"] or at is None:
+            continue
+        # Приём из iiko — время открытия чека, оно может опережать журнал.
+        seq.append((e["to_status"], max(at, created) if created else at))
+    # Заказы старше журнала: переходы достаём из меток orders.
+    logged = {st for st, _ in seq[1:]}
+    if ready and "ready" not in logged:
+        seq.append(("ready", ready))
+    if served and "served" not in logged:
+        seq.append(("served", served))
+    seq.sort(key=lambda p: p[1])
+
+    spent = {"open": 0, "preparing": 0, "ready": 0}
+    for (st, at), (_, nxt) in zip(seq, seq[1:]):
+        if st in spent and nxt > at:
+            spent[st] += round((nxt - at).total_seconds())
+
+    done = row["status"] == "served" and served is not None
+    # Лента переходов: во сколько заказ попал в каждый статус и сколько там
+    # пролежал. Без неё в карточке видны только приём и выдача, а вопрос
+    # «когда именно он стал готов» остаётся без ответа.
+    timeline = []
+    for i, (st, at) in enumerate(seq):
+        nxt = seq[i + 1][1] if i + 1 < len(seq) else None
+        timeline.append({
+            "status": st,
+            "at": at.isoformat(timespec="seconds"),
+            "sec": round((nxt - at).total_seconds()) if nxt and nxt > at else None,
+        })
+    return {
+        "timeline": timeline,
+        "date": row["date"],
+        "number": row["number"],
+        "status": row["status"],
+        "source": row["source"],
+        "acceptedAt": row["created_at"],
+        "doneAt": row["served_at"],
+        "openSec": spent["open"],
+        "prepSec": spent["preparing"],
+        "readySec": spent["ready"],
+        "totalSec": round((served - created).total_seconds()) if done and created else None,
+    }
+
+
+def stats_orders(dates: list[str], limit: int = ORDERS_PATH_LIMIT) -> dict:
+    """Путь каждого заказа за выбранные дни: время в статусах, приём и выдача.
+
+    Отсортировано новыми вперёд и обрезано до `limit` — при обрезке в ответе
+    `truncated`, чтобы фронт честно сказал, что показана не вся выборка.
+    """
+    from collections import defaultdict
+
+    if not dates:
+        return {"orders": [], "total": 0, "truncated": False}
+
+    placeholders = ",".join("?" * len(dates))
+    with _connect() as conn:
+        rows = conn.execute(
+            f"SELECT id, date, number, status, source, created_at, ready_at, served_at "
+            f"FROM orders WHERE date IN ({placeholders}) "
+            f"ORDER BY date DESC, created_at DESC, number DESC",
+            dates,
+        ).fetchall()
+        # Отзывы к этим же заказам. Связываем по order_id, а не по номеру: за
+        # день номер может повториться, и оценка прилипла бы к чужому заказу.
+        fb_rows = conn.execute(
+            f"SELECT order_id, rating, tags, comment, contact, contact_type, status "
+            f"FROM feedbacks WHERE date IN ({placeholders})",
+            dates,
+        ).fetchall()
+        events = conn.execute(
+            f"SELECT date, number, event, to_status, at FROM order_events "
+            f"WHERE date IN ({placeholders}) AND event IN ('created', 'status') "
+            f"ORDER BY id",
+            dates,
+        ).fetchall()
+
+    by_order: dict[tuple[str, int], list[sqlite3.Row]] = defaultdict(list)
+    for e in events:
+        if e["number"] is not None:
+            by_order[(e["date"], e["number"])].append(e)
+
+    by_fb = {f["order_id"]: f for f in fb_rows}
+
+    limit = max(1, min(limit, 2000))
+    shown = rows[:limit]
+    out = []
+    for r in shown:
+        item = _order_path(r, by_order.get((r["date"], r["number"]), []))
+        fb = by_fb.get(r["id"])
+        # Оценка прямо в строке заказа: видно, сколько гость ждал и как это
+        # сказалось на оценке, без сопоставления двух таблиц глазами.
+        item["rating"] = fb["rating"] if fb else None
+        item["tags"] = [t for t in (fb["tags"] or "").split(",") if t] if fb else []
+        item["comment"] = (fb["comment"] if fb else None) or None
+        item["contact"] = (fb["contact"] if fb else None) or None
+        item["contactType"] = fb["contact_type"] if fb else None
+        item["feedbackStatus"] = fb["status"] if fb else None
+        out.append(item)
+    return {
+        "orders": out,
+        "total": len(rows),
+        "rated": sum(1 for r in rows if r["id"] in by_fb),
+        "truncated": len(rows) > limit,
+    }
+
+
+# ---------------------- Отзывы гостей (docs/feedback-flow.md) ----------------
+# Оценку гость ставит одним тапом (feedback_create), детали дописываются вторым
+# запросом (feedback_detail) — если гость бросит форму, оценка уже в базе.
+# Причины отказа возвращаются кодом в поле `reason`, тексты для гостя живут в
+# main.py: формулировки правятся в одном месте.
+
+FEEDBACK_STATUSES = ("new", "contacted", "resolved", "visited")
+# Окно, в течение которого к отзыву можно дописать детали и переставить оценку.
+# Настраивается в .env (feedback_edit_window_min).
+
+
+def _wait_seconds(row: sqlite3.Row) -> int | None:
+    """Фактическое ожидание гостя: приём → выдача, в секундах."""
+    c = _parse_naive(row["created_at"])
+    sv = _parse_naive(row["served_at"])
+    if c and sv and sv >= c:
+        return round((sv - c).total_seconds())
+    return None
+
+
+def _contact_type(contact: str | None) -> str | None:
+    """Телеграм или телефон — определяем по виду строки, гостя не спрашиваем.
+
+    Ник часто пишут без «собаки» («greatjaaack»), и такой контакт раньше
+    оставался без типа: в чат он уходил простым текстом, а в кассе по нему
+    нельзя было кликнуть. Считаем телеграмом всё, что выглядит как username.
+    """
+    c = (contact or "").strip()
+    if not c:
+        return None
+    if c.startswith("@") or "t.me/" in c.lower():
+        return "telegram"
+    digits = sum(ch.isdigit() for ch in c)
+    if digits >= 7:
+        return "phone"
+    # Username в Telegram: латиница, цифры и подчёркивания, 5–32 символа.
+    bare = c.lstrip("@")
+    if 5 <= len(bare) <= 32 and re.fullmatch(r"[A-Za-z][A-Za-z0-9_]*", bare):
+        return "telegram"
+    return None
+
+
+def _today_order(conn: sqlite3.Connection, date: str, number: int) -> sqlite3.Row | None:
+    """Заказ с таким номером за день. Если номер за день переиспользовали —
+    берём последний: отзыв ставят сразу после выдачи, значит про свежий заказ."""
+    return conn.execute(
+        """
+        SELECT id, number, status, created_at, served_at FROM orders
+         WHERE date = ? AND number = ? ORDER BY id DESC LIMIT 1
+        """,
+        (date, number),
+    ).fetchone()
+
+
+def _can_rate(conn: sqlite3.Connection, date: str, number: int) -> dict:
+    """Можно ли оценить заказ №number за сегодня.
+
+    Отказы: not_found (нет такого за сегодня — в т.ч. вчерашний номер),
+    not_served (ещё не выдан), already (отзыв уже есть).
+    """
+    order = _today_order(conn, date, number)
+    if order is None:
+        return {"ok": False, "reason": "not_found"}
+    if order["status"] != "served":
+        return {"ok": False, "reason": "not_served", "orderId": order["id"]}
+    dup = conn.execute(
+        "SELECT 1 FROM feedbacks WHERE order_id = ? LIMIT 1", (order["id"],)
+    ).fetchone()
+    if dup is not None:
+        return {"ok": False, "reason": "already", "orderId": order["id"]}
+    return {
+        "ok": True,
+        "reason": None,
+        "orderId": order["id"],
+        "number": order["number"],
+        "waitSeconds": _wait_seconds(order),
+    }
+
+
+def feedback_check(number: int) -> dict:
+    """Проверка перед показом формы (запасной путь — ввод номера руками)."""
+    with _connect() as conn:
+        return _can_rate(conn, today(), number)
+
+
+def feedback_create(number: int, rating: int, ua_hash: str | None = None) -> dict:
+    """Сохранить оценку заказа. Возвращает `feedbackId` и ветку воронки.
+
+    `wait_seconds` фиксируем здесь же, а не считаем потом: если заказ позже
+    отредактируют, цифра в отзыве не поедет.
+    """
+    if rating not in (1, 2, 3, 4, 5):
+        raise ValueError("Оценка должна быть от 1 до 5")
+    date = today()
+    with _connect() as conn:
+        check = _can_rate(conn, date, number)
+        if not check["ok"]:
+            return check
+        now = _now()
+        token = secrets.token_urlsafe(16)
+        try:
+            cur = conn.execute(
+                """
+                INSERT INTO feedbacks
+                    (date, order_id, number, rating, wait_seconds,
+                     status, created_at, updated_at, ua_hash, edit_token)
+                VALUES (?, ?, ?, ?, ?, 'new', ?, ?, ?, ?)
+                """,
+                (
+                    date,
+                    check["orderId"],
+                    number,
+                    rating,
+                    check["waitSeconds"],
+                    now,
+                    now,
+                    ua_hash,
+                    token,
+                ),
+            )
+        except sqlite3.IntegrityError:
+            # Два тапа по звёздам одновременно — уникальный индекс отсёк второй.
+            return {"ok": False, "reason": "already", "orderId": check["orderId"]}
+        audit.info("ОТЗЫВ №%s: оценка %s", number, rating)
+        return {
+            "ok": True,
+            "feedbackId": cur.lastrowid,
+            "editToken": token,
+            "branch": feedback_branch(rating),
+            "number": number,
+            "rating": rating,
+            "waitSeconds": check["waitSeconds"],
+        }
+
+
+def feedback_branch(rating: int) -> str:
+    """Куда ведём гостя: positive — на карты, negative — во внутреннюю форму."""
+    return "negative" if rating <= settings.feedback_negative_max else "positive"
+
+
+def feedback_detail(
+    feedback_id: int,
+    edit_token: str = "",
+    tags: str | None = None,
+    comment: str | None = None,
+    contact: str | None = None,
+) -> dict:
+    """Дописать детали к уже сохранённой оценке (второй запрос воронки).
+
+    Принимаем только свежий отзыв (окно feedback_edit_window_min) и только от
+    автора — по ключу, выданному при оценке. Возвращает полную запись: из неё
+    main.py собирает алерт.
+    """
+    with _connect() as conn:
+        row = conn.execute(
+            "SELECT * FROM feedbacks WHERE id = ?", (feedback_id,)
+        ).fetchone()
+        if row is None:
+            # Отдельный код от not_found: там речь про номер заказа, тут — про
+            # саму оценку, и гостю нужен другой текст.
+            return {"ok": False, "reason": "unknown_feedback"}
+        # Сверка в константное время: id предсказуем, ключ — нет. Сравниваем
+        # байты: compare_digest не принимает не-ASCII, а прислать могут что угодно.
+        expected = row["edit_token"] or ""
+        if not expected or not hmac.compare_digest(
+            str(edit_token).encode("utf-8"), expected.encode("utf-8")
+        ):
+            return {"ok": False, "reason": "wrong_token"}
+        created = _parse_naive(row["created_at"])
+        age_min = None
+        if created:
+            now_naive = datetime.now(ZoneInfo(settings.timezone)).replace(tzinfo=None)
+            age_min = (now_naive - created).total_seconds() / 60
+        if age_min is None or age_min > settings.feedback_edit_window_min:
+            return {"ok": False, "reason": "expired"}
+        # Пустое поле = «не менять», а не «стереть». Иначе повторный запрос
+        # (ретрай сети, второй тап) затёр бы уже записанный отзыв пустотой.
+        tags = (tags or "").strip() or row["tags"]
+        comment = (comment or "").strip() or row["comment"]
+        had_details = bool(row["tags"] or row["comment"] or row["contact"])
+        contact = (contact or "").strip() or row["contact"]
+        conn.execute(
+            """
+            UPDATE feedbacks
+               SET tags = ?, comment = ?, contact = ?, contact_type = ?,
+                   updated_at = ?
+             WHERE id = ?
+            """,
+            (tags, comment, contact, _contact_type(contact), _now(), feedback_id),
+        )
+        fresh = conn.execute(
+            "SELECT * FROM feedbacks WHERE id = ?", (feedback_id,)
+        ).fetchone()
+        audit.info(
+            "ОТЗЫВ №%s: детали (теги: %s, контакт: %s)",
+            fresh["number"],
+            fresh["tags"] or "—",
+            "есть" if fresh["contact"] else "нет",
+        )
+        return {"ok": True, "first": not had_details, "feedback": _feedback_dict(fresh)}
+
+
+def feedback_rate(feedback_id: int, edit_token: str, rating: int) -> dict:
+    """Исправить оценку — гость мог промахнуться по звезде.
+
+    Разрешено в том же окне, что и дописывание деталей, и только автору (по
+    ключу). Возвращает старую и новую оценку: по ним main.py решает, надо ли
+    поправить уже улетевшее уведомление.
+    """
+    if rating not in (1, 2, 3, 4, 5):
+        raise ValueError("Оценка должна быть от 1 до 5")
+    with _connect() as conn:
+        row = conn.execute(
+            "SELECT * FROM feedbacks WHERE id = ?", (feedback_id,)
+        ).fetchone()
+        if row is None:
+            return {"ok": False, "reason": "unknown_feedback"}
+        expected = row["edit_token"] or ""
+        if not expected or not hmac.compare_digest(
+            str(edit_token).encode("utf-8"), expected.encode("utf-8")
+        ):
+            return {"ok": False, "reason": "wrong_token"}
+        created = _parse_naive(row["created_at"])
+        if created is None:
+            return {"ok": False, "reason": "expired"}
+        now_naive = datetime.now(ZoneInfo(settings.timezone)).replace(tzinfo=None)
+        if (now_naive - created).total_seconds() / 60 > settings.feedback_edit_window_min:
+            return {"ok": False, "reason": "expired"}
+        # Детали уже отправлены — отзыв закрыт. Иначе получилась бы запись вида
+        # «5★ + теги «остыло, долго ждали»», противоречивая и для смены, и для
+        # аналитики. Промах по звезде ловится до отправки формы.
+        if (row["tags"] or row["comment"] or row["contact"]):
+            return {"ok": False, "reason": "locked"}
+        was = row["rating"]
+        if was == rating:
+            return {"ok": True, "changed": False, "was": was,
+                    "branch": feedback_branch(rating),
+                    "feedback": _feedback_dict(row)}
+        conn.execute(
+            "UPDATE feedbacks SET rating = ?, updated_at = ? WHERE id = ?",
+            (rating, _now(), feedback_id),
+        )
+        fresh = conn.execute(
+            "SELECT * FROM feedbacks WHERE id = ?", (feedback_id,)
+        ).fetchone()
+        audit.info("ОТЗЫВ №%s: оценка исправлена %s → %s", row["number"], was, rating)
+        return {"ok": True, "changed": True, "was": was,
+                "branch": feedback_branch(rating),
+                "feedback": _feedback_dict(fresh)}
+
+
+def _feedback_dict(row: sqlite3.Row) -> dict:
+    return {
+        "id": row["id"],
+        "date": row["date"],
+        "number": row["number"],
+        "rating": row["rating"],
+        "tags": [t for t in (row["tags"] or "").split(",") if t],
+        "comment": row["comment"],
+        "contact": row["contact"],
+        "contactType": row["contact_type"],
+        "waitSeconds": row["wait_seconds"],
+        "status": row["status"],
+        "staffNote": row["staff_note"],
+        "createdAt": row["created_at"],
+        "updatedAt": row["updated_at"],
+    }
+
+
+def feedback_list(
+    date: str | None = None, status: str | None = None, limit: int = 200
+) -> list[dict]:
+    """Инбокс отзывов для кассы: за день (по умолчанию сегодня), опционально
+    только с нужным статусом. Свежие — сверху."""
+    date = date or today()
+    sql = "SELECT * FROM feedbacks WHERE date = ?"
+    params: list = [date]
+    if status:
+        sql += " AND status = ?"
+        params.append(status)
+    sql += " ORDER BY id DESC LIMIT ?"
+    params.append(limit)
+    with _connect() as conn:
+        rows = conn.execute(sql, params).fetchall()
+    return [_feedback_dict(r) for r in rows]
+
+
+def feedback_set_status(
+    feedback_id: int, status: str, staff_note: str | None = None
+) -> dict:
+    """Сменить статус отработки негатива и оставить заметку смены."""
+    if status not in FEEDBACK_STATUSES:
+        raise ValueError(f"Неизвестный статус отзыва: {status}")
+    with _connect() as conn:
+        row = conn.execute(
+            "SELECT id FROM feedbacks WHERE id = ?", (feedback_id,)
+        ).fetchone()
+        if row is None:
+            return {"ok": False, "reason": "not_found"}
+        # Заметку не затираем пустой строкой: статус можно двигать без неё.
+        note = (staff_note or "").strip()
+        if note:
+            conn.execute(
+                "UPDATE feedbacks SET status = ?, staff_note = ?, updated_at = ? "
+                "WHERE id = ?",
+                (status, note, _now(), feedback_id),
+            )
+        else:
+            conn.execute(
+                "UPDATE feedbacks SET status = ?, updated_at = ? WHERE id = ?",
+                (status, _now(), feedback_id),
+            )
+        fresh = conn.execute(
+            "SELECT * FROM feedbacks WHERE id = ?", (feedback_id,)
+        ).fetchone()
+    return {"ok": True, "feedback": _feedback_dict(fresh)}
+
+
+# Корзины ожидания для связки «сколько ждал ↔ как оценил» — главная цифра всей
+# затеи: где проходит порог, после которого гость перестаёт быть довольным.
+_WAIT_BUCKETS = ((0, 300, "до 5 мин"), (300, 480, "5–8"), (480, 720, "8–12"),
+                 (720, None, "12+"))
+
+
+def feedback_stats(dates: list[str]) -> dict:
+    """Агрегаты по отзывам за выбранные дни: средняя, доли, теги, корзины ожидания."""
+    from collections import Counter
+
+    empty = {
+        "count": 0, "orders": 0, "coverage": None, "avgRating": None,
+        "share5": None, "negative": 0, "withContact": 0,
+        "byRating": {}, "tags": [], "waitBuckets": [],
+    }
+    if not dates:
+        return empty
+
+    placeholders = ",".join("?" * len(dates))
+    with _connect() as conn:
+        rows = conn.execute(
+            f"SELECT rating, tags, contact, wait_seconds FROM feedbacks "
+            f"WHERE date IN ({placeholders})",
+            dates,
+        ).fetchall()
+        orders = conn.execute(
+            f"SELECT COUNT(*) AS n FROM orders WHERE date IN ({placeholders}) "
+            f"AND status = 'served'",
+            dates,
+        ).fetchone()["n"]
+
+    if not rows:
+        return {**empty, "orders": orders}
+
+    ratings = [r["rating"] for r in rows]
+    tags: Counter = Counter()
+    for r in rows:
+        tags.update(t for t in (r["tags"] or "").split(",") if t)
+
+    buckets = []
+    for lo, hi, label in _WAIT_BUCKETS:
+        vals = [
+            r["rating"] for r in rows
+            if r["wait_seconds"] is not None
+            and r["wait_seconds"] >= lo
+            and (hi is None or r["wait_seconds"] < hi)
+        ]
+        buckets.append({
+            "label": label,
+            "count": len(vals),
+            "avgRating": round(sum(vals) / len(vals), 2) if vals else None,
+        })
+
+    negative_max = settings.feedback_negative_max
+    return {
+        "count": len(rows),
+        "orders": orders,
+        "coverage": round(len(rows) / orders * 100) if orders else None,
+        "avgRating": round(sum(ratings) / len(ratings), 2),
+        "share5": round(ratings.count(5) / len(ratings) * 100),
+        "negative": sum(1 for x in ratings if x <= negative_max),
+        "withContact": sum(1 for r in rows if r["contact"]),
+        "byRating": {str(n): ratings.count(n) for n in (1, 2, 3, 4, 5)},
+        "tags": [{"tag": t, "count": c} for t, c in tags.most_common(10)],
+        "waitBuckets": buckets,
     }
