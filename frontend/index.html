@@ -1371,6 +1371,18 @@
 
       <!-- панель -->
       <div id="panelBox" class="hidden">
+        <!-- Ручной ввод: заказы приезжают из iiko сами, но на планшете нужен
+             запасной путь — когда касса пробила мимо или поллер молчит. -->
+        <div class="card">
+          <label class="field" for="newNum">Новый заказ — номер с чека</label>
+          <div class="row">
+            <input id="newNum" type="number" inputmode="numeric" min="1" placeholder="напр. 14"
+                   onkeydown="if(event.key==='Enter')addOrder()" />
+            <button class="amber" style="flex:0 0 auto; width:auto; padding-left:22px; padding-right:22px;" onclick="addOrder()">Добавить</button>
+          </div>
+          <div class="result err" id="addErr"></div>
+        </div>
+
         <div class="card">
           <div class="board-label" style="margin-bottom:14px;">Заказы сегодня</div>
           <div class="stat-row">
@@ -1852,6 +1864,25 @@
       state = data;
       renderGuest(); renderStaff();
       return data;
+    }
+
+    async function addOrder(){
+      const inp = document.getElementById("newNum");
+      const err = document.getElementById("addErr");
+      err.classList.remove("show");
+      const num = parseInt(inp.value, 10);
+      if(!num || num < 1){
+        err.className = "result err show";
+        err.textContent = "Введи номер заказа";
+        return;
+      }
+      try {
+        await api("/api/order", { number: num });
+        inp.value = ""; inp.focus();
+      } catch(e){
+        err.className = "result err show";
+        err.textContent = e.message || "Не удалось добавить";
+      }
     }
 
     function setStatus(num, status){ api("/api/order/status", { number: num, status }).catch(() => {}); }
