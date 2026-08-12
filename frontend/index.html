@@ -503,6 +503,18 @@
     .my-step.done span { color: var(--brand-label); }
     .my-step.now span { color: var(--brand-ink); font-weight: 600; }
     /* Второстепенные действия не должны спорить с номером заказа. */
+    /* Строка о состоянии уведомлений: видна, только когда они не работают. */
+    .my-notify {
+      display: flex; align-items: center; gap: 10px; margin-top: 14px;
+      padding: 11px 13px; border-radius: 14px;
+      background: rgba(255, 255, 255, .16); border: 1px solid rgba(255, 255, 255, .3);
+    }
+    .my-notify .ic { font-size: 17px; line-height: 1; flex: 0 0 auto; }
+    .my-notify .tx { flex: 1; min-width: 0; font-size: 12.5px; line-height: 1.4; color: #fff; }
+    body.brand .my-notify button {
+      flex: 0 0 auto; width: auto; padding: 9px 13px; font-size: 13px; border-radius: 10px;
+    }
+
     .my-actions { margin-top: 16px; }
     .my-actions button { padding: 13px; font-size: 15px; border-radius: 13px; }
     /* Кнопки под карточкой лежат на оранжевом фоне — им нужен белый текст. */
@@ -1325,6 +1337,14 @@
         </div>
 
         <div class="fb-err hidden" id="fbErr"></div>
+      </div>
+
+      <!-- Показывается, только когда уведомления не работают: гость должен
+           понимать, чего ждать, и иметь способ их включить. -->
+      <div class="my-notify hidden" id="myNotify">
+        <span class="ic" aria-hidden="true">🔔</span>
+        <span class="tx" id="myNotifyText"></span>
+        <button id="myNotifyBtn" class="hidden" onclick="notifAsk()">Включить</button>
       </div>
 
       <div class="my-actions">
@@ -2422,11 +2442,44 @@
           buzz(30);
           notifShow("Уведомления включены", "Скажем, когда заказ будет готов");
         }
-      } catch(e){ /* гость отказал или браузер не дал — не беда */ }
+        notifSyncUi();
+      } catch(e){ notifSyncUi(); }
     }
 
     // Показать системное уведомление. Через service worker, если он есть
     // (Android), иначе — обычным конструктором (десктоп).
+    // iOS даёт уведомления только сайтам, добавленным на экран «Домой»:
+    // в обычной вкладке Safari Notification вообще нет, и запрос не появится.
+    function isIOS(){
+      return /iP(hone|ad|od)/.test(navigator.userAgent)
+        || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
+    }
+
+    // Строка о состоянии уведомлений. Молчит, когда всё хорошо.
+    function notifSyncUi(){
+      const box = document.getElementById("myNotify");
+      const txt = document.getElementById("myNotifyText");
+      const btn = document.getElementById("myNotifyBtn");
+      if(!box) return;
+      const st = notifState();
+      let text = "", showBtn = false;
+      if(st === "granted"){
+        text = "";                                    // всё работает — молчим
+      } else if(st === "default"){
+        text = "Включите уведомления — скажем, когда заказ будет готов";
+        showBtn = true;
+      } else if(st === "denied"){
+        text = "Уведомления запрещены в настройках браузера. Звук и вибрация сработают, пока эта страница открыта";
+      } else if(isIOS()){
+        text = "На айфоне уведомления приходят только из приложения: «Поделиться» → «На экран Домой». Пока держите страницу открытой — телефон звякнет";
+      } else {
+        text = "Браузер не умеет уведомления — держите страницу открытой, телефон звякнет";
+      }
+      txt.textContent = text;
+      box.classList.toggle("hidden", !text);
+      btn.classList.toggle("hidden", !showBtn);
+    }
+
     function notifShow(title, body){
       if(notifState() !== "granted") return;
       const opts = {
@@ -2464,7 +2517,9 @@
           fbSaveMy({ n: n, d: (state && state.date) || todayLocal(), seen: true,
                      servedAt: Date.now(), rated: false, done: false,
                      promptedAt: Date.now(), lastStatus: "served" });
+          unlockAudio();
           showMyOrder();
+          notifAsk();          // та же ветка, что и при обычной подписке
           return;
         }
         if(d.reason === "already"){ subTo(n); return; }   // отзыв есть — просто следим
@@ -2617,6 +2672,7 @@
       }
 
       myRenderRating(my, st);
+      notifSyncUi();
     }
 
     // Звёзды и то, что под ними. Всё на одном экране: гость видит номер,
