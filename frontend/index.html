@@ -21,13 +21,27 @@
        ============================================================ -->
   <script>
     window.YM_ID = 110894396;
-    // Считаем только лендинг. Табло весь день висит на экране, а касса —
-    // рабочий инструмент: их просмотры завысили бы статистику своими же.
-    window.YM_ON = !!window.YM_ID && !/^\/(board|staff)\b/.test(location.pathname);
-    // Хелпер «цели»: дёргаем при клике по ссылке лендинга, чтобы в отчётах
-    // Метрики было видно, по какой именно ссылке кликают.
-    window.ymGoal = function (name) {
-      if (window.YM_ON && window.ym) { window.ym(window.YM_ID, "reachGoal", name); }
+    // Что НЕ считаем: /tv висит на телевизоре в зале весь день (один «посетитель»
+    // с бесконечной сессией перекосил бы всю статистику), /staff и /stats —
+    // рабочие инструменты своих же. Лендинг и гостевое табло считаем: это
+    // витрина и путь гостя, ради которых аналитика и нужна.
+    window.YM_OFF = /^\/(tv|staff|stats)\b/;
+    window.YM_ON = !!window.YM_ID && !window.YM_OFF.test(location.pathname);
+    // Хелпер «цели»: дёргаем на ключевых шагах гостя, чтобы в отчётах Метрики
+    // было видно не только «зашёл», но и «подписался / оценил / оставил отзыв».
+    window.ymGoal = function (name, params) {
+      if (window.YM_ON && window.ym) { window.ym(window.YM_ID, "reachGoal", name, params); }
+    };
+    // Экраны переключаются через history.pushState, без перезагрузки страницы.
+    // Такие переходы Метрика сама не видит — просмотр отправляем руками, иначе
+    // весь путь гостя схлопнется в один просмотр точки входа.
+    window.ymHit = function (path, title) {
+      if (!window.YM_ON || !window.ym) return;
+      if (window.YM_OFF.test(path)) return;      // ушли на служебный экран — молчим
+      var prev = window._ymLast || document.referrer;
+      if (prev === location.origin + path) return;   // тот же экран — не дублируем
+      window._ymLast = location.origin + path;
+      window.ym(window.YM_ID, "hit", location.origin + path, { referer: prev, title: title });
     };
   </script>
   <script>
@@ -1741,7 +1755,7 @@
       document.body.classList.remove("brand", "board-view", "tv", "stats-view");
       document.getElementById("landing").classList.remove("hidden");
       stopPolling();
-      if(push !== false) history.pushState({s:"landing"}, "", "/");
+      if(push !== false){ history.pushState({s:"landing"}, "", "/"); ymHit("/", "Лендинг"); }
     }
     // tv=true — крупная раскладка для телевизора (маршрут /tv). Контент тот же.
     function showBoard(push, tv){
@@ -1784,6 +1798,7 @@
       if(push !== false){
         const path = tv ? "/tv" : "/board";
         history.pushState({s: tv ? "tv" : "board"}, "", path);
+        ymHit(path, tv ? "Табло (ТВ)" : "Табло заказов");
       }
     }
     function showStaff(push){
@@ -2473,6 +2488,9 @@
           buzz(30);
           notifShow("Уведомления включены", "Скажем, когда заказ будет готов");
         }
+        // Доля отказов — это и есть ответ на вопрос «почему гости не слышат
+        // готовность»: без разрешения уведомление не придёт никогда.
+        if(res === "granted" || res === "denied"){ ymGoal("notif_" + res); }
         notifSyncUi();
       } catch(e){ notifSyncUi(); }
     }
@@ -2549,6 +2567,7 @@
                      servedAt: Date.now(), rated: false, done: false,
                      promptedAt: Date.now(), lastStatus: "served" });
           unlockAudio();
+          ymGoal("sub_served");   // пришёл по QR со стойки: заказ уже на руках
           showMyOrder();
           notifAsk();          // та же ветка, что и при обычной подписке
           return;
@@ -2556,6 +2575,9 @@
         if(d.reason === "already"){ subTo(n); return; }   // отзыв есть — просто следим
         err.textContent = d.message || "Не нашли такой заказ за сегодня";
         err.classList.remove("hidden");
+        // Сколько гостей спотыкается о ввод номера. Растёт — значит номер на
+        // чеке плохо виден или подсказка непонятна.
+        ymGoal("sub_fail");
       } catch(e){
         err.textContent = "Нет связи — попробуйте ещё раз";
         err.classList.remove("hidden");
@@ -2568,6 +2590,7 @@
                  servedAt: 0, rated: false, done: false, lastStatus: "" });
       document.getElementById("subNum").value = "";
       buzz(30);                       // короткий отклик: подписка принята
+      ymGoal("sub_ok");               // вход в воронку: гость следит за заказом
       unlockAudio();                  // тап по кнопке = разрешение на звук дальше
       showMyOrder();
       // Разрешение на уведомления просим здесь: гость только что нажал кнопку,
@@ -2599,7 +2622,10 @@
       document.getElementById("myOrder").classList.remove("hidden");
       myRender();
       startPolling();
-      if(push !== false) history.pushState({s:"my"}, "", "/board?my=1");
+      if(push !== false){
+        history.pushState({s:"my"}, "", "/board?my=1");
+        ymHit("/board?my=1", "Мой заказ");
+      }
     }
 
     function myOpen(){ return !document.getElementById("myOrder").classList.contains("hidden"); }
@@ -2777,7 +2803,10 @@
         fbSaveMy(my);
         // Звеним только на переходе в «готово» и только если раньше уже видели
         // другой статус — иначе телефон звякнет при первом же заходе на страницу.
-        if(st === "ready" && was && was !== "ready"){ myNotifyReady(my.n); }
+        if(st === "ready" && was && was !== "ready"){
+          myNotifyReady(my.n);
+          ymGoal("order_ready");   // гость дождался готовности с открытым сайтом
+        }
       }
       myRender();
     }
@@ -3033,6 +3062,13 @@
         fbState.editToken = upd.fb.token;
         fbMarkMine();
         fbState.rating = rating;
+        // Целей две: общая «оценил» для конверсии всей воронки и отдельная по
+        // ветке — в отчётах сразу видно соотношение хвалы и жалоб. Саму оценку
+        // передаём параметром, средняя считается в Метрике без выгрузки.
+        if(!fix){
+          ymGoal("rate", { rating: rating });
+          ymGoal(d.branch === "positive" ? "rate_positive" : "rate_negative");
+        }
         // Ветка могла смениться (двойка → пятёрка): перерисовываем блок под
         // карточкой с нуля, а не дописываем поверх прежнего.
         fbStep(null);
@@ -3111,6 +3147,9 @@
         if(cur && cur.fb){
           fbPatchMy(cur.n, { fb: Object.assign({}, cur.fb, { detailSent: true }) });
         }
+        // Конец негативной ветки: гость не просто поставил низкую оценку, а
+        // потратил время и написал, что именно не так.
+        ymGoal("feedback_sent");
         fbStep("fbStepDone");
       } catch(e){
         fbFail("Нет связи — попробуйте ещё раз");
