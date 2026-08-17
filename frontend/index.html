@@ -401,6 +401,28 @@
        УЖЕ пришёл по этому QR — показывать его снова незачем. */
     body.board-view:not(.tv) .board-qr { display: none; }
 
+    /* ---------- Свёрнутая общая очередь (только телефон) ----------
+       Скрываем сам список, а не оборачиваем его: обёртка вокруг .board-cols
+       порвала бы флекс-цепочку #guest, по которой fitTvBoard() меряет высоту
+       колонок на телевизоре. */
+    .board-more-btn { display: none; }
+    body.board-view:not(.tv) .board-more-btn {
+      display: flex; align-items: center; justify-content: center; gap: 8px;
+      width: min(100%, 360px); margin: 4px auto 0; cursor: pointer;
+      padding: 13px 16px; border-radius: 16px;
+      background: rgba(255,255,255,.15); border: 1px solid rgba(255,255,255,.4);
+      -webkit-backdrop-filter: blur(3px); backdrop-filter: blur(3px);
+      color: #fff; font-weight: 700; font-size: 15px; box-shadow: none;
+      transition: background .15s ease;
+    }
+    body.board-view:not(.tv) .board-more-btn:hover { background: rgba(255,255,255,.24); }
+    .board-more-btn svg { width: 18px; height: 18px; transition: transform .18s ease; }
+    body.board-view:not(.tv) #guest.queue-open .board-more-btn { margin-bottom: 14px; }
+    #guest.queue-open .board-more-btn svg { transform: rotate(180deg); }
+    /* Свёрнуто — списка нет в потоке. На /tv правило не действует. */
+    body.board-view:not(.tv) #guest:not(.queue-open) .board-cols,
+    body.board-view:not(.tv) #guest:not(.queue-open) #boardEmpty { display: none; }
+
     .sub-card {
       position: relative; overflow: hidden; width: min(100%, 360px); margin: 0 auto 16px;
       padding: 22px 18px 20px; border-radius: 22px;
@@ -412,20 +434,8 @@
       color: var(--brand-2); opacity: .08; pointer-events: none;
     }
     .sub-card .sub-bg svg { width: 100%; height: 100%; display: block; }
-    .sub-title {
-      position: relative;
-      /* Строго одна строка. Размер считаем от ширины САМОЙ карточки (cqw), а не
-         экрана: карточка ограничена 360px, и привязка к vw на широком экране
-         выносила заголовок за её край. Первая строка — фолбэк для браузеров без
-         контейнерных запросов, вторая их перекрывает. */
-      font-family: "Bebas Neue", sans-serif;
-      font-size: clamp(17px, 4.6vw, 21px);
-      font-size: clamp(17px, 7.2cqw, 26px);
-      line-height: 1.1; letter-spacing: .5px; text-align: center; color: var(--brand-2);
-      white-space: nowrap; min-width: 0;
-    }
     .sub-form { position: relative; }
-    .sub-form { margin-top: 16px; }
+    .sub-form { margin-top: 0; }
     .sub-form input {
       width: 100%; text-align: center; font-size: 27px; letter-spacing: 2px;
       padding: 15px 14px; border-radius: 14px;
@@ -434,6 +444,18 @@
       font-size: 17px; letter-spacing: 0; color: var(--muted); opacity: .7;
     }
     .sub-form button { width: 100%; margin-top: 10px; padding: 16px; font-size: 17px; border-radius: 14px; }
+    /* Кнопка живёт на белой карточке, поэтому «стекло» лендинга тут не годится —
+       оно бы растворилось. Берём ту же брендовую пару, что у фона: оранжевый
+       градиент и белый текст. Правило точечное: общий body.brand button красит
+       и кнопки кассы, их трогать нельзя. */
+    body.brand .sub-form button {
+      background: linear-gradient(135deg, #ffb418 0%, #f7621e 100%);
+      color: #fff; font-weight: 700;
+      box-shadow: 0 8px 20px rgba(247, 98, 30, .32);
+      transition: filter .15s ease, transform .06s ease;
+    }
+    body.brand .sub-form button:hover { filter: brightness(1.05); }
+    body.brand .sub-form button:active { transform: translateY(1px); }
     .sub-err {
       background: var(--err-bg); border: 1px solid var(--err-line); color: var(--err-text);
       border-radius: 12px; padding: 11px; text-align: center; font-size: 14px; margin-top: 12px;
@@ -1263,7 +1285,6 @@
       <!-- Подписка на свой заказ. На /tv скрыта правилом body.tv #subCard. -->
       <div class="card sub-card hidden" id="subCard">
         <div class="sub-bg" id="subBg" aria-hidden="true"></div>
-        <div class="sub-title">Подпишись на свой Балык</div>
 
         <div class="sub-form">
           <input id="subNum" type="number" inputmode="numeric" min="1" placeholder="номер заказа"
@@ -1274,7 +1295,17 @@
         <div class="sub-err hidden" id="subErr"></div>
       </div>
 
-      <div class="board-cols">
+      <!-- Общая очередь. На телефоне свёрнута: первый шаг для гостя — подписка на
+           свой номер, список очереди остаётся запасным путём в один тап. На /tv
+           кнопка скрыта, а список открыт всегда — там он и есть весь экран.
+           Разметка нарочно плоская: .board-cols должен остаться прямым потомком
+           #guest, по этой цепочке fitTvBoard() меряет высоту колонок. -->
+      <button class="board-more-btn" id="boardMoreBtn" onclick="toggleQueue()" aria-expanded="false" aria-controls="boardCols">
+        <span id="boardMoreTx">Посмотреть общую очередь</span>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6" /></svg>
+      </button>
+
+      <div class="board-cols" id="boardCols">
         <div class="col col-prep">
           <div class="col-head">Готовятся</div>
           <div class="nums" id="prepNums"></div>
@@ -1570,6 +1601,23 @@
       prevReady = readySet;
     }
 
+    // Общая очередь на телефоне: свёрнута по умолчанию, разворачивается тапом.
+    function toggleQueue(){
+      const open = document.getElementById("guest").classList.toggle("queue-open");
+      setQueueBtn(open);
+      // Список мог смениться, пока был скрыт: подписи «Пока пусто» и номера
+      // перерисовывает renderGuest, дёргаем его, чтобы открыть уже актуальным.
+      if(open){ renderGuest(); }
+      ymGoal(open ? "queue_open" : "queue_close");
+    }
+
+    function setQueueBtn(open){
+      const btn = document.getElementById("boardMoreBtn");
+      const tx = document.getElementById("boardMoreTx");
+      if(btn){ btn.setAttribute("aria-expanded", open ? "true" : "false"); }
+      if(tx){ tx.textContent = open ? "Скрыть общую очередь" : "Посмотреть общую очередь"; }
+    }
+
     // Разметка плашек с номерами. hot — колонка «Готово ✓», fresh — номера,
     // только что ставшие готовыми (короткий «поп»).
     function numsHtml(list, hot, fresh){
@@ -1771,6 +1819,11 @@
       document.body.classList.remove("stats-view");
       document.body.classList.toggle("tv", !!tv);
       document.getElementById("guest").classList.remove("hidden");
+      paintOrnament();
+      // На телефоне очередь свёрнута при каждом заходе: первый шаг для гостя —
+      // подписка на свой номер. На /tv класс не влияет — правила там не действуют.
+      document.getElementById("guest").classList.remove("queue-open");
+      setQueueBtn(false);
       // QR всегда ведёт на /board (телефон гостя), даже если открыт ТВ-режим.
       // border=1 — минимальная белая рамка, чтобы сам код был крупнее.
       const qr = document.getElementById("boardQr");
