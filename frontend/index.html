@@ -957,39 +957,46 @@
     .nd-shell {
       width: 100%; max-width: 440px; margin: 0 auto;
       display: grid; grid-template-columns: 1fr; row-gap: 0;
-      grid-template-areas: "logo" "tag" "media" "cta" "social" "maps";
+      grid-template-areas: "logo" "tag" "cta" "maps" "hours" "social";
     }
-    .nd-logo { grid-area: logo; display: block; width: 82%; max-width: 320px; margin: 6px auto 0; filter: drop-shadow(0 4px 14px rgba(0,0,0,.22)); }
+    /* Логотип и слоган работают как заголовок страницы — отсюда крупный кегль.
+       Ширину логотипа держим в пределах 476 px: картинка 952 px, дальше на
+       ретине она начинает мылить (нужен двойной запас пикселей). */
+    .nd-logo { grid-area: logo; display: block; width: 100%; max-width: 440px; margin: 6px auto 0; filter: drop-shadow(0 4px 14px rgba(0,0,0,.22)); }
+    /* Слоган держим в одну строку: размер считаем от ширины экрана, чтобы он
+       не переносился ни на 320 px, ни на планшете. */
     .nd-tag {
       grid-area: tag; text-align: center; color: #fff; font-weight: 700;
-      font-size: clamp(14px, 4vw, 16px); letter-spacing: .3px; line-height: 1.35;
-      margin: 12px 0 18px; text-shadow: 0 2px 12px rgba(0,0,0,.28);
+      font-size: clamp(14px, 4.5vw, 24px); letter-spacing: .2px; line-height: 1.3;
+      white-space: nowrap; margin: 14px 0 22px; text-shadow: 0 2px 12px rgba(0,0,0,.28);
     }
-    .nd-media {
-      grid-area: media; border-radius: 24px; overflow: hidden; margin-bottom: 20px;
-      box-shadow: 0 16px 40px rgba(0,0,0,.30); border: 3px solid rgba(255,255,255,.5);
-    }
-    .nd-media img { display: block; width: 100%; }
+    /* Цветокор общий с плашками «карты» и «часы»: стекло на градиенте. Но это
+       главное действие страницы, поэтому внутри того же стиля оно тяжелее:
+       плотнее заливка, ярче кант, своя тень — читается первым, не выпадая. */
     .nd-cta {
       grid-area: cta; display: flex; align-items: center; gap: 14px;
-      background: #F8D00F; color: #201400; border-radius: 20px;
+      background: rgba(255,255,255,.30); color: #fff;
+      border: 1.5px solid rgba(255,255,255,.75); border-radius: 20px;
       padding: 15px 16px; text-decoration: none; margin-bottom: 16px;
-      box-shadow: 0 12px 28px rgba(0,0,0,.22);
-      transition: transform .06s ease, box-shadow .15s ease, filter .15s;
+      box-shadow: 0 12px 28px rgba(0,0,0,.20);
+      -webkit-backdrop-filter: blur(3px); backdrop-filter: blur(3px);
+      transition: transform .06s ease, background .15s ease, box-shadow .15s ease;
     }
-    .nd-cta:hover { filter: brightness(1.03); box-shadow: 0 16px 34px rgba(0,0,0,.28); }
+    .nd-cta:hover { background: rgba(255,255,255,.38); box-shadow: 0 16px 34px rgba(0,0,0,.26); }
     .nd-cta:active { transform: translateY(1px); }
+    /* Белый кружок с фирменным оранжевым — та же пара, что у иконок соцсетей. */
     .nd-cta-ic {
       flex: 0 0 48px; width: 48px; height: 48px; border-radius: 15px;
-      background: #201400; color: #F8D00F; display: flex; align-items: center; justify-content: center;
+      background: #fff; color: #f7621e;
+      display: flex; align-items: center; justify-content: center;
     }
     .nd-cta-ic svg { width: 25px; height: 25px; }
     .nd-cta-tx { flex: 1; min-width: 0; }
     .nd-cta-tx b { display: block; font-size: 19px; font-weight: 800; letter-spacing: .2px; }
-    .nd-cta-tx span { display: block; font-size: 12.5px; color: #6a4a08; font-weight: 600; margin-top: 2px; }
-    .nd-arr { flex: 0 0 auto; color: #201400; opacity: .5; display: flex; }
+    .nd-cta-tx span { display: block; font-size: 12.5px; color: rgba(255,255,255,.92); font-weight: 600; margin-top: 2px; }
+    .nd-arr { flex: 0 0 auto; color: #fff; opacity: .85; display: flex; }
     .nd-arr svg { width: 22px; height: 22px; }
-    .nd-social { grid-area: social; display: flex; justify-content: center; gap: 16px; margin: 2px 0 16px; }
+    .nd-social { grid-area: social; display: flex; justify-content: center; gap: 16px; margin: 22px 0 0; }
     .nd-social a {
       width: 56px; height: 56px; border-radius: 50%; background: #fff; color: #f7621e;
       display: flex; align-items: center; justify-content: center;
@@ -1011,79 +1018,69 @@
     .nd-maps svg { width: 20px; height: 20px; }
     .nd-foot { text-align: center; color: rgba(255,255,255,.82); font-size: 12px; letter-spacing: .4px; margin-top: 22px; }
 
-    /* Десктоп: герой в две колонки — контент слева, фото справа. */
+    /* Десктоп: колонка по центру (фото больше нет, растягивать нечего), а карты
+       и часы встают в один ряд — иначе внизу вырастает длинная кишка плашек. */
     @media (min-width: 900px) {
       .nd-shell {
-        max-width: 940px;
-        grid-template-columns: 1.02fr 0.98fr;
-        column-gap: 54px; align-items: center;
+        max-width: 620px;
+        grid-template-columns: 1fr 1fr;
+        column-gap: 16px;
         grid-template-areas:
-          "logo   media"
-          "tag    media"
-          "cta    media"
-          "social media"
-          "maps   media";
+          "logo   logo"
+          "tag    tag"
+          "cta    cta"
+          "maps   hours"
+          "social social";
       }
-      .nd-logo { width: 100%; max-width: 380px; margin: 0 0 4px; }
-      .nd-tag { text-align: left; font-size: 19px; margin: 6px 0 22px; }
-      .nd-media { margin: 0; align-self: center; }
+      .nd-logo { width: 100%; max-width: 476px; margin: 0 auto 4px; }
+      .nd-tag { font-size: 30px; margin: 14px 0 30px; }
       .nd-cta-tx b { font-size: 22px; }
-      .nd-social { justify-content: flex-start; margin: 6px 0 18px; }
-      .nd-maps { justify-content: flex-start; }
-      .nd-foot { text-align: left; max-width: 940px; margin: 26px auto 0; }
+      .nd-hours { margin-top: 0; }
+      .nd-foot { max-width: 620px; margin: 26px auto 0; }
     }
 
-    /* ---------- (старые lk-* стили лендинга — не используются) ---------- */
-    .lk-banner {
-      width: 100%; display: block; border-radius: 18px;
-      box-shadow: 0 8px 24px rgba(0, 0, 0, .22);
+    /* ---------- Орнамент лендинга: шашка из розеток и фесок ----------
+       Розетка — тот же мотив, что в эмблеме бренда и на плашке «мой заказ»
+       (rosette()). Слой лежит под .wrap и живёт только на лендинге: на табло,
+       ТВ, кассе и статистике фон рабочий, узор там был бы помехой. */
+    #ornament { display: none; }
+    /* Лендинг и гостевое табло. На /tv узора нет намеренно: экран висит в зале
+       и смотрят на него издалека — там всё лишнее мешает читать номера. */
+    body.landing-bg #ornament,
+    body.board-view:not(.tv) #ornament {
+      display: block; position: fixed; inset: 0; z-index: 0; pointer-events: none;
+      background-repeat: repeat; background-position: center top;
+      /* Белый узор на жёлтом верху градиента пропадал, а на красном низу лез
+         вперёд. overlay привязывает контраст к подложке — плотность ровная. */
+      mix-blend-mode: overlay;
     }
-    .lk-banner + .lk-banner { margin-top: 12px; }
-    .lk-head {
-      text-align: center; color: #fff; font-weight: 800;
-      font-size: clamp(19px, 5.6vw, 24px); line-height: 1.18;
-      text-transform: uppercase; letter-spacing: .3px;
-      margin: 16px 4px 18px; text-shadow: 0 2px 12px rgba(0, 0, 0, .3);
+    body.landing-bg .wrap,
+    body.board-view .wrap { position: relative; z-index: 1; }
+
+    /* Шапка табло — под размер надписи «ИСКЕНДИ» в логотипе на главной: там она
+       занимает около 300 px по ширине, при том что сам логотип шире (в нём ещё
+       эмблема и вторая строка). Задаём ширину, а не высоту: при height плюс
+       max-width картинку сплющивало бы по горизонтали. /tv не трогаем. */
+    body.board-view:not(.tv) .brand .wordmark {
+      height: auto; width: clamp(190px, 62vw, 300px); max-width: 100%;
     }
-    .lk-btn {
-      display: flex; align-items: center; gap: 13px;
-      background: #F8D00F; color: #201400;
-      border-radius: 16px; padding: 13px 15px;
-      text-decoration: none; margin-bottom: 14px;
-      box-shadow: 0 6px 18px rgba(0, 0, 0, .18);
-      transition: transform .05s, filter .15s;
+    body.board-view:not(.tv) .brand .sub {
+      font-size: clamp(11px, 2.8vw, 14px); letter-spacing: 3.5px; margin-top: 8px;
     }
-    .lk-btn:hover { filter: brightness(1.04); }
-    .lk-btn:active { transform: translateY(1px); }
-    .lk-thumb {
-      flex: 0 0 58px; width: 58px; height: 58px;
-      border-radius: 12px; object-fit: cover; display: block;
+    body.board-view:not(.tv) .brand { margin-bottom: 22px; }
+
+    /* Часы работы. Рядом с картами: гость смотрит «где» и «когда» вместе. */
+    .nd-hours {
+      grid-area: hours; display: flex; align-items: center; gap: 12px;
+      background: rgba(255,255,255,.15); color: #fff; border: 1px solid rgba(255,255,255,.4);
+      border-radius: 16px; padding: 13px 14px; margin-top: 10px;
+      -webkit-backdrop-filter: blur(3px); backdrop-filter: blur(3px);
     }
-    .lk-tx { flex: 1; min-width: 0; }
-    .lk-tx b { display: block; font-size: 15px; font-weight: 800; line-height: 1.22; }
-    .lk-tx span { display: block; font-size: 12.5px; font-weight: 600; color: #6a4a08; margin-top: 3px; line-height: 1.35; }
-    .lk-maps { justify-content: center; gap: 10px; }
-    .lk-maps .lk-tx { flex: 0 1 auto; }
-    .lk-maps .lk-tx b { font-size: 16px; }
-    .lk-map-ic { display: flex; color: #201400; }
-    .lk-map-ic svg { width: 22px; height: 22px; }
-    .lk-board-ic {
-      flex: 0 0 58px; width: 58px; height: 58px; border-radius: 12px;
-      display: flex; align-items: center; justify-content: center;
-      background: #201400; color: #F8D00F;
-    }
-    .lk-board-ic svg { width: 30px; height: 30px; }
-    .lk-social { display: flex; justify-content: center; gap: 16px; margin: 2px 0 16px; }
-    .lk-social a {
-      width: 54px; height: 54px; border-radius: 50%;
-      background: #fff; color: #f73131;
-      display: flex; align-items: center; justify-content: center;
-      box-shadow: 0 6px 16px rgba(0, 0, 0, .2);
-      transition: transform .05s; text-decoration: none;
-    }
-    .lk-social a:active { transform: translateY(1px); }
-    .lk-social a svg { width: 27px; height: 27px; }
-    .lk-vk { font-weight: 800; font-size: 19px; letter-spacing: .5px; }
+    .nd-hours svg { width: 20px; height: 20px; flex: 0 0 auto; }
+    .nd-hours-rows { display: flex; flex-direction: column; gap: 2px; font-size: 14.5px; }
+    .nd-hours-rows div { display: flex; gap: 8px; }
+    .nd-hours-rows b { font-weight: 700; min-width: 62px; }
+    .nd-hours-rows span { font-weight: 600; font-variant-numeric: tabular-nums; }
 
     /* ============================================================
        Фирменная тема табло/кассы — как на главной (лендинге):
@@ -1198,6 +1195,8 @@
       document.body.className = c;
     })();
   </script>
+  <div id="ornament" aria-hidden="true"></div>
+
   <div class="wrap">
     <!-- ========================= ЛЕНДИНГ (мультиссылка) ========================= -->
     <div id="landing">
@@ -1205,9 +1204,6 @@
       <img class="nd-logo" src="/assets/logo_white.png" alt="Искенди · Дюрюмная" />
       <p class="nd-tag">Крутим айраны · наливаем дюрюмы</p>
 
-      <div class="nd-media">
-        <img src="/assets/banner_food.jpg" alt="Дюрюмы Искенди" loading="lazy" />
-      </div>
 
       <a class="nd-cta" href="/board" onclick="ymGoal('board')">
         <span class="nd-cta-ic" aria-hidden="true">
@@ -1226,11 +1222,11 @@
         <a href="https://t.me/iskendy" target="_blank" rel="noopener" aria-label="Telegram" onclick="ymGoal('telegram')">
           <svg viewBox="0 0 24 24" fill="currentColor"><path d="M21.9 4.3 2.9 11.6c-1 .4-1 1.85.15 2.15l4.75 1.5 1.8 5.55c.28.82 1.3 1.05 1.9.42l2.55-2.5 4.68 3.45c.72.53 1.75.12 1.92-.72L23 5.35c.2-.9-.72-1.5-1.1-1.05z" /></svg>
         </a>
-        <a href="https://vk.com/iskendy" target="_blank" rel="noopener" aria-label="ВКонтакте" onclick="ymGoal('vk')">
-          <span class="nd-vk">VK</span>
-        </a>
         <a href="https://instagram.com/_iskendy_" target="_blank" rel="noopener" aria-label="Instagram" onclick="ymGoal('instagram')">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="5" /><circle cx="12" cy="12" r="4" /><circle cx="17.4" cy="6.6" r="1.15" fill="currentColor" stroke="none" /></svg>
+        </a>
+        <a href="https://vk.com/iskendy" target="_blank" rel="noopener" aria-label="ВКонтакте" onclick="ymGoal('vk')">
+          <span class="nd-vk">VK</span>
         </a>
       </div>
 
@@ -1239,6 +1235,14 @@
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21s7-5.6 7-11a7 7 0 1 0-14 0c0 5.4 7 11 7 11z" /><circle cx="12" cy="10" r="2.5" /></svg>
         <span>Мы на Яндекс Картах</span>
       </a>
+
+      <div class="nd-hours">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9" /><path d="M12 7v5l3.5 2" /></svg>
+        <div class="nd-hours-rows">
+          <div><b>пн–чт</b><span>12:00 – 22:00</span></div>
+          <div><b>пт–вс</b><span>12:00 – 23:00</span></div>
+        </div>
+      </div>
      </div>
 
       <div class="nd-foot">© Искенди · дюрюмная</div>
@@ -1754,6 +1758,7 @@
       document.body.classList.add("landing-bg");
       document.body.classList.remove("brand", "board-view", "tv", "stats-view");
       document.getElementById("landing").classList.remove("hidden");
+      paintOrnament();
       stopPolling();
       if(push !== false){ history.pushState({s:"landing"}, "", "/"); ymHit("/", "Лендинг"); }
     }
@@ -2642,7 +2647,8 @@
     // восьмиконечной сердцевины. Четыре больших по осям, четыре поменьше по
     // диагоналям — как на вывеске. Рисуем один лепесток и поворачиваем его, так
     // фигура остаётся симметричной при любом размере и не тащит лишнюю картинку.
-    function rosette(){
+    // Фигуры розетки без обёртки <svg> — их же переиспользует орнамент лендинга.
+    function rosettePaths(){
       // Лепесток: остриё сверху, остриё у сердцевины, пухлый в середине.
       const petal = function(top, bottom, w){
         const mid = (top + bottom) / 2;
@@ -2664,8 +2670,59 @@
         star += (i ? "L" : "M") + (50 + r * Math.cos(t)).toFixed(1)
               + " " + (50 + r * Math.sin(t)).toFixed(1);
       }
+      return out + '<path d="' + star + 'Z"/>';
+    }
+
+    function rosette(){
       return '<svg viewBox="0 0 100 100" fill="currentColor" aria-hidden="true">'
-           + out + '<path d="' + star + 'Z"/></svg>';
+           + rosettePaths() + '</svg>';
+    }
+
+    // ==========================================================================
+    // Орнамент лендинга. Фон — редкая решётка из розеток, панно на месте бывшего
+    // фото — плотная шахматка «розетка / феска». Рисуем в SVG и отдаём в CSS
+    // как data-URI: никаких картинок в ассетах, узор тянется под любой экран.
+    // ==========================================================================
+
+    // Феска в клетке 100x100. Верх у неё ШИРЕ основания, а кисть падает из
+    // центра плоской тульи — с обратной пропорцией силуэт читается как ведро.
+    function feskaPaths(){
+      return '<path d="M34 84 L30 42 Q50 37 70 42 L66 84 Q50 89 34 84 Z"/>'
+           + '<ellipse cx="50" cy="41" rx="20" ry="6"/>'
+           + '<path d="M50 39 Q74 44 78 62" fill="none" stroke="currentColor" stroke-width="4.5" stroke-linecap="round"/>'
+           + '<path d="M78 60 Q86 74 78 88 Q70 74 78 60 Z"/>';
+    }
+
+    function ornSvgUrl(inner, w, h){
+      const svg = '<svg xmlns="http://www.w3.org/2000/svg" width="' + w + '" height="' + h
+                + '" viewBox="0 0 ' + w + ' ' + h + '">' + inner + '</svg>';
+      return 'url("data:image/svg+xml,' + encodeURIComponent(svg) + '")';
+    }
+
+    // Шашка: розетки и фески через клетку, разделённые тонкой сеткой.
+    // Прозрачность низкая: узор идёт во весь экран и на плотной заливке
+    // забивал бы логотип и кнопку — он тут подложка, а не картинка.
+    function checkerTile(){
+      const S = 160, q = S / 4, c = 'rgba(255,255,255,.34)', f = 'rgba(255,255,255,.30)';
+      const rose = function(x, y){
+        return '<g transform="translate(' + (x - 25) + ',' + (y - 25) + ') scale(0.5)" fill="' + c + '">'
+             + rosettePaths() + '</g>';
+      };
+      const fes = function(x, y){
+        return '<g transform="translate(' + (x - 29) + ',' + (y - 29) + ') scale(0.58)" fill="' + f
+             + '" color="' + f + '">' + feskaPaths() + '</g>';
+      };
+      const grid = '<path stroke="rgba(255,255,255,.13)" stroke-width="1.5" fill="none" d="M0 '
+                 + S/2 + ' H' + S + ' M' + S/2 + ' 0 V' + S + '"/>';
+      return ornSvgUrl(grid + rose(q, q) + rose(3*q, 3*q) + fes(3*q, q) + fes(q, 3*q), S, S);
+    }
+
+    function paintOrnament(){
+      const orn = document.getElementById("ornament");
+      if(orn && !orn.style.backgroundImage){
+        orn.style.backgroundImage = checkerTile();
+        orn.style.backgroundSize = "160px 160px";
+      }
     }
 
     // Статус моего заказа по данным табло. Заказ ушёл из активных — считаем
