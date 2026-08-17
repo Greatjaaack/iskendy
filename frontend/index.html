@@ -149,29 +149,6 @@
       color: var(--muted);
       text-align: center;
     }
-    .board-num {
-      font-family: "Bebas Neue", sans-serif;
-      font-size: 96px;
-      line-height: 0.9;
-      text-align: center;
-      color: var(--amber);
-      margin: 6px 0 2px;
-    }
-    .board-range {
-      text-align: center;
-      color: var(--muted);
-      font-size: 14px;
-    }
-    .board-next {
-      margin-top: 16px;
-      padding-top: 14px;
-      border-top: 1px dashed var(--line);
-      display: flex;
-      justify-content: space-between;
-      font-size: 14px;
-      color: var(--muted);
-    }
-    .board-next b { color: var(--text); font-family: "IBM Plex Mono", monospace; }
 
     label.field { display: block; font-size: 13px; color: var(--muted); margin-bottom: 6px; }
     input[type="number"], input[type="text"], input[type="password"] {
@@ -233,9 +210,6 @@
       letter-spacing: 1px;
     }
     .staff-line a { color: var(--copper); text-decoration: none; cursor: pointer; }
-
-    .settings-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 12px; }
-    .settings-grid .full { grid-column: 1 / -1; }
     .muted-note { font-size: 12px; color: var(--muted); text-align: center; margin-top: 8px; line-height: 1.5; }
     .hidden { display: none !important; }
 
@@ -248,8 +222,6 @@
       margin-bottom: 10px;
     }
     .plaque-sub { color: var(--muted); font-size: 15px; line-height: 1.45; }
-    .plaque.sold { background: #2c1c14; border-color: #6b4326; }
-    .plaque.sold .plaque-big { color: var(--amber); }
     .plaque.before .plaque-big { color: var(--copper); }
 
     #qrBox { text-align: center; margin-top: 14px; }
@@ -658,13 +630,6 @@
     .fb-links-row > * { flex: 1; }
     .fb-hr { border-top: 1px dashed rgba(0, 0, 0, .14); margin: 18px 0 14px; }
 
-    /* «Ошиблись?» — неброская ссылка: нужна редко, но должна быть под рукой. */
-    body.brand .fb-fix {
-      display: block; width: 100%; margin-top: 14px; padding: 8px;
-      background: none; border: 0; box-shadow: none;
-      color: var(--brand-sub); font-size: 13px; text-decoration: underline;
-    }
-
     .fb-err {
       background: var(--err-bg); border: 1px solid var(--err-line); color: var(--err-text);
       border-radius: 12px; padding: 12px; text-align: center; font-size: 15px;
@@ -849,10 +814,6 @@
     .stat-tbl tbody tr:last-child td { border-bottom: 0; }
     .stat-tbl tbody tr.sel td { background: rgba(232, 169, 58, .14); }
     .link-a { color: var(--copper); cursor: pointer; text-decoration: underline; }
-    .sum-line { display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px dashed var(--line); font-size: 14px; }
-    .sum-line:last-child { border-bottom: 0; }
-    .sum-k { color: var(--muted); }
-    .sum-v { font-family: "IBM Plex Mono", monospace; color: var(--text); font-weight: 600; }
     .preset-row { display: flex; gap: 8px; margin-bottom: 8px; }
     .preset { width: auto; flex: 1; font-size: 13px; padding: 9px 8px; }
     body.brand button.ghost.preset.on { border-color: var(--copper); color: #6a4a08; background: rgba(232, 169, 58, .18); }
@@ -886,44 +847,6 @@
       body.stats-view .s-charts { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; align-items: start; }
     }
 
-    /* ---------- Лендинг (мультиссылка) ---------- */
-    .hero { text-align: center; padding: 4px 0 20px; }
-    .banner {
-      width: 100%; display: block; border-radius: 16px;
-      border: 1px solid var(--line);
-    }
-    .banner-logo { margin-bottom: 12px; }
-    .banner-food { margin-bottom: 16px; box-shadow: 0 8px 30px rgba(0, 0, 0, .45); }
-    .hero-tag2 {
-      font-family: "Bebas Neue", sans-serif;
-      font-size: clamp(22px, 6.6vw, 30px); letter-spacing: 0.5px; line-height: 1.08;
-      margin: 2px 0 0; color: var(--amber); text-transform: uppercase;
-      overflow-wrap: break-word;
-    }
-    .eda-card { align-items: center; gap: 14px; padding: 12px 14px; }
-    .eda-thumb {
-      flex: 0 0 64px; width: 64px; height: 64px; border-radius: 12px;
-      object-fit: cover; display: block; border: 1px solid rgba(23, 19, 15, .18);
-    }
-    .hero-badge {
-      width: 112px; height: 112px; border-radius: 22px;
-      display: block; margin: 0 auto 16px;
-      border: 1px solid var(--line);
-      box-shadow: 0 8px 30px rgba(0, 0, 0, .45);
-    }
-    .hero-logo {
-      font-family: "Bebas Neue", sans-serif;
-      font-size: clamp(48px, 15vw, 62px); line-height: 0.92; letter-spacing: 2px;
-      margin: 0; color: var(--copper);
-      text-shadow: 0 2px 28px rgba(193, 122, 61, .28);
-    }
-    .hero-tag {
-      font-family: "IBM Plex Mono", monospace;
-      font-size: 12px; letter-spacing: 3px; text-transform: uppercase;
-      color: var(--amber); margin-top: 14px; line-height: 1.7;
-    }
-    .hero-sub { color: var(--muted); font-size: 13px; margin-top: 10px; }
-
     .links { display: flex; flex-direction: column; gap: 12px; }
     .link {
       display: flex; align-items: center; gap: 14px;
@@ -955,11 +878,6 @@
     .link.cta .ic { background: rgba(23, 19, 15, .14); border-color: rgba(23, 19, 15, .2); color: #17130f; }
     .link.cta .tx span { color: rgba(23, 19, 15, .72); }
     .link.cta .arr { color: rgba(23, 19, 15, .6); }
-
-    .landing-foot {
-      text-align: center; margin-top: 24px;
-      font-size: 12px; color: var(--muted); line-height: 1.7;
-    }
 
     /* ---------- Лендинг: дизайнерский, адаптивный (мобилка + десктоп) ---------- */
     body.landing-bg {
@@ -1180,9 +1098,6 @@
     body.brand .stat-tbl td { color: #201400; border-bottom-color: rgba(0, 0, 0, .1); }
     body.brand .stat-tbl tbody tr.sel td { background: #fff1d6; }
     body.brand .link-a { color: #b0600f; }
-    body.brand .sum-line { border-bottom-color: rgba(0, 0, 0, .1); }
-    body.brand .sum-k { color: #6a4a08; }
-    body.brand .sum-v { color: #201400; }
     body.brand .kpi { background: #fff3e0; border-color: rgba(0, 0, 0, .08); }
     body.brand .kpi b { color: #201400; }
     body.brand .kpi b em { color: #9a7b52; }
