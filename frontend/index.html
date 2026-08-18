@@ -2554,6 +2554,22 @@
         return sid;
       } catch(e){ return ""; }   // приватный режим — считаем как событие без визита
     }
+    // Метка устройства: та же случайная строка при следующем приходе гостя —
+    // так видно долю постоянных. Живёт в localStorage, ничего о человеке не
+    // говорит и не выводится из IP или User-Agent (в зале весь Wi-Fi под одним
+    // адресом, а одинаковые айфоны дают одинаковый UA — по ним гости слиплись
+    // бы в одного). Гость очистит браузер — станет «новым», и это нормально:
+    // доля постоянных читается как «не меньше, чем».
+    function guestId(){
+      try {
+        let gid = localStorage.getItem("iskendy_guest");
+        if(!gid){
+          gid = String(Date.now() % 1e9) + Math.random().toString(36).slice(2, 10);
+          localStorage.setItem("iskendy_guest", gid);
+        }
+        return gid;
+      } catch(e){ return ""; }
+    }
     // Шаг мог уже уйти в этом визите: воронка отвечает на «сколько людей дошло»,
     // а не «сколько раз нажали», и повторы её только зашумляют.
     const guestSent = new Set();
@@ -2572,6 +2588,7 @@
           body: JSON.stringify({
             step: step,
             session: guestSession(),
+            guest: guestId(),
             number: (my && my.n) || null
           }),
           keepalive: true          // переживёт уход со страницы по ссылке на отзыв

@@ -343,6 +343,9 @@ class GuestStepBody(BaseModel):
     # Заказ, за которым гость следит (если уже подписан). Связывает поведение с
     # временами готовки — ради этого разреза номер и собираем.
     number: int | None = Field(default=None, gt=0, le=100000)
+    # Метка устройства из localStorage: отличает вернувшегося гостя от нового.
+    # Случайная строка, не выводится ни из IP, ни из User-Agent.
+    guest: str = Field(default="", max_length=40)
 
 
 @app.post("/api/guest/event")
@@ -353,7 +356,9 @@ def guest_event(request: Request, body: GuestStepBody) -> dict:
     сбор статистики не должен мешать человеку забрать заказ.
     """
     _guard(request, RATE_LIMIT_STEP)
-    return {"ok": db.log_guest_event(body.step, body.session, body.number)}
+    return {
+        "ok": db.log_guest_event(body.step, body.session, body.number, body.guest)
+    }
 
 
 @app.get("/api/stats/guest")
@@ -365,7 +370,12 @@ def stats_guest(
     valid = [d for d in dates.split(",") if re.fullmatch(r"\d{4}-\d{2}-\d{2}", d)]
     if not valid:
         valid = [db.today()]
-    return {"dates": valid, **db.guest_funnel(valid), **db.guest_by_wait(valid)}
+    return {
+        "dates": valid,
+        **db.guest_funnel(valid),
+        **db.guest_by_wait(valid),
+        "returning": db.guest_returning(valid),
+    }
 
 
 @app.get("/api/feedback/check")

@@ -146,6 +146,7 @@ def init_db() -> None:
                 date    TEXT NOT NULL,
                 step    TEXT NOT NULL,
                 session TEXT,
+                guest   TEXT,
                 number  INTEGER,
                 at      TEXT NOT NULL
             )
@@ -154,6 +155,14 @@ def init_db() -> None:
         ge_cols = [r[1] for r in conn.execute("PRAGMA table_info(guest_events)")]
         if "number" not in ge_cols:
             conn.execute("ALTER TABLE guest_events ADD COLUMN number INTEGER")
+        # Метка устройства: случайная строка из localStorage гостя, живёт между
+        # визитами. Нужна ровно для одного — отличить вернувшегося от нового.
+        # НЕ IP и НЕ User-Agent: в зале весь гостевой Wi-Fi выходит под одним
+        # адресом (все слиплись бы в одного «постоянного»), а десяток одинаковых
+        # айфонов даёт один и тот же UA. Такая метка и точнее, и рассказывает о
+        # человеке меньше.
+        if "guest" not in ge_cols:
+            conn.execute("ALTER TABLE guest_events ADD COLUMN guest TEXT")
         conn.execute(
             "CREATE INDEX IF NOT EXISTS idx_guest_events_date "
             "ON guest_events (date, step)"
@@ -161,6 +170,10 @@ def init_db() -> None:
         conn.execute(
             "CREATE INDEX IF NOT EXISTS idx_guest_events_number "
             "ON guest_events (date, number)"
+        )
+        conn.execute(
+            "CREATE INDEX IF NOT EXISTS idx_guest_events_guest "
+            "ON guest_events (guest, date)"
         )
 
 
@@ -1165,11 +1178,15 @@ GUEST_STEP_LABELS = {
 
 
 def log_guest_event(
-    step: str, session: str | None = None, number: int | None = None
+    step: str,
+    session: str | None = None,
+    number: int | None = None,
+    guest: str | None = None,
 ) -> bool:
     """Записать шаг гостя. Неизвестный шаг молча игнорируем (вернём False).
 
     `number` — заказ, за которым гость следит; до подписки его ещё нет.
+    `guest` — метка устройства, по ней считаем повторные визиты.
     """
     if step not in GUEST_STEPS:
         return False
@@ -1177,9 +1194,10 @@ def log_guest_event(
         number = None
     with _connect() as conn:
         conn.execute(
-            "INSERT INTO guest_events (date, step, session, number, at) "
-            "VALUES (?, ?, ?, ?, ?)",
-            (today(), step, (session or "")[:40] or None, number, _now()),
+            "INSERT INTO guest_events (date, step, session, guest, number, at) "
+            "VALUES (?, ?, ?, ?, ?, ?)",
+            (today(), step, (session or "")[:40] or None,
+             (guest or "")[:40] or None, number, _now()),
         )
     return True
 
@@ -1286,3 +1304,52 @@ def guest_by_wait(dates: list[str]) -> dict:
     for b in buckets:
         b["rateShare"] = round(b["rated"] * 100 / b["guests"]) if b["guests"] else None
     return {"buckets": buckets}
+
+
+def guest_returning(dates: list[str]) -> dict:
+    """Новые и вернувшиеся гости за период — по метке устройства.
+
+    «Вернувшийся» = у метки есть визит раньше первого дня периода. Считаем по
+    дням визита, а не по числу событий: пять шагов за вечер — это один визит
+    одного человека.
+
+    Метка живёт в localStorage, поэтому доля повторных всегда занижена: гость
+    мог почистить браузер, прийти с другого телефона или сидеть в приватном
+    режиме. Цифру честно читать как «не меньше, чем», а не как точную.
+    """
+    if not dates:
+        return {"guests": 0, "returning": 0, "returningShare": None, "visits": []}
+    placeholders = ",".join("?" for _ in dates)
+    since = min(dates)
+    with _connect() as conn:
+        rows = conn.execute(
+            f"""
+            SELECT guest, COUNT(DISTINCT date) AS days
+              FROM guest_events
+             WHERE date IN ({placeholders}) AND guest IS NOT NULL
+             GROUP BY guest
+            """,
+            dates,
+        ).fetchall()
+        seen_before = {
+            r["guest"]
+            for r in conn.execute(
+                "SELECT DISTINCT guest FROM guest_events "
+                "WHERE date < ? AND guest IS NOT NULL",
+                (since,),
+            )
+        }
+    total = len(rows)
+    returning = sum(1 for r in rows if r["guest"] in seen_before)
+    # Сколько разных дней приходил каждый — грубая мера привязанности.
+    buckets = {"1": 0, "2": 0, "3-5": 0, "6+": 0}
+    for r in rows:
+        d = r["days"]
+        key = "1" if d == 1 else "2" if d == 2 else "3-5" if d <= 5 else "6+"
+        buckets[key] += 1
+    return {
+        "guests": total,
+        "returning": returning,
+        "returningShare": round(returning * 100 / total) if total else None,
+        "visits": [{"days": k, "guests": v} for k, v in buckets.items()],
+    }
