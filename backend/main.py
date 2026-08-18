@@ -48,7 +48,37 @@ async def security_headers(request: Request, call_next):
     response.headers["X-Frame-Options"] = "SAMEORIGIN"
     response.headers["X-Content-Type-Options"] = "nosniff"
     response.headers["Referrer-Policy"] = "same-origin"
+    response.headers["Content-Security-Policy"] = CSP
     return response
+
+# Content-Security-Policy. Второй рубеж на случай, если где-то пропустят
+# экранирование: даже тогда чужой скрипт с чужого адреса не загрузится, а увести
+# данные будет некуда — connect-src закрыт своим origin.
+#
+# 'unsafe-inline' обязателен и снимает часть защиты: весь JS страницы инлайновый,
+# обработчики висят в onclick. Убрать его можно только переписав фронт целиком
+# (внешние файлы + addEventListener) — до тех пор CSP ограничивает ИСТОЧНИКИ, но
+# не внедрённый в разметку код.
+#
+# Что и зачем разрешено, кроме своего origin:
+#   mc.yandex.ru        — Метрика: скрипт, пиксель, отправка данных, iframe вебвизора
+#   fonts.googleapis.com / fonts.gstatic.com — шрифты Bebas Neue и IBM Plex
+#   data:               — орнамент и QR рисуются в SVG прямо на странице
+#   blob:               — вебвизор Метрики поднимает воркер
+CSP = "; ".join([
+    "default-src 'self'",
+    "script-src 'self' 'unsafe-inline' https://mc.yandex.ru",
+    "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
+    "font-src 'self' https://fonts.gstatic.com",
+    "img-src 'self' data: https://mc.yandex.ru",
+    "connect-src 'self' https://mc.yandex.ru",
+    "frame-src https://mc.yandex.ru",
+    "worker-src 'self' blob:",
+    "object-src 'none'",
+    "base-uri 'self'",
+    "form-action 'self'",
+    "frame-ancestors 'self'",
+])
 
 FRONTEND_DIR = Path(__file__).resolve().parent.parent / "frontend"
 
@@ -82,7 +112,9 @@ class LoginBody(BaseModel):
 
 
 @app.post("/api/auth/login")
-def login(body: LoginBody) -> dict:
+def login(request: Request, body: LoginBody) -> dict:
+    """Пароль персонала → JWT. С лимитом попыток: см. RATE_LIMIT_LOGIN."""
+    _guard(request, RATE_LIMIT_LOGIN)
     if not verify_password(body.password):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED, detail="Неверный пароль"
@@ -250,6 +282,12 @@ RATE_LIMIT_WRITE = 20  # POST /api/feedback и /api/feedback/detail
 # Шаги воронки: пишет каждый гость по нескольку раз за визит, а в зале все сидят
 # под одним IP. Потолок высокий — потерять шаг не страшно, но и не заваливать БД.
 RATE_LIMIT_STEP = 240  # POST /api/guest/event
+# Вход персонала. Пароль один и открывает всё: кассу, аналитику, инбокс отзывов с
+# контактами гостей и выгрузку базы. Персонал логинится редко (токен живёт сутки),
+# так что десяти попыток в минуту хватает с запасом, а перебор становится
+# бессмысленным. Ключ — IP, но в зале он общий: для гостей эта ручка не нужна,
+# поэтому помешать друг другу они не могут.
+RATE_LIMIT_LOGIN = 10  # POST /api/auth/login
 _rate_hits: dict[str, list[float]] = {}
 
 # Фоновые отправки уведомлений: держим ссылки, иначе сборщик мусора может
@@ -292,7 +330,8 @@ def _rate_ok(key: str, limit: int) -> bool:
 def _guard(request: Request, limit: int = RATE_LIMIT_WRITE) -> None:
     # Ключ включает вид лимита: чтение не должно съедать квоту записи, а поток
     # шагов воронки — квоту отзывов.
-    kind = {RATE_LIMIT_READ: "r", RATE_LIMIT_STEP: "s"}.get(limit, "w")
+    kind = {RATE_LIMIT_READ: "r", RATE_LIMIT_STEP: "s",
+            RATE_LIMIT_LOGIN: "l"}.get(limit, "w")
     if not _rate_ok(f"{kind}:{_client_ip(request)}", limit):
         raise HTTPException(
             status_code=status.HTTP_429_TOO_MANY_REQUESTS,
