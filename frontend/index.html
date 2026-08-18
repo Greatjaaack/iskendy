@@ -101,28 +101,11 @@
        под экран: плашки становятся крупнее расчётных. Отключаем. */
     html { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
     body {
-      /* Плоская заливка под слоем-подложкой: видна только в момент до отрисовки
-         и в областях, куда фон почему-то не дотянулся. */
-      background: var(--bg);
+      background: radial-gradient(120% 80% at 50% -10%, #24190f 0%, var(--bg) 60%);
       color: var(--text);
       font-family: "IBM Plex Sans", system-ui, sans-serif;
-      /* border-box обязателен рядом с min-height: 100dvh — иначе вертикальные
-         паддинги прибавляются к высоте экрана, и страница получает лишние 40 px
-         прокрутки на пустом месте. */
-      box-sizing: border-box;
       min-height: 100dvh;
       padding: 20px 16px calc(20px + env(safe-area-inset-bottom));
-    }
-    /* Фон-подложка на весь экран. Раньше градиент жил на самом body с
-       `background-attachment: fixed`, но Safari на iOS его фактически не
-       поддерживает: фон рисовался по высоте контента, и на коротких страницах
-       (а это почти все наши экраны — контент умещается в центре) обрезался
-       сверху и снизу. Фиксированный слой закрывает вьюпорт целиком, включая
-       области под чёлкой и домашней полосой: `viewport-fit=cover` в meta плюс
-       inset: 0 у fixed-элемента. Тот же приём, что у #ornament. */
-    body::before {
-      content: ""; position: fixed; inset: 0; z-index: -1; pointer-events: none;
-      background: radial-gradient(120% 80% at 50% -10%, #24190f 0%, var(--bg) 60%);
     }
     .wrap { width: 100%; max-width: 420px; margin: 0 auto; }
     img { max-width: 100%; height: auto; }
@@ -341,13 +324,7 @@
        fitTvBoard() в JS — сколько бы заказов ни было, ничего не уезжает вниз.
        Правила ниже board-view. ---------------------------------------------- */
     body.tv {
-      /* Вертикальные отступы урезаны с 16 до 8 px не ради красоты: с border-box
-         на body они теперь входят в height: 100dvh и отнимают место у номеров, а
-         на телевизоре полезной высоты и так мало (~520–560 px). При 8 px под
-         колонки остаётся ровно столько же, сколько было видно раньше, — но без
-         прежнего изъяна, когда нижние ~16 px уходили под кромку экрана и
-         подрезали последний ряд. По бокам 26 px сохранены. */
-      padding: 8px 26px calc(8px + env(safe-area-inset-bottom));
+      padding: 16px 26px calc(16px + env(safe-area-inset-bottom));
       /* vh — фолбэк для старых сборок Яндекс.Браузера (dvh есть с Chromium 108). */
       height: 100vh; height: 100dvh; min-height: 0; overflow: hidden;
       --tv-num-fs: 52px; --tv-gap-y: 10px; --tv-gap-x: 14px; --tv-rows: 5;
@@ -912,8 +889,12 @@
     .link.cta .arr { color: rgba(23, 19, 15, .6); }
 
     /* ---------- Лендинг: дизайнерский, адаптивный (мобилка + десктоп) ---------- */
-    body.landing-bg { background: #f7621e; padding: 0; }
-    body.landing-bg::before {
+    /* Отступы обнулены намеренно: высоту в 100dvh просит и body, и #landing, а
+       паддинги body (border-box задан глобально правилом `*`) прибавлялись
+       сверху — страница выходила на 40 px выше экрана и прокручивалась впустую.
+       Свои отступы лендинг задаёт сам. */
+    body.landing-bg {
+      padding: 0;
       background:
         radial-gradient(60% 45% at 85% 8%, rgba(255,255,255,.16), transparent 60%),
         radial-gradient(55% 40% at 10% 95%, rgba(0,0,0,.14), transparent 60%),
@@ -1072,13 +1053,17 @@
        оранжево-красный градиент, белые карточки, жёлтые акценты.
        Включается классом body.brand (см. showBoard/showStaff).
        ============================================================ */
+    /* Градиент живёт на самом body — и БЕЗ background-attachment: fixed, который
+       Safari на iOS фактически не поддерживает (фон рисовался по высоте контента
+       и обрезался сверху и снизу). Отдельный слой-подложка тут не годится: узор
+       #ornament смешивается с фоном через mix-blend-mode: overlay, и на подложке
+       смешивание шло с плоской заливкой — на жёлтом верху и красном низу узор
+       пропадал. Экран фон покрывает за счёт min-height: 100dvh (border-box задан
+       глобально правилом `*`). */
     body.brand {
-      background: #f7621e;   /* заливка под слоем-подложкой, см. body::before */
+      background: linear-gradient(150deg, #ffb418 6%, #f7621e 52%, #f73131 96%);
       color: #201400;
       font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
-    }
-    body.brand::before {
-      background: linear-gradient(150deg, #ffb418 6%, #f7621e 52%, #f73131 96%);
     }
     body.brand .brand h1 {
       color: #fff; text-shadow: 0 2px 14px rgba(0, 0, 0, .28);
