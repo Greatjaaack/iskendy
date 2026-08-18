@@ -395,6 +395,15 @@
     body.board-view:not(.tv) #guest:not(.queue-open) .board-cols,
     body.board-view:not(.tv) #guest:not(.queue-open) #boardEmpty { display: none; }
 
+    /* ВРЕМЕННО СКРЫТО (18.08.2026, решение владельца): общая очередь на телефоне
+       гостя. Экран /board сведён к одному действию — подписке на свой номер.
+       Разметка и JS оставлены нетронутыми: чтобы вернуть, достаточно удалить
+       этот блок и снять глушитель в renderGuest (см. «ОЧЕРЕДЬ СКРЫТА» в JS).
+       На /tv не влияет — там очередь и есть весь экран. */
+    body.board-view:not(.tv) .board-more-btn,
+    body.board-view:not(.tv) .board-cols,
+    body.board-view:not(.tv) #boardEmpty { display: none !important; }
+
     .sub-card {
       position: relative; overflow: hidden; width: min(100%, 360px); margin: 0 auto 16px;
       padding: 22px 18px 20px; border-radius: 22px;
@@ -979,15 +988,19 @@
       .nd-foot { max-width: 620px; margin: 26px auto 0; }
     }
 
-    /* ---------- Орнамент лендинга: шашка из розеток и фесок ----------
+    /* ---------- Фирменный орнамент: шашка из розеток и фесок ----------
        Розетка — тот же мотив, что в эмблеме бренда и на плашке «мой заказ»
-       (rosette()). Слой лежит под .wrap и живёт только на лендинге: на табло,
-       ТВ, кассе и статистике фон рабочий, узор там был бы помехой. */
+       (rosette()). Слой лежит под .wrap. Где именно он показывается — см.
+       правило ниже. */
     #ornament { display: none; }
-    /* Лендинг и гостевое табло. На /tv узора нет намеренно: экран висит в зале
-       и смотрят на него издалека — там всё лишнее мешает читать номера. */
+    /* Лендинг, гостевое табло, ТВ и касса — везде фирменный узор (18.08.2026,
+       решение владельца). Раньше на /tv его не было намеренно: экран смотрят
+       издалека, и лишнее мешает читать номера. Если номера станут хуже читаться —
+       достаточно вернуть `:not(.tv)` к board-view. Аналитика (/stats) без узора:
+       там графики и таблицы, фон должен быть спокойным. */
     body.landing-bg #ornament,
-    body.board-view:not(.tv) #ornament {
+    body.staff-view #ornament,
+    body.board-view #ornament {
       display: block; position: fixed; inset: 0; z-index: 0; pointer-events: none;
       background-repeat: repeat; background-position: center top;
       /* Белый узор на жёлтом верху градиента пропадал, а на красном низу лез
@@ -995,6 +1008,7 @@
       mix-blend-mode: overlay;
     }
     body.landing-bg .wrap,
+    body.staff-view .wrap,
     body.board-view .wrap { position: relative; z-index: 1; }
 
     /* Шапка табло — под размер надписи «ИСКЕНДИ» в логотипе на главной: там она
@@ -1127,7 +1141,7 @@
       var p = location.pathname, c = "landing-bg";
       if(p === "/tv") c = "brand board-view tv";
       else if(p === "/board") c = "brand board-view";
-      else if(p === "/staff") c = "brand";
+      else if(p === "/staff") c = "brand staff-view";
       else if(p === "/stats") c = "brand stats-view";
       document.body.className = c;
     })();
@@ -1509,7 +1523,11 @@
       // Уведомление о новых готовых заказах — только на табло /board (в ТВ-режиме
       // молчим). Если гость подписан на свой номер, общий трезвон выключаем: ему
       // придёт персональное уведомление, а чужие заказы его не касаются.
-      if(fresh.size && isBoardScreen() && !fbMy()){ notifyReady([...fresh]); }
+      // ОЧЕРЕДЬ СКРЫТА (18.08.2026): общий трезвон о чужих готовых заказах выключен
+      // вместе с ней — гость не видит очередь, и всплывашка про чужой номер ему
+      // ничего не говорит. Персональное уведомление о своём заказе (myNotifyReady)
+      // работает как прежде. Вернуть очередь — снять `false &&`.
+      if(false && fresh.size && isBoardScreen() && !fbMy()){ notifyReady([...fresh]); }
       // Отзывы и слежение за своим заказом — только на телефоне гостя, и строго
       // ПОСЛЕ fitTvBoard(): на телевизоре сюда не заходим, подгонку не задеваем.
       if(isBoardScreen()){ fbMarkMine(); myWatch(); fbWatch(); }
@@ -1719,7 +1737,7 @@
     function showLanding(push){
       hideAllScreens();
       document.body.classList.add("landing-bg");
-      document.body.classList.remove("brand", "board-view", "tv", "stats-view");
+      document.body.classList.remove("brand", "board-view", "tv", "stats-view", "staff-view");
       document.getElementById("landing").classList.remove("hidden");
       paintOrnament();
       stopPolling();
@@ -1731,7 +1749,7 @@
       document.body.classList.remove("landing-bg");
       document.body.classList.add("brand");
       document.body.classList.add("board-view");
-      document.body.classList.remove("stats-view");
+      document.body.classList.remove("stats-view", "staff-view");
       document.body.classList.toggle("tv", !!tv);
       document.getElementById("guest").classList.remove("hidden");
       paintOrnament();
@@ -1779,7 +1797,9 @@
       document.body.classList.remove("landing-bg");
       document.body.classList.add("brand");
       document.body.classList.remove("board-view", "tv", "stats-view");
+      document.body.classList.add("staff-view");
       document.getElementById("staff").classList.remove("hidden");
+      paintOrnament();
       const authed = !!token;
       document.getElementById("loginBox").classList.toggle("hidden", authed);
       document.getElementById("panelBox").classList.toggle("hidden", !authed);
@@ -1932,7 +1952,7 @@
       hideAllScreens();
       document.body.classList.remove("landing-bg");
       document.body.classList.add("brand");
-      document.body.classList.remove("board-view", "tv");
+      document.body.classList.remove("board-view", "tv", "staff-view");
       document.body.classList.add("stats-view");
       document.getElementById("stats").classList.remove("hidden");
       const authed = !!token;
@@ -2590,9 +2610,18 @@
       if(my && my.d && my.d !== todayLocal()){ fbForget(); showBoard(push); return; }
       if(!my){ showBoard(push); return; }
       hideAllScreens();
-      document.body.classList.remove("landing-bg", "stats-view", "tv");
+      document.body.classList.remove("landing-bg", "stats-view", "tv", "staff-view");
       document.body.classList.add("brand", "board-view");
       document.getElementById("myOrder").classList.remove("hidden");
+      // Узор фона рисуется лениво и только при первом показе. Сюда гость попадает
+      // не только из showBoard, но и напрямую после F5 (роутер ведёт подписанного
+      // на /board?my=1) — без этого вызова слой #ornament остаётся пустым.
+      paintOrnament();
+      // По той же причине — инициализация воронки отзывов. Без fbLoadConfig()
+      // ссылки на Яндекс/2ГИС пустые, и экран «спасибо» показывается вообще без
+      // кнопок: fbShowThanks рисует их только при непустом links.
+      fbLoadConfig();
+      notifInit();
       myRender();
       startPolling();
       if(push !== false){
