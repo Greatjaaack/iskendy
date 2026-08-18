@@ -101,11 +101,28 @@
        под экран: плашки становятся крупнее расчётных. Отключаем. */
     html { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
     body {
-      background: radial-gradient(120% 80% at 50% -10%, #24190f 0%, var(--bg) 60%);
+      /* Плоская заливка под слоем-подложкой: видна только в момент до отрисовки
+         и в областях, куда фон почему-то не дотянулся. */
+      background: var(--bg);
       color: var(--text);
       font-family: "IBM Plex Sans", system-ui, sans-serif;
+      /* border-box обязателен рядом с min-height: 100dvh — иначе вертикальные
+         паддинги прибавляются к высоте экрана, и страница получает лишние 40 px
+         прокрутки на пустом месте. */
+      box-sizing: border-box;
       min-height: 100dvh;
       padding: 20px 16px calc(20px + env(safe-area-inset-bottom));
+    }
+    /* Фон-подложка на весь экран. Раньше градиент жил на самом body с
+       `background-attachment: fixed`, но Safari на iOS его фактически не
+       поддерживает: фон рисовался по высоте контента, и на коротких страницах
+       (а это почти все наши экраны — контент умещается в центре) обрезался
+       сверху и снизу. Фиксированный слой закрывает вьюпорт целиком, включая
+       области под чёлкой и домашней полосой: `viewport-fit=cover` в meta плюс
+       inset: 0 у fixed-элемента. Тот же приём, что у #ornament. */
+    body::before {
+      content: ""; position: fixed; inset: 0; z-index: -1; pointer-events: none;
+      background: radial-gradient(120% 80% at 50% -10%, #24190f 0%, var(--bg) 60%);
     }
     .wrap { width: 100%; max-width: 420px; margin: 0 auto; }
     img { max-width: 100%; height: auto; }
@@ -324,7 +341,13 @@
        fitTvBoard() в JS — сколько бы заказов ни было, ничего не уезжает вниз.
        Правила ниже board-view. ---------------------------------------------- */
     body.tv {
-      padding: 16px 26px calc(16px + env(safe-area-inset-bottom));
+      /* Вертикальные отступы урезаны с 16 до 8 px не ради красоты: с border-box
+         на body они теперь входят в height: 100dvh и отнимают место у номеров, а
+         на телевизоре полезной высоты и так мало (~520–560 px). При 8 px под
+         колонки остаётся ровно столько же, сколько было видно раньше, — но без
+         прежнего изъяна, когда нижние ~16 px уходили под кромку экрана и
+         подрезали последний ряд. По бокам 26 px сохранены. */
+      padding: 8px 26px calc(8px + env(safe-area-inset-bottom));
       /* vh — фолбэк для старых сборок Яндекс.Браузера (dvh есть с Chromium 108). */
       height: 100vh; height: 100dvh; min-height: 0; overflow: hidden;
       --tv-num-fs: 52px; --tv-gap-y: 10px; --tv-gap-x: 14px; --tv-rows: 5;
@@ -889,11 +912,12 @@
     .link.cta .arr { color: rgba(23, 19, 15, .6); }
 
     /* ---------- Лендинг: дизайнерский, адаптивный (мобилка + десктоп) ---------- */
-    body.landing-bg {
+    body.landing-bg { background: #f7621e; padding: 0; }
+    body.landing-bg::before {
       background:
         radial-gradient(60% 45% at 85% 8%, rgba(255,255,255,.16), transparent 60%),
         radial-gradient(55% 40% at 10% 95%, rgba(0,0,0,.14), transparent 60%),
-        linear-gradient(150deg, #ffb418 4%, #f7621e 50%, #f73131 98%) fixed;
+        linear-gradient(150deg, #ffb418 4%, #f7621e 50%, #f73131 98%);
     }
     /* На десктопе лендинг центрируем по всему экрану (не «мобильная колонка»). */
     body.landing-bg .wrap { max-width: 100%; padding: 0; }
@@ -901,32 +925,40 @@
       font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
       min-height: 100dvh; box-sizing: border-box;
       padding: 26px 18px calc(26px + env(safe-area-inset-bottom));
-      display: flex; flex-direction: column; justify-content: center;
+      display: flex; flex-direction: column;
     }
+    /* Страница занимает высоту экрана целиком: шапка сверху, действие в центре,
+       справочное внизу. Раньше всё лежало одним блоком по центру, и на телефоне
+       сверху и снизу оставались широкие пустые поля. */
     .nd-shell {
       width: 100%; max-width: 440px; margin: 0 auto;
-      display: grid; grid-template-columns: 1fr; row-gap: 0;
-      grid-template-areas: "logo" "tag" "cta" "maps" "hours" "social";
+      flex: 1; display: flex; flex-direction: column;
     }
+    .nd-top { flex: 0 0 auto; }
+    /* Центр забирает всё свободное место, поэтому «Табло заказов» стоит ровно
+       посередине независимо от высоты экрана. */
+    .nd-mid { flex: 1 1 auto; display: flex; align-items: center; min-height: 0; }
+    .nd-mid .nd-cta { width: 100%; margin: 24px 0; }
+    .nd-bot { flex: 0 0 auto; display: flex; flex-direction: column; gap: 10px; }
     /* Логотип и слоган работают как заголовок страницы — отсюда крупный кегль.
        Ширину логотипа держим в пределах 476 px: картинка 952 px, дальше на
        ретине она начинает мылить (нужен двойной запас пикселей). */
-    .nd-logo { grid-area: logo; display: block; width: 100%; max-width: 440px; margin: 6px auto 0; filter: drop-shadow(0 4px 14px rgba(0,0,0,.22)); }
+    .nd-logo { display: block; width: 100%; max-width: 440px; margin: 6px auto 0; filter: drop-shadow(0 4px 14px rgba(0,0,0,.22)); }
     /* Слоган держим в одну строку: размер считаем от ширины экрана, чтобы он
        не переносился ни на 320 px, ни на планшете. */
     .nd-tag {
-      grid-area: tag; text-align: center; color: #fff; font-weight: 700;
+      text-align: center; color: #fff; font-weight: 700;
       font-size: clamp(14px, 4.5vw, 24px); letter-spacing: .2px; line-height: 1.3;
-      white-space: nowrap; margin: 14px 0 22px; text-shadow: 0 2px 12px rgba(0,0,0,.28);
+      white-space: nowrap; margin: 14px 0 0; text-shadow: 0 2px 12px rgba(0,0,0,.28);
     }
     /* Цветокор общий с плашками «карты» и «часы»: стекло на градиенте. Но это
        главное действие страницы, поэтому внутри того же стиля оно тяжелее:
        плотнее заливка, ярче кант, своя тень — читается первым, не выпадая. */
     .nd-cta {
-      grid-area: cta; display: flex; align-items: center; gap: 14px;
+      display: flex; align-items: center; gap: 14px;
       background: rgba(255,255,255,.30); color: #fff;
       border: 1.5px solid rgba(255,255,255,.75); border-radius: 20px;
-      padding: 15px 16px; text-decoration: none; margin-bottom: 16px;
+      padding: 15px 16px; text-decoration: none;
       box-shadow: 0 12px 28px rgba(0,0,0,.20);
       -webkit-backdrop-filter: blur(3px); backdrop-filter: blur(3px);
       transition: transform .06s ease, background .15s ease, box-shadow .15s ease;
@@ -945,7 +977,7 @@
     .nd-cta-tx span { display: block; font-size: 12.5px; color: rgba(255,255,255,.92); font-weight: 600; margin-top: 2px; }
     .nd-arr { flex: 0 0 auto; color: #fff; opacity: .85; display: flex; }
     .nd-arr svg { width: 22px; height: 22px; }
-    .nd-social { grid-area: social; display: flex; justify-content: center; gap: 16px; margin: 22px 0 0; }
+    .nd-social { display: flex; justify-content: center; gap: 16px; margin: 6px 0 0; }
     .nd-social a {
       width: 56px; height: 56px; border-radius: 50%; background: #fff; color: #f7621e;
       display: flex; align-items: center; justify-content: center;
@@ -957,7 +989,7 @@
     .nd-social a svg { width: 28px; height: 28px; }
     .nd-vk { font-weight: 800; font-size: 20px; letter-spacing: .5px; }
     .nd-maps {
-      grid-area: maps; display: flex; align-items: center; justify-content: center; gap: 10px;
+      display: flex; align-items: center; justify-content: center; gap: 10px;
       background: rgba(255,255,255,.15); color: #fff; border: 1px solid rgba(255,255,255,.4);
       border-radius: 16px; padding: 14px; text-decoration: none; font-weight: 700; font-size: 15px;
       -webkit-backdrop-filter: blur(3px); backdrop-filter: blur(3px);
@@ -965,27 +997,26 @@
     }
     .nd-maps:hover { background: rgba(255,255,255,.24); }
     .nd-maps svg { width: 20px; height: 20px; }
-    .nd-foot { text-align: center; color: rgba(255,255,255,.82); font-size: 12px; letter-spacing: .4px; margin-top: 22px; }
+    .nd-foot { text-align: center; color: rgba(255,255,255,.82); font-size: 12px; letter-spacing: .4px; margin-top: 6px; }
 
     /* Десктоп: колонка по центру (фото больше нет, растягивать нечего), а карты
        и часы встают в один ряд — иначе внизу вырастает длинная кишка плашек. */
     @media (min-width: 900px) {
-      .nd-shell {
-        max-width: 620px;
-        grid-template-columns: 1fr 1fr;
-        column-gap: 16px;
-        grid-template-areas:
-          "logo   logo"
-          "tag    tag"
-          "cta    cta"
-          "maps   hours"
-          "social social";
+      .nd-shell { max-width: 620px; }
+      /* Карты и часы встают в один ряд — иначе внизу вырастает длинная кишка
+         плашек. Соцсети и копирайт остаются под ними на всю ширину. */
+      .nd-bot {
+        display: grid; grid-template-columns: 1fr 1fr; gap: 12px 16px;
+        grid-template-areas: "maps hours" "social social" "foot foot";
       }
+      .nd-bot .nd-maps { grid-area: maps; }
+      .nd-bot .nd-hours { grid-area: hours; }
+      .nd-bot .nd-social { grid-area: social; }
+      .nd-bot .nd-foot { grid-area: foot; }
       .nd-logo { width: 100%; max-width: 476px; margin: 0 auto 4px; }
-      .nd-tag { font-size: 30px; margin: 14px 0 30px; }
+      .nd-tag { font-size: 30px; margin: 14px 0 0; }
       .nd-cta-tx b { font-size: 22px; }
-      .nd-hours { margin-top: 0; }
-      .nd-foot { max-width: 620px; margin: 26px auto 0; }
+      .nd-foot { margin-top: 0; }
     }
 
     /* ---------- Фирменный орнамент: шашка из розеток и фесок ----------
@@ -1025,9 +1056,9 @@
 
     /* Часы работы. Рядом с картами: гость смотрит «где» и «когда» вместе. */
     .nd-hours {
-      grid-area: hours; display: flex; align-items: center; gap: 12px;
+      display: flex; align-items: center; gap: 12px;
       background: rgba(255,255,255,.15); color: #fff; border: 1px solid rgba(255,255,255,.4);
-      border-radius: 16px; padding: 13px 14px; margin-top: 10px;
+      border-radius: 16px; padding: 13px 14px;
       -webkit-backdrop-filter: blur(3px); backdrop-filter: blur(3px);
     }
     .nd-hours svg { width: 20px; height: 20px; flex: 0 0 auto; }
@@ -1042,9 +1073,12 @@
        Включается классом body.brand (см. showBoard/showStaff).
        ============================================================ */
     body.brand {
-      background: linear-gradient(150deg, #ffb418 6%, #f7621e 52%, #f73131 96%) fixed;
+      background: #f7621e;   /* заливка под слоем-подложкой, см. body::before */
       color: #201400;
       font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    }
+    body.brand::before {
+      background: linear-gradient(150deg, #ffb418 6%, #f7621e 52%, #f73131 96%);
     }
     body.brand .brand h1 {
       color: #fff; text-shadow: 0 2px 14px rgba(0, 0, 0, .28);
@@ -1152,10 +1186,17 @@
     <!-- ========================= ЛЕНДИНГ (мультиссылка) ========================= -->
     <div id="landing">
      <div class="nd-shell">
-      <img class="nd-logo" src="/assets/logo_white.png" alt="Искенди · Дюрюмная" />
-      <p class="nd-tag">Крутим айраны · наливаем дюрюмы</p>
+      <!-- Три зоны на высоту экрана: шапка сверху, главное действие по центру,
+           справочное — в футер. Так страница выглядит цельной на телефоне, а не
+           комком по центру с пустотой сверху и снизу. -->
+      <div class="nd-top">
+        <img class="nd-logo" src="/assets/logo_white.png" alt="Искенди · Дюрюмная" />
+        <!-- Всё строчными — как в <title>. Заглавная только в первом слове
+             читалась как опечатка, а не как приём. -->
+        <p class="nd-tag">крутим айраны · наливаем дюрюмы</p>
+      </div>
 
-
+      <div class="nd-mid">
       <a class="nd-cta" href="/board" onclick="ymGoal('board')">
         <span class="nd-cta-ic" aria-hidden="true">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="13" rx="2" /><path d="M8 21h8M12 17v4" /></svg>
@@ -1168,19 +1209,9 @@
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6" /></svg>
         </span>
       </a>
-
-      <div class="nd-social">
-        <a href="https://t.me/iskendy" target="_blank" rel="noopener" aria-label="Telegram" onclick="ymGoal('telegram')">
-          <svg viewBox="0 0 24 24" fill="currentColor"><path d="M21.9 4.3 2.9 11.6c-1 .4-1 1.85.15 2.15l4.75 1.5 1.8 5.55c.28.82 1.3 1.05 1.9.42l2.55-2.5 4.68 3.45c.72.53 1.75.12 1.92-.72L23 5.35c.2-.9-.72-1.5-1.1-1.05z" /></svg>
-        </a>
-        <a href="https://instagram.com/_iskendy_" target="_blank" rel="noopener" aria-label="Instagram" onclick="ymGoal('instagram')">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="5" /><circle cx="12" cy="12" r="4" /><circle cx="17.4" cy="6.6" r="1.15" fill="currentColor" stroke="none" /></svg>
-        </a>
-        <a href="https://vk.com/iskendy" target="_blank" rel="noopener" aria-label="ВКонтакте" onclick="ymGoal('vk')">
-          <span class="nd-vk">VK</span>
-        </a>
       </div>
 
+      <div class="nd-bot">
       <a class="nd-maps" href="https://yandex.ru/maps/org/iskendi/52119597703"
          target="_blank" rel="noopener" onclick="ymGoal('yandex_maps')">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21s7-5.6 7-11a7 7 0 1 0-14 0c0 5.4 7 11 7 11z" /><circle cx="12" cy="10" r="2.5" /></svg>
@@ -1194,9 +1225,22 @@
           <div><b>пт–вс</b><span>12:00 – 23:00</span></div>
         </div>
       </div>
-     </div>
+
+      <div class="nd-social">
+        <a href="https://t.me/iskendy" target="_blank" rel="noopener" aria-label="Telegram" onclick="ymGoal('telegram')">
+          <svg viewBox="0 0 24 24" fill="currentColor"><path d="M21.9 4.3 2.9 11.6c-1 .4-1 1.85.15 2.15l4.75 1.5 1.8 5.55c.28.82 1.3 1.05 1.9.42l2.55-2.5 4.68 3.45c.72.53 1.75.12 1.92-.72L23 5.35c.2-.9-.72-1.5-1.1-1.05z" /></svg>
+        </a>
+        <a href="https://instagram.com/_iskendy_" target="_blank" rel="noopener" aria-label="Instagram" onclick="ymGoal('instagram')">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="5" /><circle cx="12" cy="12" r="4" /><circle cx="17.4" cy="6.6" r="1.15" fill="currentColor" stroke="none" /></svg>
+        </a>
+        <a href="https://vk.com/iskendy" target="_blank" rel="noopener" aria-label="ВКонтакте" onclick="ymGoal('vk')">
+          <span class="nd-vk">VK</span>
+        </a>
+      </div>
 
       <div class="nd-foot">© Искенди · дюрюмная</div>
+      </div>
+     </div>
     </div>
 
     <!-- ========================= ТАБЛО ЗАКАЗОВ (скрытая вкладка /board) ========================= -->
