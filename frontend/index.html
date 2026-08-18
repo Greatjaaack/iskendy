@@ -2918,6 +2918,12 @@
           links: d.links || {},
           loaded: true
         };
+        // Конфиг едет по сети, а экран рисуется сразу — у гостя, который вернулся
+        // на уже оценённый заказ, «спасибо» успевает отрисоваться с пустыми
+        // ссылками. Второй раз myRenderRating его не перерисует (блок уже не
+        // hidden), поэтому обновляем кнопки здесь, когда ссылки наконец приехали.
+        const thanks = document.getElementById("fbStepThanks");
+        if(thanks && !thanks.classList.contains("hidden")){ fbShowThanks(fbConfig.links); }
       } catch(e){ /* не ответил — работаем на значениях по умолчанию */ }
     }
 
