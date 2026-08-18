@@ -1216,7 +1216,13 @@
         <div class="sub-bg" id="subBg" aria-hidden="true"></div>
 
         <div class="sub-form">
-          <input id="subNum" type="number" inputmode="numeric" min="1" placeholder="номер заказа"
+          <!-- text + inputmode=numeric, а не type=number: цифровая клавиатура на
+               телефоне остаётся, но поле не пропускает «e», «.», «+» и «−»,
+               из-за которых «1e5» молча превращалось в заказ №1. Лишнее чистим
+               на вводе, чтобы гость сразу видел, что принимаются только цифры. -->
+          <input id="subNum" type="text" inputmode="numeric" pattern="[0-9]*"
+                 maxlength="6" placeholder="номер заказа"
+                 oninput="this.value=this.value.replace(/[^0-9]/g,'')"
                  onkeydown="if(event.key==='Enter')subSubmit()" />
           <button onclick="subSubmit()">Следить за заказом</button>
         </div>
@@ -2628,7 +2634,25 @@
           notifAsk();          // та же ветка, что и при обычной подписке
           return;
         }
-        if(d.reason === "already"){ subTo(n); return; }   // отзыв есть — просто следим
+        if(d.reason === "not_served"){
+          // Заказ есть и он в работе, просто наш список на экране отстал (опрос
+          // раз в 5 сек). Раньше здесь показывался отказ «оцените, когда
+          // заберёте» — бессмысленный для того, кто как раз хотел подписаться.
+          subTo(n);
+          return;
+        }
+        if(d.reason === "already"){
+          // Заказ выдан, и отзыв по нему уже есть. Следим, но показываем правду:
+          // «Выдан», а не «Ждём кухню», и оценивать больше не зовём.
+          fbSaveMy({ n: n, d: (state && state.date) || todayLocal(), seen: true,
+                     servedAt: Date.now(), rated: true, done: true,
+                     promptedAt: Date.now(), lastStatus: "served" });
+          document.getElementById("subNum").value = "";
+          ymGoal("sub_served");
+          guestStep("sub_ok");
+          showMyOrder();
+          return;
+        }
         if(d.reason === "not_found"){
           // Заказа сегодня ещё нет. Раньше здесь был отказ, и гость, оплативший
           // минуту назад, утыкался в «не нашли» — хотя всё в порядке, просто
@@ -2874,12 +2898,14 @@
     // Заказ ещё не появился на табло. Первые минуты это норма — из кассы номер
     // доезжает не мгновенно. Но если ждём слишком долго, вероятнее всего гость
     // ошибся в номере, и надо сказать об этом прямо, а не держать его у окна.
-    const MY_PENDING_HINT_MIN = 5;
+    // Минуты хватает с запасом: из кассы заказ доезжает за 10–12 секунд, так что
+    // через минуту молчания дело почти наверняка в номере, а не в задержке.
+    const MY_PENDING_HINT_MIN = 1;
     function myPendingText(my){
       const waited = my && my.subAt ? (Date.now() - my.subAt) / 60000 : 0;
       return waited > MY_PENDING_HINT_MIN
-        ? ["Ждём кухню", "Заказ всё ещё не появился на табло.\nПроверьте номер на чеке или подойдите на выдачу"]
-        : ["Ждём кухню", "Заказ вот-вот появится на табло — из кассы номер доезжает до минуты"];
+        ? ["Заказ не найден", "Мы его так и не увидели.\nПроверьте номер на чеке или подойдите на выдачу"]
+        : ["Ждём кухню", "Заказ вот-вот появится на табло — это займёт несколько секунд"];
     }
 
     function myRenderRating(my, st){
