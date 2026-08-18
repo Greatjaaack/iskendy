@@ -71,6 +71,13 @@ def init_db() -> None:
             conn.execute(
                 "ALTER TABLE orders ADD COLUMN source TEXT NOT NULL DEFAULT 'manual'"
             )
+        # Мягкое удаление: строку не выбрасываем, а помечаем временем. Статус
+        # остаётся тем, каким был в момент снятия, — видно, на каком этапе заказ
+        # сняли. Раньше здесь был DELETE, и вместе со строкой пропадали все
+        # метки времени: восстановить, во сколько такой заказ приняли, было
+        # нечем. Все рабочие выборки фильтруют `deleted_at IS NULL`.
+        if "deleted_at" not in cols:
+            conn.execute("ALTER TABLE orders ADD COLUMN deleted_at TEXT")
         # Журнал событий заказов (аудит): создание, смена статуса, удаление, сброс.
         # Переживает передеплой (в отличие от docker logs) — история по дням.
         conn.execute(
@@ -126,6 +133,35 @@ def init_db() -> None:
             "CREATE INDEX IF NOT EXISTS idx_feedback_date "
             "ON feedbacks (date, rating)"
         )
+        # Шаги гостя по воронке (для аналитики /stats). `session` — случайная
+        # метка визита, живёт до закрытия вкладки: по ней считаем людей, а не
+        # клики. `number` — номер заказа, если гость уже подписан; по нему шаги
+        # связываются с временами готовки («уходят ли те, кто дольше ждал»).
+        # ВНИМАНИЕ: связка «номер + время» делает записи косвенно персональными.
+        # IP и User-Agent тут не храним намеренно.
+        conn.execute(
+            """
+            CREATE TABLE IF NOT EXISTS guest_events (
+                id      INTEGER PRIMARY KEY AUTOINCREMENT,
+                date    TEXT NOT NULL,
+                step    TEXT NOT NULL,
+                session TEXT,
+                number  INTEGER,
+                at      TEXT NOT NULL
+            )
+            """
+        )
+        ge_cols = [r[1] for r in conn.execute("PRAGMA table_info(guest_events)")]
+        if "number" not in ge_cols:
+            conn.execute("ALTER TABLE guest_events ADD COLUMN number INTEGER")
+        conn.execute(
+            "CREATE INDEX IF NOT EXISTS idx_guest_events_date "
+            "ON guest_events (date, step)"
+        )
+        conn.execute(
+            "CREATE INDEX IF NOT EXISTS idx_guest_events_number "
+            "ON guest_events (date, number)"
+        )
 
 
 def _log_event(
@@ -153,7 +189,8 @@ def _log_event(
     elif event == "deleted":
         audit.info("ЗАКАЗ %s: удалён (был %s)", number, from_status)
     elif event == "reset":
-        audit.info("СБРОС ДНЯ: убрано активных %s", number)
+        # Сводку по сбросу печатает reset_day — здесь только сам заказ.
+        audit.info("ЗАКАЗ %s: снят при сбросе табло (был %s)", number, from_status)
 
 
 def today() -> str:
@@ -182,15 +219,19 @@ def get_board(date: str | None = None) -> dict:
             """
             SELECT number, status, created_at, ready_at, served_at FROM orders
              WHERE date = ? AND status IN ('open', 'preparing', 'ready')
+               AND deleted_at IS NULL
              ORDER BY number
             """,
             (date,),
         ).fetchall()
         served = conn.execute(
-            "SELECT COUNT(*) AS n FROM orders WHERE date = ? AND status = 'served'",
+            "SELECT COUNT(*) AS n FROM orders WHERE date = ? AND status = 'served'"
+            " AND deleted_at IS NULL",
             (date,),
         ).fetchone()["n"]
         upd = conn.execute(
+            # Без фильтра `deleted_at`: снятие заказа — тоже изменение табло,
+            # и фронт должен увидеть свежую метку.
             "SELECT MAX(updated_at) AS m FROM orders WHERE date = ?", (date,)
         ).fetchone()["m"]
     return {
@@ -225,35 +266,38 @@ def get_history(date: str | None = None) -> list[dict]:
         rows = conn.execute(
             """
             SELECT number, status, created_at, ready_at, served_at FROM orders
-             WHERE date = ? ORDER BY created_at, number
+             WHERE date = ? AND deleted_at IS NULL
+             ORDER BY created_at, number
             """,
             (date,),
         ).fetchall()
     return [_order_dict(r) for r in rows]
 
 
-def _active_id(conn: sqlite3.Connection, date: str, number: int) -> int | None:
-    """id активного заказа (open/готовится/готово) с таким номером сегодня, если есть."""
-    row = conn.execute(
-        """
-        SELECT id FROM orders
-         WHERE date = ? AND number = ? AND status IN ('open', 'preparing', 'ready')
-         ORDER BY id DESC LIMIT 1
-        """,
-        (date, number),
-    ).fetchone()
-    return row["id"] if row else None
-
-
 def add_order(number: int) -> dict:
-    """Занести новый заказ (статус «готовится»).
+    """Занести новый заказ вручную (статус «готовится»).
 
-    Если заказ с таким номером уже активен сегодня — ошибка (дубликат).
+    Дедуп по (дата, номер) в ЛЮБОМ статусе — как в `ingest_iiko_order`. Раньше
+    проверялись только активные, и номер уже выданного заказа заводился второй
+    раз: за месяц так набралось 34 дубля, все парой «iiko + вручную». Каждый
+    дубль — лишний заказ в счётчике дня и вторая, неверная запись времён.
     """
     date = today()
     with _connect() as conn:
-        if _active_id(conn, date, number) is not None:
-            raise ValueError(f"Заказ №{number} уже на табло")
+        was = conn.execute(
+            """
+            SELECT status FROM orders
+             WHERE date = ? AND number = ? AND deleted_at IS NULL
+             ORDER BY id DESC LIMIT 1
+            """,
+            (date, number),
+        ).fetchone()
+        if was is not None:
+            raise ValueError(
+                f"Заказ №{number} уже на табло"
+                if was["status"] in ACTIVE_STATUSES
+                else f"Заказ №{number} сегодня уже был и выдан"
+            )
         now = _now()
         conn.execute(
             """
@@ -276,6 +320,8 @@ def ingest_iiko_order(number: int, opened_at: str | None = None) -> bool:
     date = today()
     with _connect() as conn:
         exists = conn.execute(
+            # Намеренно без фильтра `deleted_at`: заказ, снятый кассиром вручную,
+            # поллер не должен заводить заново, пока номер в окне свежести.
             "SELECT 1 FROM orders WHERE date = ? AND number = ? LIMIT 1",
             (date, number),
         ).fetchone()
@@ -305,6 +351,7 @@ def set_status(number: int, new_status: str) -> dict:
             """
             SELECT id, status FROM orders
              WHERE date = ? AND number = ? AND status IN ('open', 'preparing', 'ready')
+               AND deleted_at IS NULL
              ORDER BY id DESC LIMIT 1
             """,
             (date, number),
@@ -338,31 +385,52 @@ def delete_order(number: int) -> dict:
             """
             SELECT id, status FROM orders
              WHERE date = ? AND number = ? AND status IN ('open', 'preparing', 'ready')
+               AND deleted_at IS NULL
              ORDER BY id DESC LIMIT 1
             """,
             (date, number),
         ).fetchone()
         if row is None:
             raise ValueError(f"Активного заказа №{number} нет")
-        conn.execute("DELETE FROM orders WHERE id = ?", (row["id"],))
+        now = _now()
+        conn.execute(
+            "UPDATE orders SET deleted_at = ?, updated_at = ? WHERE id = ?",
+            (now, now, row["id"]),
+        )
         _log_event(conn, date, "deleted", number, from_status=row["status"])
     return get_board(date)
 
 
 def reset_day() -> dict:
-    """Очистить ТАБЛО за сегодня: убрать активные (open/готовится/готово).
+    """Очистить ТАБЛО за сегодня: снять активные (open/готовится/готово).
 
     Выданные (served) НЕ трогаем — это история дня, она хранится постоянно
     (для аналитики). Кнопка «Новый день» лишь снимает зависшие активные заказы.
+
+    Снятые помечаются `deleted_at`, а в журнал идёт событие на КАЖДЫЙ заказ — с
+    его номером и статусом на момент снятия. Раньше строки удалялись, а в журнал
+    писалась одна запись, где в поле `number` лежало количество: какие именно
+    заказы сняли, установить было нельзя (и «№13» в журнале читалось как номер).
     """
     date = today()
     with _connect() as conn:
-        cur = conn.execute(
-            "DELETE FROM orders WHERE date = ? AND status IN "
-            "('open', 'preparing', 'ready')",
+        rows = conn.execute(
+            """
+            SELECT id, number, status FROM orders
+             WHERE date = ? AND status IN ('open', 'preparing', 'ready')
+               AND deleted_at IS NULL
+             ORDER BY number
+            """,
             (date,),
-        )
-        _log_event(conn, date, "reset", number=cur.rowcount)
+        ).fetchall()
+        now = _now()
+        for row in rows:
+            conn.execute(
+                "UPDATE orders SET deleted_at = ?, updated_at = ? WHERE id = ?",
+                (now, now, row["id"]),
+            )
+            _log_event(conn, date, "reset", row["number"], from_status=row["status"])
+        audit.info("СБРОС ТАБЛО: снято активных %s", len(rows))
     return get_board(date)
 
 
@@ -419,6 +487,7 @@ def stats_days() -> list[dict]:
     with _connect() as conn:
         rows = conn.execute(
             "SELECT date, status, created_at, ready_at, served_at FROM orders"
+            " WHERE deleted_at IS NULL"
         ).fetchall()
 
     days: dict[str, dict] = defaultdict(
@@ -472,7 +541,7 @@ def stats_range(dates: list[str]) -> dict:
     with _connect() as conn:
         rows = conn.execute(
             f"SELECT status, created_at, ready_at, served_at FROM orders "
-            f"WHERE date IN ({placeholders})",
+            f"WHERE date IN ({placeholders}) AND deleted_at IS NULL",
             dates,
         ).fetchall()
 
@@ -635,7 +704,7 @@ def stats_orders(dates: list[str], limit: int = ORDERS_PATH_LIMIT) -> dict:
     with _connect() as conn:
         rows = conn.execute(
             f"SELECT id, date, number, status, source, created_at, ready_at, served_at "
-            f"FROM orders WHERE date IN ({placeholders}) "
+            f"FROM orders WHERE date IN ({placeholders}) AND deleted_at IS NULL "
             f"ORDER BY date DESC, created_at DESC, number DESC",
             dates,
         ).fetchall()
@@ -731,7 +800,8 @@ def _today_order(conn: sqlite3.Connection, date: str, number: int) -> sqlite3.Ro
     return conn.execute(
         """
         SELECT id, number, status, created_at, served_at FROM orders
-         WHERE date = ? AND number = ? ORDER BY id DESC LIMIT 1
+         WHERE date = ? AND number = ? AND deleted_at IS NULL
+         ORDER BY id DESC LIMIT 1
         """,
         (date, number),
     ).fetchone()
@@ -1028,7 +1098,7 @@ def feedback_stats(dates: list[str]) -> dict:
         ).fetchall()
         orders = conn.execute(
             f"SELECT COUNT(*) AS n FROM orders WHERE date IN ({placeholders}) "
-            f"AND status = 'served'",
+            f"AND status = 'served' AND deleted_at IS NULL",
             dates,
         ).fetchone()["n"]
 
@@ -1067,3 +1137,152 @@ def feedback_stats(dates: list[str]) -> dict:
         "tags": [{"tag": t, "count": c} for t, c in tags.most_common(10)],
         "waitBuckets": buckets,
     }
+
+
+# ---------- Воронка гостя (шаги на /board, для аналитики) ----------
+# Порядок важен: в этом виде воронка и рисуется. Белый список — заодно защита
+# от мусора: шаг не из него в базу не попадает.
+GUEST_STEPS = (
+    "board_open",    # открыл табло с телефона
+    "sub_try",       # нажал «Следить за заказом»
+    "sub_fail",      # номер не нашёлся (ошибся в цифрах или чужой день)
+    "sub_ok",        # подписался на свой заказ
+    "ready_seen",    # дождался «Готово» с открытой страницей
+    "rate_shown",    # позвали оценить (карточка стала оценочной)
+    "rated",         # поставил звёзды
+    "review_click",  # ушёл писать отзыв на карты/в соцсети
+)
+GUEST_STEP_LABELS = {
+    "board_open": "открыл табло",
+    "sub_try": "ввёл номер",
+    "sub_fail": "номер не нашёлся",
+    "sub_ok": "подписался",
+    "ready_seen": "увидел «готово»",
+    "rate_shown": "позвали оценить",
+    "rated": "оценил",
+    "review_click": "ушёл писать отзыв",
+}
+
+
+def log_guest_event(
+    step: str, session: str | None = None, number: int | None = None
+) -> bool:
+    """Записать шаг гостя. Неизвестный шаг молча игнорируем (вернём False).
+
+    `number` — заказ, за которым гость следит; до подписки его ещё нет.
+    """
+    if step not in GUEST_STEPS:
+        return False
+    if number is not None and not (0 < number <= 100000):
+        number = None
+    with _connect() as conn:
+        conn.execute(
+            "INSERT INTO guest_events (date, step, session, number, at) "
+            "VALUES (?, ?, ?, ?, ?)",
+            (today(), step, (session or "")[:40] or None, number, _now()),
+        )
+    return True
+
+
+def guest_funnel(dates: list[str]) -> dict:
+    """Воронка гостя за выбранные дни: сколько визитов дошло до каждого шага.
+
+    Считаем визиты (уникальные session), а не события: один гость, трижды
+    нажавший «Следить», — это один человек на шаге, а не три.
+    """
+    if not dates:
+        return {"steps": [], "byDay": []}
+    placeholders = ",".join("?" for _ in dates)
+    with _connect() as conn:
+        rows = conn.execute(
+            f"""
+            SELECT step,
+                   COUNT(DISTINCT COALESCE(session, CAST(id AS TEXT))) AS visits,
+                   COUNT(*) AS events
+              FROM guest_events WHERE date IN ({placeholders})
+             GROUP BY step
+            """,
+            dates,
+        ).fetchall()
+        by_day = conn.execute(
+            f"""
+            SELECT date, step,
+                   COUNT(DISTINCT COALESCE(session, CAST(id AS TEXT))) AS visits
+              FROM guest_events WHERE date IN ({placeholders})
+             GROUP BY date, step ORDER BY date
+            """,
+            dates,
+        ).fetchall()
+    got = {r["step"]: r for r in rows}
+    base = got["board_open"]["visits"] if "board_open" in got else 0
+    steps = []
+    for st in GUEST_STEPS:
+        r = got.get(st)
+        visits = r["visits"] if r else 0
+        steps.append({
+            "step": st,
+            "label": GUEST_STEP_LABELS[st],
+            "visits": visits,
+            "events": r["events"] if r else 0,
+            # Доля от заходов на табло — «сколько людей досюда добралось».
+            "share": round(visits * 100 / base) if base else None,
+        })
+    return {"steps": steps, "byDay": [dict(r) for r in by_day]}
+
+
+def guest_by_wait(dates: list[str]) -> dict:
+    """Довёл ли гость дело до оценки — в зависимости от того, сколько ждал.
+
+    Главный вопрос воронки: теряем ли мы отзывы из-за долгого ожидания. Берём
+    подписавшихся гостей (по номеру заказа), считаем время от приёма до выдачи и
+    раскладываем по корзинам: сколько в каждой дошло до звёзд и до отзыва.
+    """
+    if not dates:
+        return {"buckets": []}
+    placeholders = ",".join("?" for _ in dates)
+    with _connect() as conn:
+        rows = conn.execute(
+            f"""
+            SELECT g.number, g.date,
+                   MAX(g.step = 'rate_shown') AS zvali,
+                   MAX(g.step = 'rated')      AS ocenil,
+                   MAX(g.step = 'review_click') AS ushel
+              FROM guest_events g
+             WHERE g.date IN ({placeholders}) AND g.number IS NOT NULL
+             GROUP BY g.date, g.number
+            """,
+            dates,
+        ).fetchall()
+        orders = {
+            (r["date"], r["number"]): r
+            for r in conn.execute(
+                f"""
+                SELECT date, number, created_at, served_at FROM orders
+                 WHERE date IN ({placeholders}) AND deleted_at IS NULL
+                """,
+                dates,
+            ).fetchall()
+        }
+    # Границы — те же, что в разборе отзывов: до 5, 5–10, 10–15, дольше.
+    edges = [(0, 300, "до 5 мин"), (300, 600, "5–10 мин"),
+             (600, 900, "10–15 мин"), (900, None, "дольше 15 мин")]
+    buckets = [{"label": lb, "guests": 0, "prompted": 0, "rated": 0, "left": 0}
+               for _, _, lb in edges]
+    for r in rows:
+        o = orders.get((r["date"], r["number"]))
+        if o is None:
+            continue
+        wait = _wait_seconds(o)
+        if wait is None:
+            continue
+        for i, (lo, hi, _) in enumerate(edges):
+            if wait >= lo and (hi is None or wait < hi):
+                b = buckets[i]
+                b["guests"] += 1
+                b["prompted"] += 1 if r["zvali"] else 0
+                b["rated"] += 1 if r["ocenil"] else 0
+                b["left"] += 1 if r["ushel"] else 0
+                break
+    for b in buckets:
+        b["rateShare"] = round(b["rated"] * 100 / b["guests"]) if b["guests"] else None
+    return {"buckets": buckets}

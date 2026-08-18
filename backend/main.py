@@ -247,6 +247,9 @@ REASON_TEXT = {
 RATE_LIMIT_WINDOW = 60  # секунд
 RATE_LIMIT_READ = 120  # GET /api/feedback/check
 RATE_LIMIT_WRITE = 20  # POST /api/feedback и /api/feedback/detail
+# Шаги воронки: пишет каждый гость по нескольку раз за визит, а в зале все сидят
+# под одним IP. Потолок высокий — потерять шаг не страшно, но и не заваливать БД.
+RATE_LIMIT_STEP = 240  # POST /api/guest/event
 _rate_hits: dict[str, list[float]] = {}
 
 # Фоновые отправки уведомлений: держим ссылки, иначе сборщик мусора может
@@ -287,8 +290,9 @@ def _rate_ok(key: str, limit: int) -> bool:
 
 
 def _guard(request: Request, limit: int = RATE_LIMIT_WRITE) -> None:
-    # Ключ включает вид лимита: чтение не должно съедать квоту записи.
-    kind = "r" if limit == RATE_LIMIT_READ else "w"
+    # Ключ включает вид лимита: чтение не должно съедать квоту записи, а поток
+    # шагов воронки — квоту отзывов.
+    kind = {RATE_LIMIT_READ: "r", RATE_LIMIT_STEP: "s"}.get(limit, "w")
     if not _rate_ok(f"{kind}:{_client_ip(request)}", limit):
         raise HTTPException(
             status_code=status.HTTP_429_TOO_MANY_REQUESTS,
@@ -329,6 +333,39 @@ def feedback_config() -> dict:
         "promptDelaySec": settings.feedback_prompt_delay_sec,
         "links": _review_links(),
     }
+
+
+class GuestStepBody(BaseModel):
+    step: str = Field(max_length=40)
+    # Случайная метка визита с фронта: нужна, чтобы считать людей, а не клики.
+    # Живёт до закрытия вкладки.
+    session: str = Field(default="", max_length=40)
+    # Заказ, за которым гость следит (если уже подписан). Связывает поведение с
+    # временами готовки — ради этого разреза номер и собираем.
+    number: int | None = Field(default=None, gt=0, le=100000)
+
+
+@app.post("/api/guest/event")
+def guest_event(request: Request, body: GuestStepBody) -> dict:
+    """Шаг гостя по воронке (аноним, для аналитики).
+
+    Тихая ручка: неизвестный шаг просто не пишется, ошибку гостю не показываем —
+    сбор статистики не должен мешать человеку забрать заказ.
+    """
+    _guard(request, RATE_LIMIT_STEP)
+    return {"ok": db.log_guest_event(body.step, body.session, body.number)}
+
+
+@app.get("/api/stats/guest")
+def stats_guest(
+    dates: str = Query(default=""),
+    _: dict = Depends(require_staff),
+) -> dict:
+    """Воронка гостя за выбранные дни: сколько визитов дошло до каждого шага."""
+    valid = [d for d in dates.split(",") if re.fullmatch(r"\d{4}-\d{2}-\d{2}", d)]
+    if not valid:
+        valid = [db.today()]
+    return {"dates": valid, **db.guest_funnel(valid), **db.guest_by_wait(valid)}
 
 
 @app.get("/api/feedback/check")

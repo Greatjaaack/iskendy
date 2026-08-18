@@ -1783,6 +1783,7 @@
         if(subBg && !subBg.innerHTML) subBg.innerHTML = rosette();
         fbLoadConfig();
         notifInit();
+        guestStep("board_open");
         // Запасной QR со стойки выдачи: /board?rate=1 — просим номер руками.
         if(/[?&]rate=1\b/.test(location.search)) fbOpenAsk();
       }
@@ -1939,7 +1940,10 @@
       } else if(e.event === "deleted"){
         text = "удалён (был " + (STATUS_LABEL[e.from_status] || e.from_status) + ")";
       } else if(e.event === "reset"){
-        text = "сброс табло" + (e.number != null ? " (" + e.number + ")" : "");
+        // Теперь событие пишется на каждый снятый заказ и в e.number лежит его
+        // номер. Раньше туда клали количество, и «(13)» читалось как номер.
+        text = "снят при сбросе табло"
+             + (e.from_status ? " (был " + (STATUS_LABEL[e.from_status] || e.from_status) + ")" : "");
       } else { text = e.event; }
       const num = e.number != null ? ("№" + e.number) : "";
       return '<div class="log-row"><span class="log-time">' + t + '</span>'
@@ -2535,11 +2539,52 @@
     }
 
 
+    // ---------- воронка гостя в свою базу ----------
+    // Метрика показывает цели у себя, но связать их с временами готовки и
+    // выгрузить в /stats нельзя. Поэтому шаги дублируем к себе — анонимно:
+    // ни номера заказа, ни контактов, только шаг и метка визита.
+    // Метка живёт до закрытия вкладки: по ней считаем людей, а не клики.
+    function guestSession(){
+      try {
+        let sid = sessionStorage.getItem("iskendy_visit");
+        if(!sid){
+          sid = String(Date.now() % 1e9) + Math.random().toString(36).slice(2, 8);
+          sessionStorage.setItem("iskendy_visit", sid);
+        }
+        return sid;
+      } catch(e){ return ""; }   // приватный режим — считаем как событие без визита
+    }
+    // Шаг мог уже уйти в этом визите: воронка отвечает на «сколько людей дошло»,
+    // а не «сколько раз нажали», и повторы её только зашумляют.
+    const guestSent = new Set();
+    function guestStep(step, again){
+      if(!again){
+        if(guestSent.has(step)) return;
+        guestSent.add(step);
+      }
+      try {
+        // Номер заказа прикладываем, если гость уже подписан: по нему шаги
+        // связываются с временем готовки. До подписки его просто нет.
+        const my = fbMy();
+        fetch(API + "/api/guest/event", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            step: step,
+            session: guestSession(),
+            number: (my && my.n) || null
+          }),
+          keepalive: true          // переживёт уход со страницы по ссылке на отзыв
+        }).catch(function(){});
+      } catch(e){ /* статистика не должна мешать гостю */ }
+    }
+
     async function subSubmit(){
       const input = document.getElementById("subNum");
       const err = document.getElementById("subErr");
       const n = parseInt(input.value, 10);
       err.classList.add("hidden");
+      guestStep("sub_try", true);     // каждая попытка: сравниваем с удачными
       if(!n || n < 1){
         err.textContent = "Введите номер заказа с чека";
         err.classList.remove("hidden");
@@ -2561,6 +2606,7 @@
                      promptedAt: Date.now(), lastStatus: "served" });
           unlockAudio();
           ymGoal("sub_served");   // пришёл по QR со стойки: заказ уже на руках
+          guestStep("sub_ok");
           showMyOrder();
           notifAsk();          // та же ветка, что и при обычной подписке
           return;
@@ -2571,6 +2617,7 @@
         // Сколько гостей спотыкается о ввод номера. Растёт — значит номер на
         // чеке плохо виден или подсказка непонятна.
         ymGoal("sub_fail");
+        guestStep("sub_fail", true);   // каждая неудачная попытка важна
       } catch(e){
         err.textContent = "Нет связи — попробуйте ещё раз";
         err.classList.remove("hidden");
@@ -2584,6 +2631,7 @@
       document.getElementById("subNum").value = "";
       buzz(30);                       // короткий отклик: подписка принята
       ymGoal("sub_ok");               // вход в воронку: гость следит за заказом
+      guestStep("sub_ok");
       unlockAudio();                  // тап по кнопке = разрешение на звук дальше
       showMyOrder();
       // Разрешение на уведомления просим здесь: гость только что нажал кнопку,
@@ -2622,6 +2670,9 @@
       // кнопок: fbShowThanks рисует их только при непустом links.
       fbLoadConfig();
       notifInit();
+      // Сюда гость попадает и напрямую после перезагрузки, минуя showBoard, —
+      // без этого знаменатель воронки терял бы всех вернувшихся.
+      guestStep("board_open");
       myRender();
       startPolling();
       if(push !== false){
@@ -2860,6 +2911,7 @@
         if(st === "ready" && was && was !== "ready"){
           myNotifyReady(my.n);
           ymGoal("order_ready");   // гость дождался готовности с открытым сайтом
+          guestStep("ready_seen");
         }
       }
       myRender();
@@ -2996,6 +3048,7 @@
       if(Date.now() - my.servedAt < (fbConfig.promptDelaySec || 180) * 1000) return;
       my.promptedAt = Date.now();
       fbSaveMy(my);
+      guestStep("rate_shown");
       // Экран заказа гость и так видит; если он на табло — переводим к себе.
       if(!myOpen()) showMyOrder();
       myRender();
@@ -3127,6 +3180,7 @@
         // передаём параметром, средняя считается в Метрике без выгрузки.
         if(!fix){
           ymGoal("rate", { rating: rating });
+          guestStep("rated");
           ymGoal(d.branch === "positive" ? "rate_positive" : "rate_negative");
         }
         // Ветка могла смениться (двойка → пятёрка): перерисовываем блок под
@@ -3160,7 +3214,8 @@
 
     function fbLink(url, label, cls, goal){
       return '<a class="fb-link ' + (cls || "") + '" href="' + encodeURI(url) + '"'
-        + ' target="_blank" rel="noopener" onclick="ymGoal(\'' + goal + '\')">' + label + '</a>';
+        + ' target="_blank" rel="noopener"'
+        + ' onclick="ymGoal(\'' + goal + '\');guestStep(\'review_click\')">' + label + '</a>';
     }
 
     // ---------- ветка 1–3★ ----------
