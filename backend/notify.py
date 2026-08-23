@@ -274,3 +274,34 @@ async def notify_claim_anomaly(guest: str, count: int, ip: str = "") -> int:
         f"Метка устройства: {_esc(guest)}"
     )
     return await send_throttled("claim_anomaly", text, targets)
+
+
+async def notify_poller_down(fails: int, last_error: str) -> int:
+    """Поллер iiko не может достучаться до кассы несколько тиков подряд.
+
+    18 августа 2026 такая поломка длилась час, и знал о ней только кассир у
+    стойки: поллер по замыслу не роняет цикл на ошибке тика, пишет WARNING и
+    идёт дальше, а лог никто не читает в реальном времени. Смене важно узнать
+    раньше гостей и перейти на ручной ввод, не гадая, что происходит.
+    """
+    targets = _security_targets()
+    if not targets:
+        return 0
+    text = (
+        "🟠 <b>Заказы не приезжают из кассы</b>\n"
+        f"Подряд неудачных попыток: {fails}.\n"
+        "Заносите заказы вручную на экране кассы — табло работает.\n"
+        f"Причина: {_esc(last_error[:150])}"
+    )
+    return await send_throttled("poller_down", text, targets)
+
+
+async def notify_poller_back() -> int:
+    """Связь с кассой восстановилась — можно перестать заносить руками."""
+    targets = _security_targets()
+    if not targets:
+        return 0
+    return await send_message(
+        "✅ <b>Заказы снова приезжают из кассы</b>\nРучной ввод больше не нужен.",
+        targets,
+    )
