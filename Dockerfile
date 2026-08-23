@@ -32,4 +32,8 @@ ENTRYPOINT ["python", "/app/backend/entrypoint.py"]
 # --no-proxy-headers: разбор X-Forwarded-For делает приложение (см. _client_ip),
 # и ему нужен настоящий адрес соединения. Uvicorn со своим разбором подменил бы
 # client.host тем же заголовком — проверять, кто его проставил, стало бы нечем.
-CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8080", "--no-proxy-headers"]
+# --no-access-log: строки о запросах пишет само приложение (см. middleware) —
+# со временем, настоящим адресом гостя и без опроса табло, который давал 92%
+# объёма. У uvicorn всё это отсутствует: ни времени, ни адреса дальше Caddy.
+CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8080", \
+     "--no-proxy-headers", "--no-access-log"]

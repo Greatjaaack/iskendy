@@ -924,6 +924,10 @@ def feedback_create(
     date = today()
     with _connect() as conn:
         if not claim_ok(conn, date, number, claim_token):
+            # Пишем в лог: это подпись атаки — кто-то шлёт оценку за заказ, за
+            # которым не следил. По HTTP-коду такое не найти, ручка отвечает 200
+            # с отказом внутри, и в access-логе строка неотличима от обычной.
+            audit.warning("ОТЗЫВ №%s: отклонён — заказ занят не этим телефоном", number)
             return {"ok": False, "reason": "not_claimed"}
         check = _can_rate(conn, date, number)
         if not check["ok"]:

@@ -13,6 +13,7 @@ import logging
 import ipaddress
 import re
 import time
+from logging.handlers import RotatingFileHandler
 from pathlib import Path
 from urllib.parse import urlparse
 
@@ -28,8 +29,41 @@ from fastapi.staticfiles import StaticFiles
 from iiko_poller import run_poller
 from pydantic import BaseModel, Field
 
-# Чтобы логи фонового iiko-поллера были видны рядом с логами uvicorn.
-logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
+# Единый формат для всех строк: раньше события приложения шли со временем, а
+# access-строки uvicorn — вообще без него, и по логу нельзя было сказать, когда
+# случился запрос. Миллисекунды убраны: для разбора смены хватает секунд.
+_LOG_FORMAT = "%(asctime)s %(levelname)-5s %(message)s"
+_LOG_DATEFMT = "%Y-%m-%d %H:%M:%S"
+logging.basicConfig(level=logging.INFO, format=_LOG_FORMAT, datefmt=_LOG_DATEFMT)
+
+
+def _add_file_log() -> None:
+    """Дублировать лог в файл внутри volume, рядом с базой.
+
+    docker logs живут ровно столько, сколько живёт контейнер: любой деплой
+    пересоздаёт его, и вся история исчезает. Проверено на проде — там лежало
+    пять дней, ровно с последней пересборки, а всё, что было до неё, стёрлось.
+
+    Файл в volume это переживает. Шесть кусков по 5 МБ — с учётом того, что
+    опрос табло больше не пишется, это несколько месяцев истории при жёстком
+    потолке в 30 МБ.
+    """
+    log_dir = Path(settings.db_path).resolve().parent / "logs"
+    try:
+        log_dir.mkdir(exist_ok=True)
+        handler = RotatingFileHandler(
+            log_dir / "app.log", maxBytes=5 * 1024 * 1024, backupCount=5,
+            encoding="utf-8",
+        )
+        handler.setFormatter(logging.Formatter(_LOG_FORMAT, datefmt=_LOG_DATEFMT))
+        logging.getLogger().addHandler(handler)
+    except OSError as exc:
+        # Не смогли завести файл — не повод не подниматься: в docker logs
+        # всё равно пишем, и сайт важнее истории логов.
+        logging.getLogger().warning("файловый лог недоступен: %s", exc)
+
+
+_add_file_log()
 # httpx на INFO печатает полный URL запроса, а у Telegram Bot API токен зашит
 # прямо в путь — в docker logs он светиться не должен. Ошибки отправки мы и так
 # логируем сами (notify.py), так что ничего не теряем.
@@ -38,14 +72,36 @@ logging.getLogger("httpx").setLevel(logging.WARNING)
 app = FastAPI(title="Искенди — табло заказов")
 
 
+# Пути, которые в лог не пишем. Табло опрашивает статус раз в пять секунд с
+# каждого гостевого телефона — за пять дней это дало 109 278 строк из 119 231,
+# то есть 92% лога. Полезное в этом шуме не находится, а диск он ест исправно.
+# Ошибки (код 400 и выше) пишем всегда, даже для этих путей.
+QUIET_PATHS = ("/api/status", "/api/health", "/assets/", "/favicon")
+
+access = logging.getLogger("access")
+
+
 @app.middleware("http")
 async def security_headers(request: Request, call_next):
-    """Базовые защитные заголовки.
+    """Защитные заголовки и запись запроса в лог.
 
-    Ставим в приложении, а не в общем Caddyfile: тот обслуживает и соседние
-    стеки компании, и трогать его ради одного сайта рискованно.
+    Заголовки ставим в приложении, а не в общем Caddyfile: тот обслуживает и
+    соседние стеки компании, и трогать его ради одного сайта рискованно.
+
+    Access-лог пишем сами, а не средствами uvicorn: тому виден только адрес
+    соединения, то есть всегда Caddy (172.19.0.4), — по такому логу нельзя
+    отличить одного гостя от другого и разобрать, откуда шла подозрительная
+    активность. Настоящий адрес умеет доставать только _client_ip.
     """
+    started = time.monotonic()
     response = await call_next(request)
+    path = request.url.path
+    if response.status_code >= 400 or not path.startswith(QUIET_PATHS):
+        access.info(
+            "%s %s %s · %s · %dмс",
+            request.method, path, response.status_code,
+            _client_ip(request), (time.monotonic() - started) * 1000,
+        )
     # Кассу и аналитику нельзя встраивать в чужую страницу (кликджекинг).
     response.headers["X-Frame-Options"] = "SAMEORIGIN"
     response.headers["X-Content-Type-Options"] = "nosniff"

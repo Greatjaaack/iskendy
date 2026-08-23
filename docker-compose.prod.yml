@@ -12,6 +12,16 @@ services:
     volumes:
       - app-data:/data
     restart: unless-stopped
+    # Ротация docker-логов. По умолчанию json-file растёт без предела: за пять
+    # дней набегало 16 МБ, из них 92% — опрос табло. Шум теперь не пишется, но
+    # потолок нужен всё равно: диск на сервере занят на 82%.
+    # История при этом живёт не здесь, а в /data/logs внутри volume — docker
+    # стирает свои логи вместе с контейнером при каждом деплое.
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
     networks:
       - dashboards_default
 
