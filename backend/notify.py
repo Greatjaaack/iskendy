@@ -167,3 +167,49 @@ async def notify_feedback_detail(fb: dict, branch: str) -> int:
     # Первые две строки (оценка и ожидание) уже были в первом сообщении.
     tail = body[2] if len(body) > 2 else ""
     return await send_message(f"{head}\n{tail}".strip(), targets)
+
+
+# ------------------------------------------------------------ охрана доступа
+# Эти уведомления идут владельцу в личку (`alert_targets`) и не зависят от
+# рубильника отзывов: узнать, что кассу пытались открыть чужим устройством,
+# важнее, чем поток оценок, и выключаться вместе с ним не должно.
+def _security_targets() -> list[tuple[str, int | None]]:
+    if not settings.telegram_bot_token:
+        return []
+    return _dedup(settings.alert_targets)
+
+
+async def notify_login_blocked(active: dict, ip: str = "", ua: str = "") -> int:
+    """Кто-то ввёл верный пароль, пока касса открыта на другом устройстве.
+
+    Пароль один на всех и открывает аналитику, контакты гостей и выгрузку базы.
+    Верный пароль со стороны — это либо свой человек с телефона, либо утечка;
+    отличить может только владелец, поэтому решение за ним, а наше дело — успеть
+    сказать.
+    """
+    targets = _security_targets()
+    if not targets:
+        return 0
+    text = (
+        "🔐 <b>Отклонён вход в кассу</b>\n"
+        "Пароль верный, но касса уже открыта на другом устройстве.\n"
+        f"Откуда: {_esc(ip) or '—'}\n"
+        f"Устройство: {_esc(ua[:120]) or '—'}\n"
+        f"Текущая сессия с: {_esc(active.get('createdAt'))}\n"
+        "Если это не вы — смените пароль."
+    )
+    return await send_message(text, targets)
+
+
+async def notify_claim_anomaly(guest: str, count: int, ip: str = "") -> int:
+    """Одно устройство занимает номера пачкой — похоже на попытку сорвать отзывы."""
+    targets = _security_targets()
+    if not targets:
+        return 0
+    text = (
+        "⚠️ <b>Странная активность на табло</b>\n"
+        f"Одно устройство заняло сегодня номеров: {count}\n"
+        f"Откуда: {_esc(ip) or '—'}\n"
+        f"Метка устройства: {_esc(guest)}"
+    )
+    return await send_message(text, targets)

@@ -10,9 +10,11 @@ import asyncio
 import hashlib
 import io
 import logging
+import ipaddress
 import re
 import time
 from pathlib import Path
+from urllib.parse import urlparse
 
 import backup
 import db
@@ -112,14 +114,49 @@ class LoginBody(BaseModel):
 
 
 @app.post("/api/auth/login")
-def login(request: Request, body: LoginBody) -> dict:
-    """Пароль персонала → JWT. С лимитом попыток: см. RATE_LIMIT_LOGIN."""
-    _guard(request, RATE_LIMIT_LOGIN)
+async def login(request: Request, body: LoginBody) -> dict:
+    """Пароль персонала → JWT. Одна активная сессия, лимит попыток.
+
+    Касса — один планшет за столом, залогиненный месяцами (пароль вводить
+    неудобно, поэтому токен долгий). Значит вторая сессия по тому же паролю —
+    это не «хозяин зашёл с телефона», а сигнал: пароль ушёл на сторону. Такой
+    вход отклоняем и шлём алерт владельцу; планшет при этом не трогаем, чтобы
+    смена не осталась без кассы посреди дня.
+    """
+    _guard(request, RATE_LIMIT_LOGIN, "l")
     if not verify_password(body.password):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED, detail="Неверный пароль"
         )
-    return {"token": issue_token()}
+    active = db.session_active()
+    if active is not None:
+        _fire(notify.notify_login_blocked(
+            active, ip=_client_ip(request),
+            ua=request.headers.get("user-agent", ""),
+        ))
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Касса уже открыта на другом устройстве. "
+                   "Нажмите «Выйти» там — или обратитесь к владельцу.",
+        )
+    token, jti = issue_token()
+    db.session_start(
+        jti, ip=_client_ip(request), ua=request.headers.get("user-agent", "")
+    )
+    return {"token": token}
+
+
+@app.post("/api/auth/logout")
+def logout(_: dict = Depends(require_staff)) -> dict:
+    """Освободить кассу. Только с действующим токеном — чужой выход невозможен."""
+    db.session_end()
+    return {"ok": True}
+
+
+@app.get("/api/auth/session")
+def auth_session(_: dict = Depends(require_staff)) -> dict:
+    """Кто сейчас за кассой — для экрана персонала."""
+    return {"session": db.session_active()}
 
 
 class OrderBody(BaseModel):
@@ -241,12 +278,21 @@ def day_reset(_: dict = Depends(require_staff)) -> dict:
 
 @app.get("/api/qr")
 def qr(
+    request: Request,
     data: str = Query(max_length=512),
     border: int = Query(default=2, ge=0, le=8),
 ) -> Response:
-    """SVG QR-кода для произвольной строки (обычно URL табло). `border` — «тихая
-    зона» в модулях (белая рамка): 2 для печати, поменьше для экрана табло.
-    Генерится локально, без внешних сервисов."""
+    """SVG QR-кода для страницы этого же сайта. `border` — «тихая зона» в
+    модулях (белая рамка): 2 для печати, поменьше для экрана табло.
+    Генерится локально, без внешних сервисов.
+
+    Ручка открытая (QR табло рисуется гостям), поэтому кодируем только свои
+    адреса. Раньше сюда годилась любая строка — и получался генератор QR на
+    чужой сайт, отдаваемый с домена ресторана: мошеннику оставалось напечатать
+    такой код на листовке «оплатите заказ», а проверка источника показывала бы
+    iskendy.ru.
+    """
+    data = _own_url(request, data)
     buff = io.BytesIO()
     segno.make(data, error="m").save(
         buff, kind="svg", scale=8, border=border, dark="#17130f", light="#ffffff"
@@ -269,6 +315,9 @@ REASON_TEXT = {
     "unknown_feedback": "Не нашли эту оценку — оцените заказ заново",
     "wrong_token": "Не получилось дописать отзыв — оцените заказ заново",
     "locked": "Отзыв уже отправлен — спасибо!",
+    "taken": "Этот номер уже отслеживают с другого телефона",
+    "too_many": "Слишком много заказов с одного телефона за сегодня",
+    "not_claimed": "Оценить заказ можно с того телефона, на котором вы за ним следили",
 }
 
 # Лимиты на минуту с одного адреса. Важно: в зале все телефоны выходят через
@@ -288,6 +337,13 @@ RATE_LIMIT_STEP = 240  # POST /api/guest/event
 # бессмысленным. Ключ — IP, но в зале он общий: для гостей эта ручка не нужна,
 # поэтому помешать друг другу они не могут.
 RATE_LIMIT_LOGIN = 10  # POST /api/auth/login
+# Занятие номера. В зале весь Wi-Fi под одним адресом, но занимает номер каждый
+# гость ровно один раз — десяти в минуту на весь зал хватает. Скрипту, метящему
+# забрать день целиком, этого мало: 200 номеров растянутся на 20 минут, а
+# незанятые кассой номера к тому времени начнут протухать.
+RATE_LIMIT_CLAIM = 10  # POST /api/guest/claim
+# С какого числа занятых за день номеров одним устройством слать алерт.
+CLAIM_ALERT_AT = 3
 _rate_hits: dict[str, list[float]] = {}
 
 # Фоновые отправки уведомлений: держим ссылки, иначе сборщик мусора может
@@ -296,18 +352,71 @@ _bg_tasks: set[asyncio.Task] = set()
 
 
 def _fire(coro) -> None:
-    """Отправить уведомление в фоне — гость не должен ждать Telegram."""
+    """Отправить уведомление в фоне — гость не должен ждать Telegram.
+
+    Вызывать только из `async def`-ручки: синхронная выполняется в пуле потоков,
+    где нет запущенного event loop, и create_task падает с RuntimeError — то
+    есть вместо уведомления пользователь получает 500.
+    """
     task = asyncio.create_task(coro)
     _bg_tasks.add(task)
     task.add_done_callback(_bg_tasks.discard)
 
 
+def _trusted_peer(host: str) -> bool:
+    """Пришёл ли запрос из внутренней сети, то есть от нашего Caddy.
+
+    В проде у контейнера нет опубликованных портов: снаружи до приложения
+    доходит только то, что пропустил Caddy, а он всегда виден как приватный
+    адрес docker-сети. Публичный адрес в этом поле означает, что прокси в цепочке
+    нет, — и верить заголовкам такого клиента нельзя.
+    """
+    try:
+        addr = ipaddress.ip_address(host)
+    except ValueError:
+        return False
+    return addr.is_private or addr.is_loopback
+
+
 def _client_ip(request: Request) -> str:
-    """IP гостя. За Caddy настоящий адрес приезжает в X-Forwarded-For."""
+    """IP гостя — ключ для всех лимитов по адресу.
+
+    Caddy дописывает адрес соединения в КОНЕЦ X-Forwarded-For, сохраняя всё, что
+    прислал клиент. Поэтому первый элемент — это то, что напечатал сам клиент:
+    брать его нельзя, иначе любой лимит (включая десять попыток пароля) обходится
+    одной строкой в curl — счётчик каждый раз заводится на выдуманный адрес.
+
+    Но и последний элемент годится только когда заголовок вообще проставил наш
+    прокси. Если запрос пришёл напрямую, весь заголовок сочинил клиент, и
+    «последний» ничем не лучше первого — тогда считаем по адресу соединения.
+
+    Чтобы это работало, uvicorn запускается с --no-proxy-headers: иначе он сам
+    перепишет client.host по тому же заголовку, и проверять будет уже нечего.
+    """
+    peer = request.client.host if request.client else ""
     xff = request.headers.get("x-forwarded-for", "")
-    if xff:
-        return xff.split(",")[0].strip()
-    return request.client.host if request.client else "unknown"
+    if xff and _trusted_peer(peer):
+        return xff.split(",")[-1].strip()
+    return peer or "unknown"
+
+
+def _own_url(request: Request, data: str) -> str:
+    """Пропустить только адрес этого же сайта. Иначе 400.
+
+    Принимаем относительный путь («/board») и полный http(s)-адрес на том же
+    хосте. Хост берём из запроса: снаружи до приложения доходят только домены,
+    которые Caddy для него и маршрутизирует.
+    """
+    value = (data or "").strip()
+    if value.startswith("/") and not value.startswith("//"):
+        return str(request.base_url).rstrip("/") + value
+    parsed = urlparse(value)
+    if parsed.scheme in ("http", "https") and parsed.hostname == request.url.hostname:
+        return value
+    raise HTTPException(
+        status_code=status.HTTP_400_BAD_REQUEST,
+        detail="QR генерится только для страниц этого сайта",
+    )
 
 
 def _rate_ok(key: str, limit: int) -> bool:
@@ -327,11 +436,13 @@ def _rate_ok(key: str, limit: int) -> bool:
     return True
 
 
-def _guard(request: Request, limit: int = RATE_LIMIT_WRITE) -> None:
-    # Ключ включает вид лимита: чтение не должно съедать квоту записи, а поток
-    # шагов воронки — квоту отзывов.
-    kind = {RATE_LIMIT_READ: "r", RATE_LIMIT_STEP: "s",
-            RATE_LIMIT_LOGIN: "l"}.get(limit, "w")
+def _guard(request: Request, limit: int = RATE_LIMIT_WRITE, kind: str = "w") -> None:
+    """Лимит по IP. `kind` — своя корзина на каждый вид обращения.
+
+    Вид передаётся явно, а не выводится из числа: два разных лимита легко
+    оказываются равны (вход и занятие номера — оба по десять), и тогда они
+    молча делят один счётчик, а гость выбивает персоналу вход.
+    """
     if not _rate_ok(f"{kind}:{_client_ip(request)}", limit):
         raise HTTPException(
             status_code=status.HTTP_429_TOO_MANY_REQUESTS,
@@ -394,7 +505,7 @@ def guest_event(request: Request, body: GuestStepBody) -> dict:
     Тихая ручка: неизвестный шаг просто не пишется, ошибку гостю не показываем —
     сбор статистики не должен мешать человеку забрать заказ.
     """
-    _guard(request, RATE_LIMIT_STEP)
+    _guard(request, RATE_LIMIT_STEP, "s")
     return {
         "ok": db.log_guest_event(body.step, body.session, body.number, body.guest)
     }
@@ -422,14 +533,50 @@ def feedback_check(
     request: Request,
     number: int = Query(gt=0, le=100000),
 ) -> dict:
-    """Можно ли оценить этот заказ (запасной путь — гость вводит номер руками)."""
-    _guard(request, RATE_LIMIT_READ)
-    return _with_text(db.feedback_check(number))
+    """Можно ли оценить этот заказ — гость вводит номер с чека руками.
+
+    Внутренний `orderId` наружу не отдаём: он сквозной по всей истории, и по его
+    приросту любой желающий считал бы оборот точки.
+    """
+    _guard(request, RATE_LIMIT_READ, "r")
+    result = db.feedback_check(number)
+    return _with_text({k: v for k, v in result.items() if k != "orderId"})
+
+
+class ClaimBody(BaseModel):
+    number: int = Field(gt=0, le=100000)
+    # Метка устройства из localStorage. По ней узнаём вернувшегося гостя и
+    # считаем, сколько номеров он уже занял.
+    guest: str = Field(default="", max_length=40)
+
+
+@app.post("/api/guest/claim")
+async def guest_claim(request: Request, body: ClaimBody) -> dict:
+    """Занять номер заказа за этим телефоном и получить ключ для отзыва.
+
+    Номер с чека совпадает с номером на телевизоре — сам по себе он ничего не
+    подтверждает. Поэтому право на отзыв достаётся тому, кто вбил номер первым:
+    гость делает это сразу после оплаты, а оценка открывается только после
+    выдачи, через десяток минут готовки.
+    """
+    _guard(request, RATE_LIMIT_CLAIM, "c")
+    result = db.claim_order(body.number, guest=body.guest)
+    if not result["ok"]:
+        return _with_text(result)
+    # Одно устройство, гребущее номера пачкой, — это попытка оставить зал без
+    # отзывов. Порог ниже дневного лимита: важно увидеть это до того, как упрётся.
+    if body.guest and db.claims_today(body.guest) >= CLAIM_ALERT_AT:
+        _fire(notify.notify_claim_anomaly(
+            body.guest, db.claims_today(body.guest), _client_ip(request)
+        ))
+    return result
 
 
 class FeedbackBody(BaseModel):
     number: int = Field(gt=0, le=100000)
     rating: int = Field(ge=1, le=5)
+    # Ключ, выданный при занятии номера: без него оценку за этот заказ не принять.
+    claim_token: str = Field(default="", max_length=64)
 
 
 @app.post("/api/feedback")
@@ -440,7 +587,10 @@ async def feedback_create(request: Request, body: FeedbackBody) -> dict:
     деталей, а негатив надо увидеть, пока он ещё у окна.
     """
     _guard(request)
-    result = db.feedback_create(body.number, body.rating, ua_hash=_ua_hash(request))
+    result = db.feedback_create(
+        body.number, body.rating,
+        claim_token=body.claim_token, ua_hash=_ua_hash(request),
+    )
     if not result["ok"]:
         return _with_text(result)
     _fire(notify.notify_feedback(result, result["branch"]))

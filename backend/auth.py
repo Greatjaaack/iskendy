@@ -9,8 +9,10 @@ import base64
 import hashlib
 import hmac
 import json
+import secrets
 import time
 
+import db
 from config import settings
 from fastapi import Header, HTTPException, status
 
@@ -39,12 +41,21 @@ def _sign(header_body: str) -> str:
     return _b64url(sig)
 
 
-def issue_token(subject: str = "staff") -> str:
+def issue_token(subject: str = "staff") -> tuple[str, str]:
+    """Выдать токен персонала. Возвращает (токен, jti).
+
+    `jti` — метка сессии: она же лежит в БД как «кто сейчас за кассой». Токен
+    живёт долго (планшет за столом не разлогинивают), поэтому одной подписи мало —
+    её надо уметь отозвать, а отзывать можно только то, у чего есть имя.
+    """
+    jti = secrets.token_urlsafe(12)
     header = _b64url(json.dumps({"alg": "HS256", "typ": "JWT"}).encode("utf-8"))
     exp = int(time.time()) + settings.jwt_ttl_hours * 3600
-    payload = _b64url(json.dumps({"sub": subject, "exp": exp}).encode("utf-8"))
+    payload = _b64url(
+        json.dumps({"sub": subject, "exp": exp, "jti": jti}).encode("utf-8")
+    )
     header_body = f"{header}.{payload}"
-    return f"{header_body}.{_sign(header_body)}"
+    return f"{header_body}.{_sign(header_body)}", jti
 
 
 def verify_password(password: str) -> bool:
@@ -85,7 +96,12 @@ def _decode(token: str) -> dict:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED, detail="Неверный токен"
         )
-    if data.get("exp", 0) < time.time():
+    # exp могли подсунуть строкой — сравнение с числом иначе улетит в 500.
+    try:
+        expired = float(data.get("exp", 0)) < time.time()
+    except (TypeError, ValueError):
+        expired = True
+    if expired:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED, detail="Токен истёк"
         )
@@ -93,10 +109,19 @@ def _decode(token: str) -> dict:
 
 
 def require_staff(authorization: str = Header(default="")) -> dict:
-    """Зависимость FastAPI: Bearer-JWT персонала, иначе 401."""
+    """Зависимость FastAPI: Bearer-JWT активной сессии кассы, иначе 401.
+
+    Мало проверить подпись: касса — одна, и токен прежней сессии должен умирать
+    сразу после «Выйти», не дожидаясь своего долгого exp.
+    """
     prefix = "Bearer "
     if not authorization.startswith(prefix):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED, detail="Нужна авторизация"
         )
-    return _decode(authorization[len(prefix) :])
+    data = _decode(authorization[len(prefix) :])
+    if not db.session_matches(str(data.get("jti", ""))):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED, detail="Сессия завершена"
+        )
+    return data
