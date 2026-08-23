@@ -180,32 +180,33 @@ async def login(request: Request, body: LoginBody) -> dict:
     смена не осталась без кассы посреди дня.
     """
     _guard(request, RATE_LIMIT_LOGIN, "l")
+    ip, ua = _client_ip(request), request.headers.get("user-agent", "")
     if not verify_password(body.password):
+        db.log_security("login_failed", ip, ua=ua[:200])
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED, detail="Неверный пароль"
         )
     active = db.session_active()
     if active is not None:
-        _fire(notify.notify_login_blocked(
-            active, ip=_client_ip(request),
-            ua=request.headers.get("user-agent", ""),
-        ))
+        db.log_security("login_blocked", ip, ua=ua[:200],
+                        activeSince=active.get("createdAt"))
+        _fire(notify.notify_login_blocked(active, ip=ip, ua=ua))
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
             detail="Касса уже открыта на другом устройстве. "
                    "Нажмите «Выйти» там — или обратитесь к владельцу.",
         )
     token, jti = issue_token()
-    db.session_start(
-        jti, ip=_client_ip(request), ua=request.headers.get("user-agent", "")
-    )
+    db.session_start(jti, ip=ip, ua=ua)
+    db.log_security("login_ok", ip, ua=ua[:200])
     return {"token": token}
 
 
 @app.post("/api/auth/logout")
-def logout(_: dict = Depends(require_staff)) -> dict:
+def logout(request: Request, _: dict = Depends(require_staff)) -> dict:
     """Освободить кассу. Только с действующим токеном — чужой выход невозможен."""
     db.session_end()
+    db.log_security("logout", _client_ip(request))
     return {"ok": True}
 
 
@@ -499,7 +500,9 @@ def _guard(request: Request, limit: int = RATE_LIMIT_WRITE, kind: str = "w") -> 
     оказываются равны (вход и занятие номера — оба по десять), и тогда они
     молча делят один счётчик, а гость выбивает персоналу вход.
     """
-    if not _rate_ok(f"{kind}:{_client_ip(request)}", limit):
+    ip = _client_ip(request)
+    if not _rate_ok(f"{kind}:{ip}", limit):
+        db.log_security("rate_limited", ip, bucket=kind, path=request.url.path)
         raise HTTPException(
             status_code=status.HTTP_429_TOO_MANY_REQUESTS,
             detail="Слишком много запросов, попробуйте через минуту",
@@ -618,6 +621,10 @@ async def guest_claim(request: Request, body: ClaimBody) -> dict:
     _guard(request, RATE_LIMIT_CLAIM, "c")
     result = db.claim_order(body.number, guest=body.guest)
     if not result["ok"]:
+        db.log_security(
+            "claim_taken" if result["reason"] == "taken" else "claim_too_many",
+            _client_ip(request), number=body.number, guest=body.guest[:40],
+        )
         return _with_text(result)
     # Одно устройство, гребущее номера пачкой, — это попытка оставить зал без
     # отзывов. Порог ниже дневного лимита: важно увидеть это до того, как упрётся.
@@ -648,6 +655,9 @@ async def feedback_create(request: Request, body: FeedbackBody) -> dict:
         claim_token=body.claim_token, ua_hash=_ua_hash(request),
     )
     if not result["ok"]:
+        if result["reason"] == "not_claimed":
+            db.log_security("feedback_denied", _client_ip(request),
+                            number=body.number, rating=body.rating)
         return _with_text(result)
     _fire(notify.notify_feedback(result, result["branch"]))
     return {**result, "links": _review_links() if result["branch"] == "positive" else {}}
@@ -759,6 +769,31 @@ def stats_feedback(
     if not valid:
         valid = [db.today()]
     return {"dates": valid, **db.feedback_stats(valid)}
+
+
+@app.get("/api/security/events")
+def security_events(
+    kinds: str = Query(default=""),
+    since: str | None = Query(default=None, pattern=r"^\d{4}-\d{2}-\d{2}$"),
+    limit: int = Query(default=200, ge=1, le=2000),
+    _: dict = Depends(require_staff),
+) -> dict:
+    """Журнал событий безопасности — для владельца.
+
+    `kinds` — виды через запятую (login_failed, feedback_denied, …),
+    `since` — с какой даты. Свежие сверху.
+    """
+    wanted = [k for k in kinds.split(",") if k.strip()]
+    return {"events": db.security_events(wanted or None, since=since, limit=limit)}
+
+
+@app.get("/api/security/summary")
+def security_summary(
+    since: str | None = Query(default=None, pattern=r"^\d{4}-\d{2}-\d{2}$"),
+    _: dict = Depends(require_staff),
+) -> dict:
+    """Сводка по событиям: сколько каких и самые активные адреса."""
+    return db.security_summary(since=since)
 
 
 # --- Статика фронта (после API, чтобы не перехватывать /api/*) ---

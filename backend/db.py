@@ -6,6 +6,7 @@
 """
 
 import hmac
+import json
 import logging
 import re
 import secrets
@@ -215,6 +216,34 @@ def init_db() -> None:
         # намеренно долгоживущий. Плата за это — второй вход тем же паролем
         # отклоняется, а владельцу летит алерт: украденный пароль бесполезен,
         # пока планшет работает. Строка одна, id всегда 1.
+        # Журнал событий безопасности. Раньше они расползались по трём местам и
+        # нигде не оседали: алерт в Telegram — это уведомление, а не архив, он
+        # теряется в чате и не ищется запросом, а docker-лог умирает вместе с
+        # контейнером. Вопрос «сколько раз за август подбирали пароль и с каких
+        # адресов» ответа не имел.
+        #
+        # Таблица живёт в основной БД намеренно: та уже уезжает на Google Диск
+        # каждую ночь, значит история попадает за пределы сервера бесплатно.
+        # `payload` — JSON (SQLite 3.46 умеет `->>` из коробки): у разных событий
+        # разные детали, и плодить под них колонки незачем.
+        conn.execute(
+            """
+            CREATE TABLE IF NOT EXISTS security_events (
+                id      INTEGER PRIMARY KEY AUTOINCREMENT,
+                at      TEXT NOT NULL,
+                kind    TEXT NOT NULL,
+                ip      TEXT,
+                payload TEXT
+            )
+            """
+        )
+        conn.execute(
+            "CREATE INDEX IF NOT EXISTS idx_security_kind ON security_events (kind, at)"
+        )
+        conn.execute(
+            "CREATE INDEX IF NOT EXISTS idx_security_ip ON security_events (ip, at)"
+        )
+
         conn.execute(
             """
             CREATE TABLE IF NOT EXISTS staff_session (
@@ -1582,3 +1611,92 @@ def session_end() -> None:
     with _connect() as conn:
         conn.execute("DELETE FROM staff_session WHERE id = 1")
     audit.info("КАССА: выход, сессия освобождена")
+
+
+# ------------------------------------------------- журнал событий безопасности
+# Виды событий. Строки короткие и стабильные: по ним строятся запросы и
+# фильтры, так что переименование ломает историю — добавлять новые можно,
+# менять старые нельзя.
+SECURITY_KINDS = (
+    "login_ok",        # успешный вход в кассу
+    "login_failed",    # неверный пароль
+    "login_blocked",   # пароль верный, но касса занята другой сессией
+    "logout",          # кассу освободили
+    "rate_limited",    # упёрлись в лимит запросов
+    "claim_taken",     # номер пытались занять, а он уже за другим телефоном
+    "claim_too_many",  # устройство исчерпало дневной лимит номеров
+    "feedback_denied", # оценка за заказ, который телефон не занимал
+)
+
+
+def log_security(kind: str, ip: str = "", **payload) -> None:
+    """Записать событие безопасности. Молча игнорирует неизвестный вид.
+
+    Никогда не бросает: журнал не должен ронять запрос, который он описывает.
+    Пароли, токены и ключи сюда не кладём — только адрес, номер заказа, метка
+    устройства и обрезанный User-Agent.
+    """
+    if kind not in SECURITY_KINDS:
+        return
+    try:
+        with _connect() as conn:
+            conn.execute(
+                "INSERT INTO security_events (at, kind, ip, payload) VALUES (?, ?, ?, ?)",
+                (_now(), kind, (ip or "")[:64] or None,
+                 json.dumps(payload, ensure_ascii=False) if payload else None),
+            )
+    except Exception as exc:  # noqa: BLE001 — журнал вторичен, запрос важнее
+        audit.warning("журнал безопасности: не записано (%s): %s", kind, exc)
+
+
+def security_events(
+    kinds: list[str] | None = None, since: str | None = None, limit: int = 500
+) -> list[dict]:
+    """События безопасности, свежие сверху. `since` — дата YYYY-MM-DD."""
+    sql = "SELECT * FROM security_events WHERE 1=1"
+    params: list = []
+    if kinds:
+        allowed = [k for k in kinds if k in SECURITY_KINDS]
+        if not allowed:
+            return []
+        sql += f" AND kind IN ({','.join('?' * len(allowed))})"
+        params += allowed
+    if since:
+        sql += " AND at >= ?"
+        params.append(since)
+    sql += " ORDER BY id DESC LIMIT ?"
+    params.append(max(1, min(limit, 2000)))
+    with _connect() as conn:
+        rows = conn.execute(sql, params).fetchall()
+    out = []
+    for r in rows:
+        try:
+            payload = json.loads(r["payload"]) if r["payload"] else {}
+        except ValueError:
+            payload = {}
+        out.append({"id": r["id"], "at": r["at"], "kind": r["kind"],
+                    "ip": r["ip"], **payload})
+    return out
+
+
+def security_summary(since: str | None = None) -> dict:
+    """Сводка: сколько каких событий и самые активные адреса.
+
+    Отвечает на главный вопрос разбора — «кто и сколько раз», без выгрузки
+    всего журнала.
+    """
+    where, params = ("WHERE at >= ?", [since]) if since else ("", [])
+    with _connect() as conn:
+        by_kind = {
+            r["kind"]: r["n"] for r in conn.execute(
+                f"SELECT kind, COUNT(*) AS n FROM security_events {where} "
+                "GROUP BY kind ORDER BY n DESC", params
+            )
+        }
+        top_ip = [
+            {"ip": r["ip"], "count": r["n"]} for r in conn.execute(
+                f"SELECT ip, COUNT(*) AS n FROM security_events {where} "
+                "GROUP BY ip ORDER BY n DESC LIMIT 10", params
+            ) if r["ip"]
+        ]
+    return {"byKind": by_kind, "topIp": top_ip}
