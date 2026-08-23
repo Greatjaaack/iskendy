@@ -1877,7 +1877,16 @@
           headers: {"Content-Type":"application/json"},
           body: JSON.stringify({ password: pw })
         });
-        if(!r.ok){ throw new Error("bad"); }
+        if(!r.ok){
+          // 409 — пароль верный, но касса уже открыта на другом устройстве.
+          // Показать это прямым текстом важнее, чем скрыть: иначе свой же
+          // человек решит, что забыл пароль, и будет перебирать варианты.
+          let msg = "Неверный пароль";
+          if(r.status === 409){
+            try { msg = (await r.json()).detail || msg; } catch(e){ /* пусто */ }
+          }
+          throw new Error(msg);
+        }
         const data = await r.json();
         token = data.token;
         localStorage.setItem("iskendy_staff_token", token);
@@ -1885,10 +1894,18 @@
         showStaff();
       } catch(e){
         err.className = "result err show";
-        err.textContent = "Неверный пароль";
+        err.textContent = e.message || "Неверный пароль";
       }
     }
-    function logout(){
+    // Выход освобождает кассу на сервере, а не только чистит localStorage:
+    // сессия одна, и пока она числится занятой, зайти больше никто не сможет.
+    async function logout(){
+      try {
+        await fetch(API + "/api/auth/logout", {
+          method: "POST",
+          headers: { "Authorization": "Bearer " + token }
+        });
+      } catch(e){ /* сеть — токен всё равно снимаем с устройства */ }
       token = "";
       localStorage.removeItem("iskendy_staff_token");
       showGuest();
@@ -2646,7 +2663,7 @@
       const orders = (state && state.orders) || [];
       let onBoard = false;
       for(let i = 0; i < orders.length; i++){ if(orders[i].number === n) onBoard = true; }
-      if(onBoard){ subTo(n); return; }
+      if(onBoard){ await subTo(n); return; }
       // Нет на табло: либо уже выдан (тогда сразу к оценке), либо номер неверный.
       try {
         const r = await fetch(API + "/api/feedback/check?number=" + n);
@@ -2667,7 +2684,7 @@
           // Заказ есть и он в работе, просто наш список на экране отстал (опрос
           // раз в 5 сек). Раньше здесь показывался отказ «оцените, когда
           // заберёте» — бессмысленный для того, кто как раз хотел подписаться.
-          subTo(n);
+          await subTo(n);
           return;
         }
         if(d.reason === "already"){
@@ -2687,7 +2704,7 @@
           // минуту назад, утыкался в «не нашли» — хотя всё в порядке, просто
           // касса не доехала. Берём номер авансом; если это опечатка, экран
           // сам подскажет через несколько минут (см. myRender).
-          subTo(n, true);
+          await subTo(n, true);
           return;
         }
         err.textContent = d.message || "Не нашли такой заказ за сегодня";
@@ -2708,9 +2725,32 @@
     // номер и показываем «ждём кухню», экран оживёт сам. seen остаётся false:
     // по нему fbWatch отличает «ещё не появлялся» от «уже ушёл с табло», иначе
     // он бы решил, что заказ выдан, и позвал оценивать несуществующий.
-    function subTo(n, pending){
+    async function subTo(n, pending){
+      // Занимаем номер на сервере и забираем ключ: без него оценку потом не
+      // примут. Номер с чека виден всему залу на телевизоре, поэтому право на
+      // отзыв достаётся телефону, вбившему номер первым.
+      let claim = "";
+      try {
+        const r = await fetch(API + "/api/guest/claim", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ number: n, guest: guestId() })
+        });
+        const d = await r.json();
+        if(!d.ok){
+          const err = document.getElementById("subErr");
+          err.textContent = d.message || "Не получилось занять номер";
+          err.classList.remove("hidden");
+          guestStep("sub_fail", true);
+          return;
+        }
+        claim = d.claimToken || "";
+      } catch(e){
+        // Сети нет — подписку не рвём: следить за заказом гость сможет, а ключ
+        // доберём при первой удачной попытке (см. claimEnsure).
+      }
       fbSaveMy({ n: n, d: (state && state.date) || todayLocal(), seen: !pending,
-                 subAt: Date.now(),
+                 subAt: Date.now(), claim: claim,
                  servedAt: 0, rated: false, done: false, lastStatus: "" });
       document.getElementById("subNum").value = "";
       buzz(30);                       // короткий отклик: подписка принята
@@ -2723,6 +2763,27 @@
       // то есть системный запрос для него — продолжение его же действия, а не
       // случайная всплывашка на входе.
       notifAsk();
+    }
+
+    // Ключа нет (подписка прошла без сети) — пробуем занять номер ещё раз.
+    // Номер мог за это время уйти другому телефону: тогда оценить не выйдет, и
+    // это честно — заказ действительно отслеживает кто-то другой.
+    async function claimEnsure(){
+      const my = fbMy();
+      if(!my || my.claim) return my && my.claim;
+      try {
+        const r = await fetch(API + "/api/guest/claim", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ number: my.n, guest: guestId() })
+        });
+        const d = await r.json();
+        if(d.ok && d.claimToken){
+          fbPatchMy(my.n, { claim: d.claimToken });
+          return d.claimToken;
+        }
+      } catch(e){ /* сеть — попробуем в следующий раз */ }
+      return "";
     }
 
     function subForget(){
@@ -3242,12 +3303,15 @@
       try {
         // Отзыв уже стоит — значит гость исправляет промах по звезде.
         const fix = my.fb && my.fb.id;
+        // Первая оценка идёт с ключом на номер; исправление — со своим, выданным
+        // на сам отзыв, так что добирать ключ нужно только в первом случае.
+        const claim = fix ? "" : (my.claim || await claimEnsure());
         const r = await fetch(API + (fix ? "/api/feedback/rate" : "/api/feedback"), {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(fix
             ? { feedback_id: my.fb.id, edit_token: my.fb.token || "", rating: rating }
-            : { number: my.n, rating: rating })
+            : { number: my.n, rating: rating, claim_token: claim })
         });
         const d = await r.json();
         if(!d.ok){

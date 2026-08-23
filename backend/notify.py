@@ -5,13 +5,17 @@
 уведомления о нём — гость не должен видеть ошибку из-за того, что Telegram
 недоступен или в токене опечатка.
 
-Маршрутизация:
-  негатив (оценка <= feedback_negative_max) → всем `alert_targets`
-      (личка владельца + тема рабочего чата) — его надо отработать в моменте;
-  позитив                                    → `feedback_targets` (рабочий чат),
-      чтобы смена видела все оценки, а не только жалобы.
+Маршрутизация — две темы рабочего чата, разные по смыслу:
+  отзывы гостей, обе ветки → `feedback_targets` (тема отзывов). Смена смотрит
+      её, чтобы успеть к гостю, пока он не ушёл;
+  сбои и безопасность      → `alert_targets` (тема аварий). Туда же уходит всё,
+      с чем автоматика не справилась сама.
+
+Личных адресатов нет намеренно: система должна работать без владельца, а не
+через него.
 """
 
+import asyncio
 import html
 import logging
 
@@ -36,12 +40,20 @@ def _dedup(targets: list[tuple[str, int | None]]) -> list[tuple[str, int | None]
 
 
 def targets_for(branch: str) -> list[tuple[str, int | None]]:
-    """Кому уходит уведомление об отзыве этой ветки. Пустой список = молчим."""
+    """Кому уходит уведомление об отзыве этой ветки. Пустой список = молчим.
+
+    Обе ветки идут в тему отзывов, а не в тему аварий. Раньше негатив уезжал в
+    `alert_targets` — тогда там была личка владельца, и это имело смысл. Теперь
+    там сбои и безопасность, и жалоба гостя в этом потоке только мешала бы:
+    смена смотрит отзывы, чтобы успеть к человеку, пока он не ушёл, и ей нужен
+    ровно один канал про гостей.
+
+    Разница между ветками осталась в другом: негатив уходит всегда, а поток
+    хороших оценок можно выключить рубильником `feedback_notify_all`.
+    """
     if not settings.feedback_alert_enabled or not settings.telegram_bot_token:
         return []
-    if branch == "negative":
-        return _dedup(settings.alert_targets)
-    if not settings.feedback_notify_all:
+    if branch != "negative" and not settings.feedback_notify_all:
         return []
     return _dedup(settings.feedback_targets)
 
@@ -167,3 +179,129 @@ async def notify_feedback_detail(fb: dict, branch: str) -> int:
     # Первые две строки (оценка и ожидание) уже были в первом сообщении.
     tail = body[2] if len(body) > 2 else ""
     return await send_message(f"{head}\n{tail}".strip(), targets)
+
+
+# ----------------------------------------------------------- схлопывание
+# Один отклонённый вход — одно сообщение. Но лимит пропускает десять попыток в
+# минуту, то есть шестьсот в час: атака превратила бы тему в стену одинаковых
+# строк, а живой человек в ответ замьютил бы её — и перестал видеть настоящие
+# аварии. Поэтому первое сообщение уходит сразу, повторы того же вида копятся
+# молча, и в конце окна прилетает одна строка с их числом.
+THROTTLE_WINDOW_SEC = 600
+
+_throttle: dict[str, dict] = {}
+_throttle_tasks: set[asyncio.Task] = set()
+
+
+async def _flush_throttled(key: str, targets: list[tuple[str, int | None]]) -> None:
+    """Досказать по итогам окна, сколько повторов было проглочено."""
+    await asyncio.sleep(THROTTLE_WINDOW_SEC)
+    state = _throttle.pop(key, None)
+    if not state or not state["suppressed"]:
+        return
+    await send_message(
+        f"↑ и ещё {state['suppressed']} таких за "
+        f"{THROTTLE_WINDOW_SEC // 60} мин",
+        targets,
+    )
+
+
+async def send_throttled(
+    key: str, text: str, targets: list[tuple[str, int | None]]
+) -> int:
+    """Отправить, если по этому ключу недавно не отправляли. Иначе — сосчитать.
+
+    `key` — вид события, а не конкретный случай: десять попыток входа с разных
+    адресов это всё равно одна история, и десять сообщений про неё не нужны.
+    """
+    if not targets:
+        return 0
+    state = _throttle.get(key)
+    if state is not None:
+        state["suppressed"] += 1
+        return 0
+    _throttle[key] = {"suppressed": 0}
+    sent = await send_message(text, targets)
+    # Ссылку на задачу держим: без неё сборщик мусора может убить отложенную
+    # досылку, и счётчик повторов молча пропадёт.
+    task = asyncio.create_task(_flush_throttled(key, targets))
+    _throttle_tasks.add(task)
+    task.add_done_callback(_throttle_tasks.discard)
+    return sent
+
+
+# ------------------------------------------------------- сбои и безопасность
+# Уходят в отдельную тему рабочего чата (`alert_targets`) и не зависят от
+# рубильника отзывов: узнать, что кассу пытались открыть чужим устройством,
+# важнее, чем поток оценок, и выключаться вместе с ним не должно.
+def _security_targets() -> list[tuple[str, int | None]]:
+    if not settings.telegram_bot_token:
+        return []
+    return _dedup(settings.alert_targets)
+
+
+async def notify_login_blocked(active: dict, ip: str = "", ua: str = "") -> int:
+    """Кто-то ввёл верный пароль, пока касса открыта на другом устройстве.
+
+    Пароль один на всех и открывает аналитику, контакты гостей и выгрузку базы.
+    Верный пароль со стороны — это либо свой человек с телефона, либо утечка;
+    отличить может только владелец, поэтому решение за ним, а наше дело — успеть
+    сказать.
+    """
+    targets = _security_targets()
+    if not targets:
+        return 0
+    text = (
+        "🔐 <b>Отклонён вход в кассу</b>\n"
+        "Пароль верный, но касса уже открыта на другом устройстве.\n"
+        f"Откуда: {_esc(ip) or '—'}\n"
+        f"Устройство: {_esc(ua[:120]) or '—'}\n"
+        f"Текущая сессия с: {_esc(active.get('createdAt'))}\n"
+        "Если это не вы — смените пароль."
+    )
+    return await send_throttled("login_blocked", text, targets)
+
+
+async def notify_claim_anomaly(guest: str, count: int, ip: str = "") -> int:
+    """Одно устройство занимает номера пачкой — похоже на попытку сорвать отзывы."""
+    targets = _security_targets()
+    if not targets:
+        return 0
+    text = (
+        "⚠️ <b>Странная активность на табло</b>\n"
+        f"Одно устройство заняло сегодня номеров: {count}\n"
+        f"Откуда: {_esc(ip) or '—'}\n"
+        f"Метка устройства: {_esc(guest)}"
+    )
+    return await send_throttled("claim_anomaly", text, targets)
+
+
+async def notify_poller_down(fails: int, last_error: str) -> int:
+    """Поллер iiko не может достучаться до кассы несколько тиков подряд.
+
+    18 августа 2026 такая поломка длилась час, и знал о ней только кассир у
+    стойки: поллер по замыслу не роняет цикл на ошибке тика, пишет WARNING и
+    идёт дальше, а лог никто не читает в реальном времени. Смене важно узнать
+    раньше гостей и перейти на ручной ввод, не гадая, что происходит.
+    """
+    targets = _security_targets()
+    if not targets:
+        return 0
+    text = (
+        "🟠 <b>Заказы не приезжают из кассы</b>\n"
+        f"Подряд неудачных попыток: {fails}.\n"
+        "Заносите заказы вручную на экране кассы — табло работает.\n"
+        f"Причина: {_esc(last_error[:150])}"
+    )
+    return await send_throttled("poller_down", text, targets)
+
+
+async def notify_poller_back() -> int:
+    """Связь с кассой восстановилась — можно перестать заносить руками."""
+    targets = _security_targets()
+    if not targets:
+        return 0
+    return await send_message(
+        "✅ <b>Заказы снова приезжают из кассы</b>\nРучной ввод больше не нужен.",
+        targets,
+    )

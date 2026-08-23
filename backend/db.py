@@ -6,6 +6,7 @@
 """
 
 import hmac
+import json
 import logging
 import re
 import secrets
@@ -174,6 +175,99 @@ def init_db() -> None:
         conn.execute(
             "CREATE INDEX IF NOT EXISTS idx_guest_events_guest "
             "ON guest_events (guest, date)"
+        )
+
+        # Занятые номера заказов. Номер с чека виден всему залу на телевизоре,
+        # поэтому сам по себе он никого не удостоверяет: раньше отзыв за заказ
+        # мог отправить любой прохожий. Теперь номер «занимает» телефон, первым
+        # его вбивший, и оценку принимаем только с выданным ему ключом.
+        #
+        # Гость подписывается сразу после оплаты, а оценить можно лишь после
+        # выдачи — между этим 10-15 минут готовки, так что настоящий гость почти
+        # всегда успевает первым.
+        #
+        # `order_id` пуст, пока заказ не доехал из кассы: гость вбивает номер
+        # авансом. Такое занятие протухает (см. CLAIM_PENDING_TTL_MIN) — иначе
+        # утром можно было бы занять 1..200 и оставить зал без отзывов.
+        conn.execute(
+            """
+            CREATE TABLE IF NOT EXISTS order_claims (
+                id         INTEGER PRIMARY KEY AUTOINCREMENT,
+                date       TEXT    NOT NULL,
+                number     INTEGER NOT NULL,
+                claim_token TEXT   NOT NULL,
+                guest      TEXT,
+                order_id   INTEGER,
+                created_at TEXT    NOT NULL
+            )
+            """
+        )
+        conn.execute(
+            "CREATE UNIQUE INDEX IF NOT EXISTS idx_claim_day_number "
+            "ON order_claims (date, number)"
+        )
+        conn.execute(
+            "CREATE INDEX IF NOT EXISTS idx_claim_guest "
+            "ON order_claims (date, guest)"
+        )
+
+        # Активная сессия кассы — ровно одна (решение владельца). Планшет стоит
+        # за столом залогиненным месяцами, пароль вводить тяжело, поэтому токен
+        # намеренно долгоживущий. Плата за это — второй вход тем же паролем
+        # отклоняется, а владельцу летит алерт: украденный пароль бесполезен,
+        # пока планшет работает. Строка одна, id всегда 1.
+        # Журнал событий безопасности. Раньше они расползались по трём местам и
+        # нигде не оседали: алерт в Telegram — это уведомление, а не архив, он
+        # теряется в чате и не ищется запросом, а docker-лог умирает вместе с
+        # контейнером. Вопрос «сколько раз за август подбирали пароль и с каких
+        # адресов» ответа не имел.
+        #
+        # Таблица живёт в основной БД намеренно: та уже уезжает на Google Диск
+        # каждую ночь, значит история попадает за пределы сервера бесплатно.
+        # `payload` — JSON (SQLite 3.46 умеет `->>` из коробки): у разных событий
+        # разные детали, и плодить под них колонки незачем.
+        conn.execute(
+            """
+            CREATE TABLE IF NOT EXISTS security_events (
+                id      INTEGER PRIMARY KEY AUTOINCREMENT,
+                at      TEXT NOT NULL,
+                kind    TEXT NOT NULL,
+                ip      TEXT,
+                payload TEXT
+            )
+            """
+        )
+        conn.execute(
+            "CREATE INDEX IF NOT EXISTS idx_security_kind ON security_events (kind, at)"
+        )
+        conn.execute(
+            "CREATE INDEX IF NOT EXISTS idx_security_ip ON security_events (ip, at)"
+        )
+
+        # Уборка за снятой моделью «партий». Когда-то табло показывало не номера
+        # заказов, а «партия №3 готова»; от этого отказались в пользу
+        # пер-заказного трекинга (коммит 0cb6472), а таблицы остались. К
+        # аналитике отношения не имеют: заказы, времена этапов, оценки и воронка
+        # живут в orders / order_events / feedbacks / guest_events, и только они
+        # читаются кодом. На проде на момент удаления в batch_log было 0 строк,
+        # в day_state — одна, от 20.07.2026.
+        #
+        # Проверено перед удалением: ни одного запроса к этим таблицам в коде.
+        # Строки можно убрать из init_db, когда все базы переживут этот старт.
+        for legacy in ("batch_log", "day_state"):
+            conn.execute(f"DROP TABLE IF EXISTS {legacy}")
+
+        conn.execute(
+            """
+            CREATE TABLE IF NOT EXISTS staff_session (
+                id         INTEGER PRIMARY KEY CHECK (id = 1),
+                jti        TEXT    NOT NULL,
+                created_at TEXT    NOT NULL,
+                last_seen  TEXT    NOT NULL,
+                ip         TEXT,
+                ua         TEXT
+            )
+            """
         )
 
 
@@ -851,8 +945,18 @@ def feedback_check(number: int) -> dict:
         return _can_rate(conn, today(), number)
 
 
-def feedback_create(number: int, rating: int, ua_hash: str | None = None) -> dict:
+def feedback_create(
+    number: int,
+    rating: int,
+    claim_token: str = "",
+    ua_hash: str | None = None,
+) -> dict:
     """Сохранить оценку заказа. Возвращает `feedbackId` и ветку воронки.
+
+    Принимаем только от телефона, за которым закреплён номер (см. `claim_order`).
+    Без этого оценку за чужой заказ мог отправить любой, кто увидел номер на
+    телевизоре: хватало одного POST, чтобы влепить незнакомому гостю единицу и
+    поднять владельца алертом.
 
     `wait_seconds` фиксируем здесь же, а не считаем потом: если заказ позже
     отредактируют, цифра в отзыве не поедет.
@@ -861,6 +965,12 @@ def feedback_create(number: int, rating: int, ua_hash: str | None = None) -> dic
         raise ValueError("Оценка должна быть от 1 до 5")
     date = today()
     with _connect() as conn:
+        if not claim_ok(conn, date, number, claim_token):
+            # Пишем в лог: это подпись атаки — кто-то шлёт оценку за заказ, за
+            # которым не следил. По HTTP-коду такое не найти, ручка отвечает 200
+            # с отказом внутри, и в access-логе строка неотличима от обычной.
+            audit.warning("ОТЗЫВ №%s: отклонён — заказ занят не этим телефоном", number)
+            return {"ok": False, "reason": "not_claimed"}
         check = _can_rate(conn, date, number)
         if not check["ok"]:
             return check
@@ -1355,3 +1465,251 @@ def guest_returning(dates: list[str]) -> dict:
         "returningShare": round(returning * 100 / total) if total else None,
         "visits": [{"days": k, "guests": v} for k, v in buckets.items()],
     }
+
+
+# ---------------------------------------------------------------- занятие номера
+# Сколько номеров одно устройство может занять за день. Гостю нужен один, изредка
+# два (взял ещё и за друга). Потолок отсекает скрипт, который метит занять день
+# целиком; честному гостю он не встретится никогда.
+CLAIM_MAX_PER_GUEST_DAY = 5
+# Занятие номера, которого ещё нет в кассе, живёт столько минут. Гость вбивает
+# номер сразу после оплаты, а из iiko он доезжает за полминуты — этого запаса
+# хватает с большим избытком. Без протухания можно было бы утром занять 1..200.
+CLAIM_PENDING_TTL_MIN = 20
+
+
+def _claim_row(conn: sqlite3.Connection, date: str, number: int) -> sqlite3.Row | None:
+    return conn.execute(
+        "SELECT * FROM order_claims WHERE date = ? AND number = ?", (date, number)
+    ).fetchone()
+
+
+def _claim_is_stale(row: sqlite3.Row, order_exists: bool) -> bool:
+    """Протухло ли занятие: заказ так и не появился за отведённое окно.
+
+    Как только заказ доехал из кассы, занятие становится бессрочным — гость ждёт
+    выдачи сколько нужно, и отбирать у него номер посреди готовки нельзя.
+    """
+    if order_exists:
+        return False
+    created = _parse_naive(row["created_at"])
+    if created is None:
+        return True
+    now = datetime.now(ZoneInfo(settings.timezone)).replace(tzinfo=None)
+    return (now - created).total_seconds() / 60 > CLAIM_PENDING_TTL_MIN
+
+
+def claim_order(number: int, guest: str = "") -> dict:
+    """Занять номер заказа за этим устройством. Возвращает ключ для отзыва.
+
+    Повторный заход того же устройства отдаёт прежний ключ: гость перезагрузил
+    страницу или вернулся с другой вкладки — это не вторая попытка захвата.
+    """
+    date = today()
+    guest = (guest or "")[:40]
+    with _connect() as conn:
+        order = conn.execute(
+            "SELECT id FROM orders WHERE date = ? AND number = ? LIMIT 1",
+            (date, number),
+        ).fetchone()
+        order_id = order["id"] if order else None
+        row = _claim_row(conn, date, number)
+        if row is not None:
+            if guest and row["guest"] == guest:
+                # Свой же номер: обновим привязку к заказу, если он доехал.
+                if order_id and row["order_id"] is None:
+                    conn.execute(
+                        "UPDATE order_claims SET order_id = ? WHERE id = ?",
+                        (order_id, row["id"]),
+                    )
+                return {"ok": True, "claimToken": row["claim_token"], "number": number}
+            if not _claim_is_stale(row, order_id is not None):
+                return {"ok": False, "reason": "taken"}
+            # Протухло: номер так и не появился в кассе — освобождаем.
+            conn.execute("DELETE FROM order_claims WHERE id = ?", (row["id"],))
+        if guest:
+            mine = conn.execute(
+                "SELECT COUNT(*) AS n FROM order_claims WHERE date = ? AND guest = ?",
+                (date, guest),
+            ).fetchone()["n"]
+            if mine >= CLAIM_MAX_PER_GUEST_DAY:
+                audit.warning(
+                    "ЗАНЯТИЕ: устройство %s уже держит %s номеров за %s — отказ",
+                    guest, mine, date,
+                )
+                return {"ok": False, "reason": "too_many"}
+        token = secrets.token_urlsafe(16)
+        try:
+            conn.execute(
+                "INSERT INTO order_claims "
+                "(date, number, claim_token, guest, order_id, created_at) "
+                "VALUES (?, ?, ?, ?, ?, ?)",
+                (date, number, token, guest or None, order_id, _now()),
+            )
+        except sqlite3.IntegrityError:
+            # Два телефона вбили номер одновременно — уникальный индекс решил спор.
+            return {"ok": False, "reason": "taken"}
+    return {"ok": True, "claimToken": token, "number": number}
+
+
+def claim_ok(conn: sqlite3.Connection, date: str, number: int, claim_token: str) -> bool:
+    """Принадлежит ли номер тому, кто прислал этот ключ.
+
+    Сверка в константное время и по байтам: номер предсказуем, ключ — нет, а
+    прислать в этом поле могут что угодно, вплоть до кириллицы.
+    """
+    row = _claim_row(conn, date, number)
+    if row is None or not row["claim_token"]:
+        return False
+    return hmac.compare_digest(
+        str(claim_token or "").encode("utf-8"), row["claim_token"].encode("utf-8")
+    )
+
+
+def claims_today(guest: str) -> int:
+    """Сколько номеров это устройство заняло сегодня (для алерта об аномалии)."""
+    with _connect() as conn:
+        return conn.execute(
+            "SELECT COUNT(*) AS n FROM order_claims WHERE date = ? AND guest = ?",
+            (today(), (guest or "")[:40]),
+        ).fetchone()["n"]
+
+
+# ------------------------------------------------------------- сессия персонала
+def session_start(jti: str, ip: str = "", ua: str = "") -> None:
+    """Записать активную сессию кассы, вытеснив прежнюю запись."""
+    now = _now()
+    with _connect() as conn:
+        conn.execute(
+            "INSERT INTO staff_session (id, jti, created_at, last_seen, ip, ua) "
+            "VALUES (1, ?, ?, ?, ?, ?) "
+            "ON CONFLICT(id) DO UPDATE SET "
+            "  jti = excluded.jti, created_at = excluded.created_at, "
+            "  last_seen = excluded.last_seen, ip = excluded.ip, ua = excluded.ua",
+            (jti, now, now, ip[:80] or None, (ua or "")[:200] or None),
+        )
+    audit.info("КАССА: вход, сессия %s", jti[:8])
+
+
+def session_active() -> dict | None:
+    """Текущая сессия кассы или None, если её нет."""
+    with _connect() as conn:
+        row = conn.execute("SELECT * FROM staff_session WHERE id = 1").fetchone()
+    if row is None:
+        return None
+    return {
+        "jti": row["jti"],
+        "createdAt": row["created_at"],
+        "lastSeen": row["last_seen"],
+        "ip": row["ip"],
+        "ua": row["ua"],
+    }
+
+
+def session_matches(jti: str) -> bool:
+    """Тот ли это токен, что выдан активной сессии. Заодно двигаем last_seen."""
+    with _connect() as conn:
+        row = conn.execute("SELECT jti FROM staff_session WHERE id = 1").fetchone()
+        if row is None or not row["jti"]:
+            return False
+        if not hmac.compare_digest(str(jti or "").encode("utf-8"),
+                                   row["jti"].encode("utf-8")):
+            return False
+        conn.execute("UPDATE staff_session SET last_seen = ? WHERE id = 1", (_now(),))
+    return True
+
+
+def session_end() -> None:
+    """Освободить кассу — кнопка «Выйти» на планшете."""
+    with _connect() as conn:
+        conn.execute("DELETE FROM staff_session WHERE id = 1")
+    audit.info("КАССА: выход, сессия освобождена")
+
+
+# ------------------------------------------------- журнал событий безопасности
+# Виды событий. Строки короткие и стабильные: по ним строятся запросы и
+# фильтры, так что переименование ломает историю — добавлять новые можно,
+# менять старые нельзя.
+SECURITY_KINDS = (
+    "login_ok",        # успешный вход в кассу
+    "login_failed",    # неверный пароль
+    "login_blocked",   # пароль верный, но касса занята другой сессией
+    "logout",          # кассу освободили
+    "rate_limited",    # упёрлись в лимит запросов
+    "claim_taken",     # номер пытались занять, а он уже за другим телефоном
+    "claim_too_many",  # устройство исчерпало дневной лимит номеров
+    "feedback_denied", # оценка за заказ, который телефон не занимал
+)
+
+
+def log_security(kind: str, ip: str = "", **payload) -> None:
+    """Записать событие безопасности. Молча игнорирует неизвестный вид.
+
+    Никогда не бросает: журнал не должен ронять запрос, который он описывает.
+    Пароли, токены и ключи сюда не кладём — только адрес, номер заказа, метка
+    устройства и обрезанный User-Agent.
+    """
+    if kind not in SECURITY_KINDS:
+        return
+    try:
+        with _connect() as conn:
+            conn.execute(
+                "INSERT INTO security_events (at, kind, ip, payload) VALUES (?, ?, ?, ?)",
+                (_now(), kind, (ip or "")[:64] or None,
+                 json.dumps(payload, ensure_ascii=False) if payload else None),
+            )
+    except Exception as exc:  # noqa: BLE001 — журнал вторичен, запрос важнее
+        audit.warning("журнал безопасности: не записано (%s): %s", kind, exc)
+
+
+def security_events(
+    kinds: list[str] | None = None, since: str | None = None, limit: int = 500
+) -> list[dict]:
+    """События безопасности, свежие сверху. `since` — дата YYYY-MM-DD."""
+    sql = "SELECT * FROM security_events WHERE 1=1"
+    params: list = []
+    if kinds:
+        allowed = [k for k in kinds if k in SECURITY_KINDS]
+        if not allowed:
+            return []
+        sql += f" AND kind IN ({','.join('?' * len(allowed))})"
+        params += allowed
+    if since:
+        sql += " AND at >= ?"
+        params.append(since)
+    sql += " ORDER BY id DESC LIMIT ?"
+    params.append(max(1, min(limit, 2000)))
+    with _connect() as conn:
+        rows = conn.execute(sql, params).fetchall()
+    out = []
+    for r in rows:
+        try:
+            payload = json.loads(r["payload"]) if r["payload"] else {}
+        except ValueError:
+            payload = {}
+        out.append({"id": r["id"], "at": r["at"], "kind": r["kind"],
+                    "ip": r["ip"], **payload})
+    return out
+
+
+def security_summary(since: str | None = None) -> dict:
+    """Сводка: сколько каких событий и самые активные адреса.
+
+    Отвечает на главный вопрос разбора — «кто и сколько раз», без выгрузки
+    всего журнала.
+    """
+    where, params = ("WHERE at >= ?", [since]) if since else ("", [])
+    with _connect() as conn:
+        by_kind = {
+            r["kind"]: r["n"] for r in conn.execute(
+                f"SELECT kind, COUNT(*) AS n FROM security_events {where} "
+                "GROUP BY kind ORDER BY n DESC", params
+            )
+        }
+        top_ip = [
+            {"ip": r["ip"], "count": r["n"]} for r in conn.execute(
+                f"SELECT ip, COUNT(*) AS n FROM security_events {where} "
+                "GROUP BY ip ORDER BY n DESC LIMIT 10", params
+            ) if r["ip"]
+        ]
+    return {"byKind": by_kind, "topIp": top_ip}

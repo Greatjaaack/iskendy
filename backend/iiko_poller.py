@@ -14,9 +14,16 @@ from zoneinfo import ZoneInfo
 import httpx
 
 import db
+import notify
 from config import settings
 
 logger = logging.getLogger("iiko_poller")
+
+# Сколько неудачных тиков подряд считать поломкой. При опросе раз в 30 секунд
+# пять тиков — это примерно две с половиной минуты молчания кассы: достаточно,
+# чтобы отсеять случайный таймаут, и достаточно рано, чтобы смена успела
+# перейти на ручной ввод до того, как у окна соберётся толпа.
+FAILS_BEFORE_ALERT = 5
 
 
 def _is_fresh(open_time: str, now: datetime, window: timedelta) -> bool:
@@ -59,10 +66,22 @@ async def run_poller() -> None:
         settings.iiko_orders_url,
         settings.iiko_poll_seconds,
     )
+    # Одиночный таймаут — обычное дело, слать по нему сообщение нельзя.
+    # Сообщаем о серии: пять тиков подряд это уже не рябь, а поломка связи.
+    fails = 0
+    announced = False
     async with httpx.AsyncClient() as client:
         while True:
             try:
                 await _poll_once(client)
+                if announced:
+                    await notify.notify_poller_back()
+                    logger.info("iiko: связь восстановилась после %d неудач", fails)
+                fails, announced = 0, False
             except Exception as exc:  # noqa: BLE001 — best-effort, тик не должен ронять луп
-                logger.warning("iiko-поллер: тик пропущен: %s", exc)
+                fails += 1
+                logger.warning("iiko-поллер: тик пропущен (%d подряд): %s", fails, exc)
+                if fails >= FAILS_BEFORE_ALERT and not announced:
+                    announced = True
+                    await notify.notify_poller_down(fails, f"{type(exc).__name__}: {exc}")
             await asyncio.sleep(settings.iiko_poll_seconds)
