@@ -1,0 +1,33 @@
+# Тесты на каждый пуш и каждый PR.
+#
+# Зачем именно CI, когда есть локальный хук: деплой на сервере делает `git pull`
+# из main, то есть сломанный код, попавший в ветку, доедет до прода ближайшей
+# ночью. Локальный хук обходится флагом --no-verify и не существует на чужой
+# машине; CI работает независимо от того, кто и откуда пушит.
+name: Тесты
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  pytest:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Поставить poetry
+        run: pipx install poetry==2.3.4
+
+      - name: Зависимости строго по локу
+        run: poetry install --with dev --no-root
+
+      # Боевого .env в CI нет и быть не должно; conftest сам выставляет всё
+      # нужное окружение до импорта приложения.
+      - name: Прогнать тесты
+        run: poetry run pytest
