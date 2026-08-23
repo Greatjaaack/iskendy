@@ -22,3 +22,16 @@ package-mode = false
 [build-system]
 requires = ["poetry-core>=2.0"]
 build-backend = "poetry.core.masonry.api"
+
+[dependency-groups]
+dev = [
+    "pytest (>=9.1.1,<10.0.0)",
+    "pytest-asyncio (>=1.4.0,<2.0.0)"
+]
+
+# Тесты живут в backend/tests и импортируют модули приложения напрямую
+# (main, db, notify), поэтому backend должен быть на пути импорта.
+[tool.pytest.ini_options]
+testpaths = ["backend/tests"]
+pythonpath = ["backend"]
+addopts = "-q"
