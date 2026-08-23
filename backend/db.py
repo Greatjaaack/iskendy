@@ -244,6 +244,18 @@ def init_db() -> None:
             "CREATE INDEX IF NOT EXISTS idx_security_ip ON security_events (ip, at)"
         )
 
+        # Отметка, что сводка за день уже ушла. Нужна потому, что цикл проверяет
+        # раз в час: без неё каждый час после 23:00 прилетало бы новое сообщение,
+        # а пересозданный ночным деплоем контейнер слал бы дубль.
+        conn.execute(
+            """
+            CREATE TABLE IF NOT EXISTS digest_log (
+                date    TEXT PRIMARY KEY,
+                sent_at TEXT NOT NULL
+            )
+            """
+        )
+
         # Уборка за снятой моделью «партий». Когда-то табло показывало не номера
         # заказов, а «партия №3 готова»; от этого отказались в пользу
         # пер-заказного трекинга (коммит 0cb6472), а таблицы остались. К
@@ -1713,3 +1725,19 @@ def security_summary(since: str | None = None) -> dict:
             ) if r["ip"]
         ]
     return {"byKind": by_kind, "topIp": top_ip}
+
+
+def digest_was_sent(date: str) -> bool:
+    """Уходила ли сводка за этот день."""
+    with _connect() as conn:
+        return conn.execute(
+            "SELECT 1 FROM digest_log WHERE date = ?", (date,)
+        ).fetchone() is not None
+
+
+def digest_mark_sent(date: str) -> None:
+    with _connect() as conn:
+        conn.execute(
+            "INSERT OR REPLACE INTO digest_log (date, sent_at) VALUES (?, ?)",
+            (date, _now()),
+        )

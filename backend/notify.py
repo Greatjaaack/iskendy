@@ -39,6 +39,14 @@ def _dedup(targets: list[tuple[str, int | None]]) -> list[tuple[str, int | None]
     return out
 
 
+def digest_targets() -> list[tuple[str, int | None]]:
+    """Адресаты вечерней сводки. Не зависит от рубильника отзывов: сводка — про
+    день целиком, а не про поток оценок."""
+    if not settings.telegram_bot_token:
+        return []
+    return _dedup(settings.digest_targets)
+
+
 def targets_for(branch: str) -> list[tuple[str, int | None]]:
     """Кому уходит уведомление об отзыве этой ветки. Пустой список = молчим.
 

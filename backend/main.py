@@ -19,6 +19,7 @@ from urllib.parse import urlparse
 
 import backup
 import db
+import digest
 import notify
 import segno
 from auth import issue_token, require_staff, verify_password
@@ -148,6 +149,8 @@ async def _startup() -> None:
     asyncio.create_task(run_poller())
     # Ежедневный бэкап БД.
     asyncio.create_task(backup.run_backup_loop())
+    # Вечерняя сводка одним сообщением.
+    asyncio.create_task(digest.run_digest_loop())
 
 
 def _payload(board: dict) -> dict:
@@ -769,6 +772,19 @@ def stats_feedback(
     if not valid:
         valid = [db.today()]
     return {"dates": valid, **db.feedback_stats(valid)}
+
+
+@app.get("/api/digest/preview")
+def digest_preview(
+    date: str | None = Query(default=None, pattern=r"^\d{4}-\d{2}-\d{2}$"),
+    _: dict = Depends(require_staff),
+) -> dict:
+    """Показать текст вечерней сводки, ничего не отправляя.
+
+    Нужна, чтобы формулировки можно было смотреть и править, не дожидаясь 23:00
+    и не засоряя чат пробными сообщениями.
+    """
+    return {"date": date or db.today(), "text": digest.build_text(date or db.today())}
 
 
 @app.get("/api/security/events")

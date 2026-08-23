@@ -61,7 +61,11 @@ class Settings(BaseSettings):
     # Куда «все отзывы». Пусто — берём тему рабочего чата из digest-адресата,
     # а если и его нет — тех же, кому идут алерты.
     telegram_feedback_targets: str = ""
-    telegram_digest_target: str = ""  # куда вечернюю сводку (фаза 2)
+    telegram_digest_target: str = ""  # куда вечернюю сводку
+    # Вечерняя сводка: итог дня одним сообщением. Час — по поясу точки; проверка
+    # ежечасная, поэтому сообщение уходит в первый тик после этого часа.
+    digest_enabled: bool = True
+    digest_hour: int = 23
 
     feedback_negative_max: int = 3  # оценка <= этой считается негативом
     feedback_prompt_delay_sec: int = 180  # пауза после «выдано» до экрана оценки
@@ -74,6 +78,11 @@ class Settings(BaseSettings):
     def alert_targets(self) -> list[tuple[str, int | None]]:
         """Разобранный `telegram_alert_targets` → [(chat_id, thread_id|None), ...]."""
         return parse_targets(self.telegram_alert_targets)
+
+    @property
+    def digest_targets(self) -> list[tuple[str, int | None]]:
+        """Куда вечернюю сводку. Пусто — туда же, куда отзывы: сводка про гостей."""
+        return parse_targets(self.telegram_digest_target) or self.feedback_targets
 
     @property
     def feedback_targets(self) -> list[tuple[str, int | None]]:
