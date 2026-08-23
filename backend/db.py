@@ -244,6 +244,19 @@ def init_db() -> None:
             "CREATE INDEX IF NOT EXISTS idx_security_ip ON security_events (ip, at)"
         )
 
+        # Уборка за снятой моделью «партий». Когда-то табло показывало не номера
+        # заказов, а «партия №3 готова»; от этого отказались в пользу
+        # пер-заказного трекинга (коммит 0cb6472), а таблицы остались. К
+        # аналитике отношения не имеют: заказы, времена этапов, оценки и воронка
+        # живут в orders / order_events / feedbacks / guest_events, и только они
+        # читаются кодом. На проде на момент удаления в batch_log было 0 строк,
+        # в day_state — одна, от 20.07.2026.
+        #
+        # Проверено перед удалением: ни одного запроса к этим таблицам в коде.
+        # Строки можно убрать из init_db, когда все базы переживут этот старт.
+        for legacy in ("batch_log", "day_state"):
+            conn.execute(f"DROP TABLE IF EXISTS {legacy}")
+
         conn.execute(
             """
             CREATE TABLE IF NOT EXISTS staff_session (
