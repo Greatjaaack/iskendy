@@ -15,6 +15,7 @@
 через него.
 """
 
+import asyncio
 import html
 import logging
 
@@ -180,6 +181,55 @@ async def notify_feedback_detail(fb: dict, branch: str) -> int:
     return await send_message(f"{head}\n{tail}".strip(), targets)
 
 
+# ----------------------------------------------------------- схлопывание
+# Один отклонённый вход — одно сообщение. Но лимит пропускает десять попыток в
+# минуту, то есть шестьсот в час: атака превратила бы тему в стену одинаковых
+# строк, а живой человек в ответ замьютил бы её — и перестал видеть настоящие
+# аварии. Поэтому первое сообщение уходит сразу, повторы того же вида копятся
+# молча, и в конце окна прилетает одна строка с их числом.
+THROTTLE_WINDOW_SEC = 600
+
+_throttle: dict[str, dict] = {}
+_throttle_tasks: set[asyncio.Task] = set()
+
+
+async def _flush_throttled(key: str, targets: list[tuple[str, int | None]]) -> None:
+    """Досказать по итогам окна, сколько повторов было проглочено."""
+    await asyncio.sleep(THROTTLE_WINDOW_SEC)
+    state = _throttle.pop(key, None)
+    if not state or not state["suppressed"]:
+        return
+    await send_message(
+        f"↑ и ещё {state['suppressed']} таких за "
+        f"{THROTTLE_WINDOW_SEC // 60} мин",
+        targets,
+    )
+
+
+async def send_throttled(
+    key: str, text: str, targets: list[tuple[str, int | None]]
+) -> int:
+    """Отправить, если по этому ключу недавно не отправляли. Иначе — сосчитать.
+
+    `key` — вид события, а не конкретный случай: десять попыток входа с разных
+    адресов это всё равно одна история, и десять сообщений про неё не нужны.
+    """
+    if not targets:
+        return 0
+    state = _throttle.get(key)
+    if state is not None:
+        state["suppressed"] += 1
+        return 0
+    _throttle[key] = {"suppressed": 0}
+    sent = await send_message(text, targets)
+    # Ссылку на задачу держим: без неё сборщик мусора может убить отложенную
+    # досылку, и счётчик повторов молча пропадёт.
+    task = asyncio.create_task(_flush_throttled(key, targets))
+    _throttle_tasks.add(task)
+    task.add_done_callback(_throttle_tasks.discard)
+    return sent
+
+
 # ------------------------------------------------------- сбои и безопасность
 # Уходят в отдельную тему рабочего чата (`alert_targets`) и не зависят от
 # рубильника отзывов: узнать, что кассу пытались открыть чужим устройством,
@@ -209,7 +259,7 @@ async def notify_login_blocked(active: dict, ip: str = "", ua: str = "") -> int:
         f"Текущая сессия с: {_esc(active.get('createdAt'))}\n"
         "Если это не вы — смените пароль."
     )
-    return await send_message(text, targets)
+    return await send_throttled("login_blocked", text, targets)
 
 
 async def notify_claim_anomaly(guest: str, count: int, ip: str = "") -> int:
@@ -223,4 +273,4 @@ async def notify_claim_anomaly(guest: str, count: int, ip: str = "") -> int:
         f"Откуда: {_esc(ip) or '—'}\n"
         f"Метка устройства: {_esc(guest)}"
     )
-    return await send_message(text, targets)
+    return await send_throttled("claim_anomaly", text, targets)
