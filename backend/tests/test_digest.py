@@ -33,35 +33,41 @@ def test_zakazy_i_vremena(client, staff):
     _den(client, staff, nomerov=3)
     text = digest.build_text(db.today())
     assert "Заказов: <b>3</b>" in text
-    assert "все выданы" in text
-    assert "Готовка:" in text
+    assert "Готовится:" in text
+    assert "Весь путь заказа:" in text
 
 
-def test_ohvat_pishetsya_drobyu_a_ne_procentom(client, staff):
-    """1 оценка на 222 заказа округлялась в «0%» и читалась как «никто не
-    оценил» — то есть цифра, ради которой строка существует, пропадала."""
+def test_pro_vydannye_molchim_poka_vsyo_vydano(client, staff):
+    """«Все выданы» каждый день — шум: так и должно быть. Строка нужна только
+    когда заказ завели и забыли выдать."""
     import db
 
-    _den(client, staff, nomerov=50, ocenka=5)
-    text = digest.build_text(db.today())
-    assert "Охват: 1 из 50 заказов" in text
-    assert "0%" not in text
+    _den(client, staff, nomerov=3)
+    assert "Не выдано" not in digest.build_text(db.today())
 
 
-def test_procent_poyavlyaetsya_kogda_osmyslen(client, staff):
+def test_nevydannye_zametny(client, staff):
     import db
 
-    _den(client, staff, nomerov=2, ocenka=5)
+    _den(client, staff, nomerov=2)
+    client.post("/api/order", json={"number": 99}, headers=staff)   # остался висеть
+    assert "Не выдано: 1" in digest.build_text(db.today())
+
+
+def test_ocenki_pokazyvayutsya(client, staff):
+    import db
+
+    _den(client, staff, nomerov=5, ocenka=5)
     text = digest.build_text(db.today())
-    assert "(50%)" in text
+    assert "Оценок: 1 оценка" in text
+    assert "Средняя: 5.0" in text
 
 
 def test_bez_ocenok_govorim_pryamo(client, staff):
     import db
 
     _den(client, staff, nomerov=5)
-    text = digest.build_text(db.today())
-    assert "Оценок нет" in text
+    assert "Оценок: нет" in digest.build_text(db.today())
 
 
 def test_negativ_vydelyaetsya(client, staff):
@@ -72,23 +78,63 @@ def test_negativ_vydelyaetsya(client, staff):
     assert "Недовольных: 1" in text
 
 
-def test_sobytiya_bezopasnosti_popadayut_v_svodku(client, staff, served_order):
+def test_bezopasnost_v_svodku_ne_popadaet(client, staff, served_order):
+    """Убрано по решению владельца: login_blocked повторялся каждый день — это
+    смена логинится со второго устройства, а не атака. Ежедневное повторение
+    приучает не читать."""
     import db
 
     client.post("/api/feedback", json={"number": served_order, "rating": 1},
                 headers=STRANGER)
     text = digest.build_text(db.today())
-    assert "Безопасность:" in text
-    assert "чужих отзывов" in text
+    assert "Безопасность" not in text
+    assert "чужих отзывов" not in text
 
 
-def test_spokoynyj_den_bez_stroki_bezopasnosti(client, staff):
-    """Успешный вход — не происшествие, и в сводке ему не место."""
+def test_statusy_nazvany_kak_v_kasse(client, staff):
+    """Раньше писали выдуманные «Кухня» и «Выдача» — таких статусов нет, и
+    владелец не понял, что это значит. Плюс «приём → готово» смешивало лежание
+    открытым с настоящей готовкой: 19 минут оказались 2 + 17."""
+    import db
+
+    _den(client, staff, nomerov=3)
+    text = digest.build_text(db.today())
+    for stroka in ("Открытый (ждёт готовки)", "Готовится:", "Готово (ждёт гостя)"):
+        assert stroka in text, stroka
+    assert "Кухня" not in text
+
+
+def test_tablitsa_po_chasam_ne_shire_35(client, staff):
+    """Шире ~35 символов Telegram уводит таблицу в горизонтальную прокрутку."""
+    import db
+
+    _den(client, staff, nomerov=4)
+    text = digest.build_text(db.today())
+    assert "<pre>" in text
+    tabl = text.split("<pre>")[1].split("</pre>")[0]
+    for stroka in tabl.split("\n"):
+        assert len(stroka) <= 35, f"строка шире 35: {stroka!r}"
+
+
+def test_pik_otmechen_v_tablitse_a_ne_strokoy(client, staff):
+    """Отдельная строка про пик дублировала метку в таблице."""
+    import db
+
+    _den(client, staff, nomerov=3)
+    text = digest.build_text(db.today())
+    assert "◀" in text
+    assert "Пик:" not in text
+
+
+def test_nol_minut_ne_prochyerk(client, staff):
+    """Ноль — это ответ, а не «нет данных». Заказ, пролежавший открытым 20
+    секунд, показывался как «—», то есть как неизвестность."""
     import db
 
     _den(client, staff, nomerov=2)
     text = digest.build_text(db.today())
-    assert "Безопасность:" not in text
+    tabl = text.split("<pre>")[1].split("</pre>")[0]
+    assert "—" not in tabl, "мгновенные переходы должны быть нулями, а не прочерками"
 
 
 def test_svodka_ne_uhodit_dvazhdy(client, staff):

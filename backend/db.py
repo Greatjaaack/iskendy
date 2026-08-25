@@ -1741,3 +1741,77 @@ def digest_mark_sent(date: str) -> None:
             "INSERT OR REPLACE INTO digest_log (date, sent_at) VALUES (?, ?)",
             (date, _now()),
         )
+
+
+def stats_po_statusam(dates: list[str]) -> dict:
+    """Среднее время, проведённое заказом в КАЖДОМ статусе.
+
+    Зачем отдельно от `stats_range`. Та считает по меткам в самой строке
+    заказа, а их всего три: приём, готово, выдано. Момента «взяли в работу»
+    среди них нет, поэтому её `avgPrepSec` — это на самом деле «открытый плюс
+    готовится» одним куском, и настоящее время готовки в нём не видно.
+
+    Здесь берём журнал переходов (`order_events`), где записан каждый статус, и
+    считаем по нему. Различие не косметическое: заказ из iiko приезжает
+    «открытым» и может пролежать так сколько угодно, пока касса не возьмётся, —
+    и это время сваливалось в «готовку», хотя кухня к нему не притрагивалась.
+    """
+    if not dates:
+        return {"open": None, "preparing": None, "ready": None, "orders": 0}
+    summy = {"open": [], "preparing": [], "ready": [], "total": []}
+    for o in stats_orders(dates, limit=2000)["orders"]:
+        for status, klyuch in (("open", "openSec"), ("preparing", "prepSec"),
+                               ("ready", "readySec")):
+            znachenie = o.get(klyuch)
+            if znachenie is not None:
+                summy[status].append(znachenie)
+        chasti = [o.get(k) for k in ("openSec", "prepSec", "readySec")]
+        if all(c is not None for c in chasti):
+            summy["total"].append(sum(chasti))
+    return {
+        "open": _avg_sec(summy["open"]),
+        "preparing": _avg_sec(summy["preparing"]),
+        "ready": _avg_sec(summy["ready"]),
+        "total": _avg_sec(summy["total"]),
+        "orders": len(summy["preparing"]),
+    }
+
+
+def stats_po_statusam_chasy(dates: list[str]) -> list[dict]:
+    """То же самое, но по часу ПРИЁМА заказа: где именно проседает день.
+
+    Среднее по дню прячет провал. 23.08 заказ в среднем готовился 17 минут, но
+    в 17 часов — 29, и заказов там было почти как в пик. По одной цифре за день
+    этого не увидеть, а по строке в таблице видно сразу.
+    """
+    from collections import defaultdict
+
+    if not dates:
+        return []
+    po_chasam: dict[int, dict[str, list]] = defaultdict(
+        lambda: {"open": [], "preparing": [], "ready": [], "total": [], "count": 0}
+    )
+    for o in stats_orders(dates, limit=2000)["orders"]:
+        prinyat = _parse_naive(o.get("acceptedAt"))
+        if prinyat is None:
+            continue
+        b = po_chasam[prinyat.hour]
+        b["count"] += 1
+        for status, klyuch in (("open", "openSec"), ("preparing", "prepSec"),
+                               ("ready", "readySec")):
+            if o.get(klyuch) is not None:
+                b[status].append(o[klyuch])
+        chasti = [o.get(k) for k in ("openSec", "prepSec", "readySec")]
+        if all(c is not None for c in chasti):
+            b["total"].append(sum(chasti))
+    return [
+        {
+            "hour": hr,
+            "count": po_chasam[hr]["count"],
+            "open": _avg_sec(po_chasam[hr]["open"]),
+            "preparing": _avg_sec(po_chasam[hr]["preparing"]),
+            "ready": _avg_sec(po_chasam[hr]["ready"]),
+            "total": _avg_sec(po_chasam[hr]["total"]),
+        }
+        for hr in sorted(po_chasam)
+    ]
