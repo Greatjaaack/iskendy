@@ -27,6 +27,9 @@ class Settings(BaseSettings):
     iiko_orders_url: str = ""
     iiko_internal_token: str = ""  # заголовок X-Internal-Token к ручке аналитики
     iiko_poll_seconds: int = 30  # период опроса
+    # Ручка аналитики с деньгами за день (выручка, чеки, средний чек).
+    # Пустая — в сводке просто не будет денежного блока.
+    analytics_summary_url: str = ""
     # Окно свежести: заводим только заказы, открытые за последние N минут — чтобы
     # при старте/перезапуске не залить табло старыми уже готовыми заказами.
     iiko_ingest_window_min: int = 20
@@ -80,6 +83,17 @@ class Settings(BaseSettings):
     def alert_targets(self) -> list[tuple[str, int | None]]:
         """Разобранный `telegram_alert_targets` → [(chat_id, thread_id|None), ...]."""
         return parse_targets(self.telegram_alert_targets)
+
+    @property
+    def summary_url(self) -> str:
+        """Адрес ручки с деньгами. Если не задан явно — выводим из адреса
+        заказов: обе ручки живут на одном сервисе аналитики, и держать два
+        почти одинаковых URL в .env значит однажды поменять только один."""
+        if self.analytics_summary_url:
+            return self.analytics_summary_url
+        if not self.iiko_orders_url:
+            return ""
+        return self.iiko_orders_url.replace("/api/orders/today", "/api/summary")
 
     @property
     def digest_targets(self) -> list[tuple[str, int | None]]:

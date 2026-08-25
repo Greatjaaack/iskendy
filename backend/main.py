@@ -775,7 +775,7 @@ def stats_feedback(
 
 
 @app.get("/api/digest/preview")
-def digest_preview(
+async def digest_preview(
     date: str | None = Query(default=None, pattern=r"^\d{4}-\d{2}-\d{2}$"),
     _: dict = Depends(require_staff),
 ) -> dict:
@@ -784,7 +784,8 @@ def digest_preview(
     Нужна, чтобы формулировки можно было смотреть и править, не дожидаясь 23:00
     и не засоряя чат пробными сообщениями.
     """
-    return {"date": date or db.today(), "text": digest.build_text(date or db.today())}
+    den = date or db.today()
+    return {"date": den, "text": digest.build_text(den, await digest._dengi_za_den(den))}
 
 
 @app.get("/api/security/events")

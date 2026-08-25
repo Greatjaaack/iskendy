@@ -161,3 +161,98 @@ def test_bez_adresatov_ne_padaem(client, staff):
     import asyncio
 
     assert asyncio.run(digest.send_digest()) == 0
+
+
+class TestDengi:
+    """Выручку считает аналитика, у табло этих данных нет вовсе. Читаем её
+    внутренней ручкой, и сводка не должна зависеть от того, отвечает ли она.
+    """
+
+    DENGI = {"date": "2026-08-24", "revenue": 100000.0, "checks": 200,
+             "avg_check": 500.0, "has_data": True}
+
+    def test_blok_deneg_pokazyvaetsya(self, client, staff):
+        import db
+
+        _den(client, staff, nomerov=3)
+        text = digest.build_text(db.today(), self.DENGI)
+        assert "Выручка: 100 000 ₽" in text
+        assert "Чеков: 200" in text
+        assert "Средний чек: 500 ₽" in text
+
+    def test_bez_deneg_svodka_vsyo_ravno_polnaya(self, client, staff):
+        """Аналитика молчит — сводка про заказы уходит как ни в чём не бывало."""
+        import db
+
+        _den(client, staff, nomerov=3)
+        text = digest.build_text(db.today(), None)
+        assert "Заказов: <b>3</b>" in text
+        assert "Выручка" not in text
+        assert "Деньги" not in text
+
+    def test_nol_vyruchki_ne_pechataem_kak_fakt(self, monkeypatch):
+        """has_data=false значит «строки за день нет», а не «заработали ноль».
+        «Выручка: 0 ₽» в чате прочитают как факт — это худший вид вранья."""
+        import asyncio
+
+        import httpx
+        from config import settings
+
+        monkeypatch.setattr(settings, "analytics_summary_url", "http://analytics/api/summary")
+        monkeypatch.setattr(settings, "iiko_internal_token", "t")
+
+        class FakeResp:
+            def raise_for_status(self): pass
+            def json(self):
+                return {"date": "2026-08-24", "revenue": 0, "checks": 0,
+                        "avg_check": 0, "has_data": False}
+
+        class FakeClient:
+            async def __aenter__(self): return self
+            async def __aexit__(self, *a): return False
+            async def get(self, *a, **kw): return FakeResp()
+
+        monkeypatch.setattr(httpx, "AsyncClient", lambda **kw: FakeClient())
+        assert asyncio.run(digest._dengi_za_den("2026-08-24")) is None
+
+    def test_analitika_upala_ne_ronyaet_svodku(self, monkeypatch):
+        import asyncio
+
+        import httpx
+        from config import settings
+
+        monkeypatch.setattr(settings, "analytics_summary_url", "http://analytics/api/summary")
+        monkeypatch.setattr(settings, "iiko_internal_token", "t")
+
+        class FakeClient:
+            async def __aenter__(self): return self
+            async def __aexit__(self, *a): return False
+            async def get(self, *a, **kw):
+                raise httpx.ConnectTimeout("аналитика недоступна")
+
+        monkeypatch.setattr(httpx, "AsyncClient", lambda **kw: FakeClient())
+        assert asyncio.run(digest._dengi_za_den("2026-08-24")) is None
+
+    def test_bez_nastroek_ne_hodim_v_set(self, monkeypatch):
+        import asyncio
+
+        from config import settings
+
+        monkeypatch.setattr(settings, "analytics_summary_url", "")
+        monkeypatch.setattr(settings, "iiko_orders_url", "")
+        assert asyncio.run(digest._dengi_za_den("2026-08-24")) is None
+
+    def test_adres_vyvoditsya_iz_adresa_zakazov(self, monkeypatch):
+        """Держать два почти одинаковых URL в .env — значит однажды поменять
+        только один."""
+        from config import settings
+
+        monkeypatch.setattr(settings, "analytics_summary_url", "")
+        monkeypatch.setattr(settings, "iiko_orders_url",
+                            "http://dashboards-backend-1:8000/api/orders/today")
+        assert settings.summary_url == "http://dashboards-backend-1:8000/api/summary"
+
+    def test_rubli_bez_kopeek_i_s_probelami(self):
+        assert digest._rubli(100000.0) == "100 000 ₽"
+        assert digest._rubli(20330.51) == "20 331 ₽"
+        assert digest._rubli(0) == "0 ₽"

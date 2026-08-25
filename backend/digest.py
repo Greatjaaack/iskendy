@@ -16,6 +16,7 @@ from datetime import datetime, timedelta
 from zoneinfo import ZoneInfo
 
 import db
+import httpx
 import notify
 from config import settings
 
@@ -68,7 +69,7 @@ def _tablica_po_chasam(chasy: list[dict], pik_hour: int | None) -> str:
     return "<pre>" + "\n".join(out) + "</pre>"
 
 
-def build_text(date: str) -> str:
+def build_text(date: str, dengi: dict | None = None) -> str:
     """Собрать сводку за день. Пустой день — короткая строка, без простыни нулей."""
     stats = db.stats_range([date])
     su = stats["summary"]
@@ -121,6 +122,12 @@ def build_text(date: str) -> str:
                   "<i>Итог — весь путь заказа</i>",
                   "", tabl]
 
+    if dengi:
+        lines += ["", "<b>Деньги</b>"]
+        lines.append(f"Выручка: {_rubli(dengi['revenue'])}")
+        lines.append(f"Чеков: {dengi['checks']}")
+        lines.append(f"Средний чек: {_rubli(dengi['avg_check'])}")
+
     fb = db.feedback_stats([date])
     lines.append("")
     if fb["count"]:
@@ -159,7 +166,8 @@ async def send_digest(date: str | None = None) -> int:
     if not targets:
         logger.info("сводка: адресаты не заданы, молчим")
         return 0
-    sent = await notify.send_message(build_text(date), targets)
+    dengi = await _dengi_za_den(date)
+    sent = await notify.send_message(build_text(date, dengi), targets)
     if sent:
         db.digest_mark_sent(date)
         logger.info("сводка за %s отправлена (%d адресатам)", date, sent)
@@ -189,3 +197,44 @@ async def run_digest_loop() -> None:
         except Exception as exc:  # noqa: BLE001 — сводка не должна ронять сервис
             logger.warning("сводка: ошибка: %s", exc)
         await asyncio.sleep(3600)
+
+
+# ------------------------------------------------------------------- деньги
+# Выручку считает аналитика, у табло этих данных нет вовсе: в его базе только
+# номер заказа и метки статусов. Читаем её внутренней ручкой /api/summary тем
+# же токеном, что и заказы.
+DENGI_TAYMAUT_SEC = 10
+
+
+async def _dengi_za_den(date: str) -> dict | None:
+    """Выручка, чеки и средний чек за день. None — если данных нет.
+
+    Никогда не бросает: сводка про заказы важнее денежного блока, и молчащая
+    аналитика не повод не отправить её вовсе.
+    """
+    url = settings.summary_url
+    if not url or not settings.iiko_internal_token:
+        return None
+    try:
+        async with httpx.AsyncClient(timeout=DENGI_TAYMAUT_SEC) as client:
+            r = await client.get(
+                url,
+                params={"date": date},
+                headers={"X-Internal-Token": settings.iiko_internal_token},
+            )
+            r.raise_for_status()
+            data = r.json()
+    except Exception as exc:  # noqa: BLE001 — деньги вторичны, сводка обязательна
+        logger.warning("сводка: аналитика не ответила: %s", exc)
+        return None
+    # has_data=false значит «строки за этот день в базе нет», а не «выручка
+    # ноль». Разница принципиальная: «Выручка: 0 ₽» в чате прочитают как факт.
+    if not data.get("has_data"):
+        logger.info("сводка: у аналитики нет данных за %s", date)
+        return None
+    return data
+
+
+def _rubli(summa: float) -> str:
+    """20330.5 → «20 330 ₽». Копейки в итоге дня не нужны."""
+    return f"{round(summa):,}".replace(",", " ") + " ₽"
