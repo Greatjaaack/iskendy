@@ -133,7 +133,9 @@ def build_text(date: str, dengi: dict | None = None) -> str:
     if fb["count"]:
         ocenok = _plural(fb["count"], "оценка", "оценки", "оценок")
         lines.append(f"Оценок: {fb['count']} {ocenok}")
-        lines.append(f"Средняя: {fb['avgRating']} ★")
+        # Средний балл не считаем: при одной-двух оценках в день это не средняя,
+        # а сама оценка, выданная за статистику. Важно другое — сколько их и
+        # есть ли недовольные.
         if fb["negative"]:
             lines.append(f"⚠️ Недовольных: {fb['negative']}")
     else:

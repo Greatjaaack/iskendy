@@ -1408,6 +1408,12 @@
           <div style="height:14px"></div>
           <button class="ghost" onclick="resetDay()">Новый день · очистить табло</button>
           <div class="muted-note" id="servedNote"></div>
+          <!-- Выданные заказы прячутся с табло, и промахнувшийся кассир не может
+               даже посмотреть, что закрыл. Раскрывается по клику на счётчик. -->
+          <div id="servedBox" class="hidden">
+            <div class="muted-note" id="servedErr"></div>
+            <div id="servedList" class="log-list"></div>
+          </div>
         </div>
 
         <div class="card">
@@ -1946,7 +1952,13 @@
       }
     }
 
-    function setStatus(num, status){ api("/api/order/status", { number: num, status }).catch(() => {}); }
+    function setStatus(num, status){
+      api("/api/order/status", { number: num, status })
+        // Список выданных обновляем только когда он раскрыт: иначе лишний запрос
+        // на каждое нажатие кнопки, а нажимают их весь день.
+        .then(function(){ if(servedOpen) loadServed(); })
+        .catch(() => {});
+    }
     function delOrder(num){
       if(confirm("Удалить заказ №" + num + "?")) api("/api/order/delete", { number: num }).catch(() => {});
     }
@@ -2451,7 +2463,69 @@
       document.getElementById("cntPrep").textContent = cnt.preparing;
       document.getElementById("cntReady").textContent = cnt.ready;
       const n = state.servedCount || 0;
-      document.getElementById("servedNote").textContent = n ? ("Выдано сегодня: " + n) : "";
+      const note = document.getElementById("servedNote");
+      if(n){
+        // Кликабельно: за этим прячется откат ошибочной выдачи, и найти его
+        // должно быть можно, не зная, что он существует.
+        note.innerHTML = '<a class="link-a" onclick="toggleServed()">Выдано сегодня: '
+                       + n + (servedOpen ? " ▲" : " ▼") + '</a>';
+      } else {
+        note.textContent = "";
+      }
+    }
+
+    // ---------- выданные заказы и откат ошибочной выдачи ----------
+    // Кнопки в строках стоят вплотную, и в час пик кассир попадает в соседнюю.
+    // Заказ исчезает с табло, а гость, который отошёл, больше не узнаёт, что его
+    // еда готова: номера нет, и телефон вскоре предложит оценить неполученный
+    // заказ. Возврат ставит заказ обратно в «готово» — телефон гостя звенит
+    // заново, потому что это переход в «готово», как и первый раз.
+    let servedOpen = false;
+
+    function toggleServed(){
+      servedOpen = !servedOpen;
+      document.getElementById("servedBox").classList.toggle("hidden", !servedOpen);
+      if(servedOpen) loadServed();
+      renderStaff();
+    }
+
+    async function loadServed(){
+      try {
+        const r = await fetch(API + "/api/order/served?limit=20",
+                              { headers: { "Authorization": "Bearer " + token } });
+        if(r.status === 401){ logout(); showStaff(); return; }
+        const list = (await r.json()).orders || [];
+        document.getElementById("servedList").innerHTML = list.length
+          ? list.map(servedRow).join("")
+          : '<div class="muted-note">Сегодня ещё ничего не выдано</div>';
+      } catch(e){ /* сеть моргнула — покажем на следующем тике */ }
+    }
+
+    function servedRow(o){
+      const knopka = o.canRevert
+        ? '<button class="mini ghost" onclick="revertOrder(' + o.number + ')">Вернуть</button>'
+        // Отзыв возможен только после выдачи: раз он есть, гость заказ получил,
+        // и промахом это не было.
+        : '<span class="muted-note" title="Гость уже оставил отзыв">оценён</span>';
+      return '<div class="order-row st-served">'
+           +   '<span class="order-num">' + o.number + '</span>'
+           +   '<span class="order-st">Выдан'
+           +     '<span class="order-times">' + hhmm(o.servedAt) + '</span>'
+           +   '</span>'
+           +   '<span class="order-acts">' + knopka + '</span>'
+           + '</div>';
+    }
+
+    async function revertOrder(n){
+      const err = document.getElementById("servedErr");
+      err.textContent = "";
+      try {
+        await api("/api/order/revert", { number: n });
+        loadServed();
+      } catch(e){
+        // Не alert: он блокирует экран кассы целиком, а очередь ждать не будет.
+        err.textContent = e.message || "Не получилось вернуть заказ";
+      }
     }
 
     function orderRow(o){
@@ -3171,6 +3245,14 @@
       for(let i = 0; i < orders.length; i++){ if(orders[i].number === my.n) active = true; }
       if(active){
         if(!my.seen){ my.seen = true; fbSaveMy(my); }
+        // Заказ снова на табло, хотя телефон уже считал его выданным — значит
+        // кассир откатил ошибочную выдачу. Снимаем отметку, иначе при настоящей
+        // выдаче экран оценки выскочит мгновенно: отсчёт трёх минут пошёл бы от
+        // ошибочного нажатия, случившегося задолго до этого.
+        if(my.servedAt){
+          fbPatchMy(my.n, { servedAt: 0, promptedAt: 0, gone: false });
+          fbStep(null);
+        }
         return;
       }
       if(!my.seen) return;                 // номер ни разу не висел на табло

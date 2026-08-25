@@ -1815,3 +1815,99 @@ def stats_po_statusam_chasy(dates: list[str]) -> list[dict]:
         }
         for hr in sorted(po_chasam)
     ]
+
+
+def revert_served(number: int) -> dict:
+    """Вернуть ошибочно выданный заказ обратно в «готово».
+
+    Зачем. Кнопки «Выдано ✓» стоят в строках заказов вплотную, и кассир в час
+    пик попадает в соседнюю. Заказ тут же исчезает с табло, и гость, который
+    отошёл и не смотрел на экран, больше никогда не узнает, что его еда готова:
+    номера на табло нет, а телефон через три минуты предложит оценить заказ,
+    которого человек не получал.
+
+    Отката до сих пор не было вовсе: `set_status` ищет заказ только среди
+    активных, и на выданный отвечает «активного заказа нет».
+
+    Метку выдачи обязательно стираем. Иначе заказ окажется одновременно выданным
+    и невыданным, а время «готово → выдано» в аналитике посчитается от ошибочного
+    нажатия.
+    """
+    date = today()
+    with _connect() as conn:
+        row = conn.execute(
+            """
+            SELECT id, status, ready_at FROM orders
+             WHERE date = ? AND number = ? AND deleted_at IS NULL
+             ORDER BY id DESC LIMIT 1
+            """,
+            (date, number),
+        ).fetchone()
+        if row is None:
+            raise ValueError(f"Заказа №{number} сегодня нет")
+        if row["status"] != "served":
+            raise ValueError(f"Заказ №{number} не выдан — возвращать нечего")
+        # Отзыв возможен только после выдачи. Если он есть, значит гость заказ
+        # получил и оценил, а промахом это не было: возвращать нельзя, иначе в
+        # базе окажется невыданный заказ с отзывом.
+        otzyv = conn.execute(
+            "SELECT 1 FROM feedbacks WHERE order_id = ? LIMIT 1", (row["id"],)
+        ).fetchone()
+        if otzyv is not None:
+            raise ValueError(
+                f"По заказу №{number} гость уже оставил отзыв — значит он его получил"
+            )
+        # Если заказ выдали, минуя «готово» (в интерфейсе так не нажать, но через
+        # API можно), отметки готовности нет. Возвращать в «готово» без неё
+        # нельзя: строка окажется готовой без времени готовности, и заказ выпадет
+        # из расчёта времён. Раз он был выдан — он точно был готов, ставим сейчас.
+        now = _now()
+        gotov = "ready_at" if row["ready_at"] else None
+        if gotov:
+            conn.execute(
+                "UPDATE orders SET status = 'ready', served_at = NULL, updated_at = ? "
+                "WHERE id = ?",
+                (now, row["id"]),
+            )
+        else:
+            conn.execute(
+                "UPDATE orders SET status = 'ready', served_at = NULL, "
+                "ready_at = ?, updated_at = ? WHERE id = ?",
+                (now, now, row["id"]),
+            )
+        _log_event(conn, date, "status", number,
+                   from_status="served", to_status="ready", source="revert")
+        audit.warning("ЗАКАЗ %s: ВОЗВРАЩЁН из «выдано» в «готово»", number)
+    return get_board(date)
+
+
+def served_today(limit: int = 20) -> list[dict]:
+    """Выданные сегодня заказы, свежие сверху — чтобы было что возвращать.
+
+    На экране кассы выданных не видно вовсе: они уходят с табло, а `/api/history`
+    фронт не запрашивает. Промахнувшийся кассир не может даже посмотреть, что
+    именно он закрыл.
+    """
+    date = today()
+    with _connect() as conn:
+        rows = conn.execute(
+            """
+            SELECT o.number, o.served_at, o.ready_at,
+                   (SELECT 1 FROM feedbacks f WHERE f.order_id = o.id LIMIT 1) AS otzyv
+              FROM orders o
+             WHERE o.date = ? AND o.status = 'served' AND o.deleted_at IS NULL
+             ORDER BY o.served_at DESC, o.id DESC
+             LIMIT ?
+            """,
+            (date, max(1, min(limit, 100))),
+        ).fetchall()
+    return [
+        {
+            "number": r["number"],
+            "servedAt": r["served_at"],
+            "readyAt": r["ready_at"],
+            # Заказ с отзывом вернуть нельзя — гость его получил и оценил.
+            "canRevert": r["otzyv"] is None,
+        }
+        for r in rows
+    ]

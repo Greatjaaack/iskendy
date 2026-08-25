@@ -255,6 +255,29 @@ def order_delete(body: OrderBody, _: dict = Depends(require_staff)) -> dict:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc))
 
 
+@app.get("/api/order/served")
+def order_served(
+    limit: int = Query(default=20, ge=1, le=100),
+    _: dict = Depends(require_staff),
+) -> dict:
+    """Выданные сегодня заказы, свежие сверху — для отката ошибочной выдачи."""
+    return {"orders": db.served_today(limit)}
+
+
+@app.post("/api/order/revert")
+def order_revert(body: OrderBody, _: dict = Depends(require_staff)) -> dict:
+    """Вернуть ошибочно выданный заказ обратно в «готово».
+
+    Кнопки в строках стоят вплотную, кассир в час пик попадает в соседнюю, и
+    заказ исчезает с табло. Гость, который отошёл, больше не узнает, что его
+    еда готова: номера нет, а телефон вскоре предложит оценить неполученный заказ.
+    """
+    try:
+        return _payload(db.revert_served(body.number))
+    except ValueError as exc:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc))
+
+
 @app.get("/api/history")
 def history(
     date: str | None = Query(default=None, pattern=r"^\d{4}-\d{2}-\d{2}$"),

@@ -60,7 +60,8 @@ def test_ocenki_pokazyvayutsya(client, staff):
     _den(client, staff, nomerov=5, ocenka=5)
     text = digest.build_text(db.today())
     assert "Оценок: 1 оценка" in text
-    assert "Средняя: 5.0" in text
+    # Средний балл убран: при одной оценке в день это не средняя, а сама оценка.
+    assert "Средняя" not in text
 
 
 def test_bez_ocenok_govorim_pryamo(client, staff):
