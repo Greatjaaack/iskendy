@@ -100,9 +100,49 @@ def test_statusy_nazvany_kak_v_kasse(client, staff):
 
     _den(client, staff, nomerov=3)
     text = digest.build_text(db.today())
-    for stroka in ("Открытый (ждёт готовки)", "Готовится:", "Готово (ждёт гостя)"):
+    for stroka in ("Готовится:", "Готово (ждёт гостя)", "Весь путь заказа"):
         assert stroka in text, stroka
     assert "Кухня" not in text
+
+
+def test_pustoy_status_v_svodku_ne_popadaet(client, staff):
+    """С 26.08 заказы заводятся сразу в «готовится», и «открытый» для новых
+    дней всегда ноль. Печатать «Открытый: 0 мин» каждый день значит приучать
+    пролистывать сводку не читая."""
+    import db
+
+    _den(client, staff, nomerov=3)
+    text = digest.build_text(db.today())
+    assert "Открытый" not in text
+    assert "Отк" not in text, "и колонки в таблице быть не должно"
+
+
+def test_za_starye_dni_otkrytyj_pokazyvaetsya(client, staff):
+    """В базе есть дни, когда заказы проходили через «открытый». История не
+    должна поехать из-за смены поведения."""
+    import sqlite3
+
+    import db
+    from config import settings
+
+    den = db.today()
+    with sqlite3.connect(settings.db_path) as conn:
+        conn.execute(
+            "INSERT INTO orders (date, number, status, created_at, updated_at,"
+            " ready_at, served_at, source) VALUES (?, 77, 'served', ?, ?, ?, ?, 'iiko')",
+            (den, f"{den}T12:00:00", f"{den}T12:20:00",
+             f"{den}T12:15:00", f"{den}T12:20:00"),
+        )
+        for sob, st, kogda in (("created", "open", "12:00:00"),
+                               ("status", "preparing", "12:05:00"),
+                               ("status", "ready", "12:15:00"),
+                               ("status", "served", "12:20:00")):
+            conn.execute(
+                "INSERT INTO order_events (date, number, event, to_status, at)"
+                " VALUES (?, 77, ?, ?, ?)", (den, sob, st, f"{den}T{kogda}"),
+            )
+    text = digest.build_text(den)
+    assert "Открытый (ждёт готовки)" in text
 
 
 def test_tablitsa_po_chasam_ne_shire_35(client, staff):

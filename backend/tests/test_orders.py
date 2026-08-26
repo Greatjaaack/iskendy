@@ -79,3 +79,60 @@ def test_nomer_vne_diapazona_otklonyaetsya(client, staff):
     for plohoy in (0, -1, 100001):
         r = client.post("/api/order", json={"number": plohoy}, headers=staff)
         assert r.status_code == 422, plohoy
+
+
+class TestBezOtkrytogo:
+    """С 26.08 поллер заводит заказы сразу в «готовится».
+
+    Раньше заказ приезжал из iiko «открытым» и ждал, пока кассир нажмёт
+    «Готовить →». По факту лежал так 2-4 минуты, а гость всё это время не видел
+    своего номера на табло: открытые туда не попадают. Разделение «касса
+    приняла» и «кухня взяла» смысла не несло — кнопку жали механически.
+    """
+
+    def test_zakaz_iz_iiko_srazu_gotovitsya(self, client):
+        import db
+
+        assert db.ingest_iiko_order(501) is True
+        board = client.get("/api/status").json()["orders"]
+        assert board[0]["number"] == 501
+        assert board[0]["status"] == "preparing"
+
+    def test_gost_vidit_nomer_srazu(self, client):
+        """Открытые заказы на табло не показываются — раньше номер появлялся
+        только после нажатия кассира."""
+        import db
+
+        db.ingest_iiko_order(502)
+        nomera = [o["number"] for o in client.get("/api/status").json()["orders"]
+                  if o["status"] in ("preparing", "ready")]
+        assert 502 in nomera
+
+    def test_vremya_ne_pripisyvaetsya_otkrytomu(self, client, staff):
+        """Время должно лечь в «готовится», а не в «открытый»."""
+        import db
+
+        db.ingest_iiko_order(503)
+        client.post("/api/order/status", json={"number": 503, "status": "ready"},
+                    headers=staff)
+        st = db.stats_po_statusam([db.today()])
+        assert not st["open"], f"в «открытом» ничего не должно быть: {st}"
+
+    def test_staryj_otkrytyj_zakaz_prodolzhaet_rabotat(self, client, staff):
+        """В базе есть заказы, заведённые «открытыми», и они не должны сломаться."""
+        import sqlite3
+
+        from config import settings
+
+        db_path = settings.db_path
+        with sqlite3.connect(db_path) as conn:
+            conn.execute(
+                "INSERT INTO orders (date, number, status, created_at, updated_at, source)"
+                " VALUES (?, ?, 'open', ?, ?, 'iiko')",
+                (__import__("db").today(), 504, "2026-08-26T12:00:00", "2026-08-26T12:00:00"),
+            )
+        board = client.get("/api/status").json()["orders"]
+        assert any(o["number"] == 504 and o["status"] == "open" for o in board)
+        r = client.post("/api/order/status", json={"number": 504, "status": "preparing"},
+                        headers=staff)
+        assert r.status_code == 200

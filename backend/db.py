@@ -430,7 +430,7 @@ def add_order(number: int) -> dict:
 
 
 def ingest_iiko_order(number: int, opened_at: str | None = None) -> bool:
-    """Завести заказ из iiko со статусом «open», если его сегодня ещё нет.
+    """Завести заказ из iiko сразу в «готовится», если его сегодня ещё нет.
 
     Дедуп по (дата, номер) в ЛЮБОМ статусе — уже занесённый/продвинутый/выданный
     заказ повторно не создаём. `opened_at` — время открытия из iiko (идёт как
@@ -447,15 +447,20 @@ def ingest_iiko_order(number: int, opened_at: str | None = None) -> bool:
         if exists is not None:
             return False
         now = _now()
+        # Раньше заказ приезжал «открытым», и кассир переводил его в «готовится»
+        # отдельной кнопкой. На деле он лежал так по 2-4 минуты, а гость всё это
+        # время не видел своего номера на табло: открытые туда не попадают.
+        # Разделение «касса приняла» и «кухня взяла» смысла не несло — кнопку
+        # жали механически, — поэтому статус при заведении пропускаем.
         conn.execute(
             """
             INSERT INTO orders
                 (date, number, status, created_at, updated_at, source)
-            VALUES (?, ?, 'open', ?, ?, 'iiko')
+            VALUES (?, ?, 'preparing', ?, ?, 'iiko')
             """,
             (date, number, opened_at or now, now),
         )
-        _log_event(conn, date, "created", number, to_status="open", source="iiko")
+        _log_event(conn, date, "created", number, to_status="preparing", source="iiko")
     return True
 
 
