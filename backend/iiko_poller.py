@@ -8,6 +8,7 @@
 
 import asyncio
 import logging
+import time
 from datetime import datetime, timedelta
 from zoneinfo import ZoneInfo
 
@@ -19,11 +20,19 @@ from config import settings
 
 logger = logging.getLogger("iiko_poller")
 
-# Сколько неудачных тиков подряд считать поломкой. При опросе раз в 30 секунд
-# пять тиков — это примерно две с половиной минуты молчания кассы: достаточно,
-# чтобы отсеять случайный таймаут, и достаточно рано, чтобы смена успела
-# перейти на ручной ввод до того, как у окна соберётся толпа.
-FAILS_BEFORE_ALERT = 5
+# Сколько секунд подряд касса должна молчать, чтобы поднимать тревогу.
+#
+# Считаем именно время, а не число неудачных тиков. Раньше стояло «пять тиков»
+# с комментарием «при опросе раз в 30 секунд это две с половиной минуты», но на
+# проде опрос идёт раз в 10 секунд — то есть тревога уходила через 50 секунд,
+# втрое раньше задуманного. Порог, привязанный к числу попыток, тихо меняет
+# смысл при каждой правке периода опроса.
+#
+# Три минуты выбраны так: у аналитики бывают короткие обрывы связи с iiko, и
+# почти все они проходят сами (93% её сбоев приходятся на рабочие часы и
+# длятся секунды). Тревожить смену на каждом таком эпизоде — верный способ
+# приучить её не читать сообщения. Настоящая поломка длиннее трёх минут.
+ALERT_AFTER_SEC = 180
 
 
 def _is_fresh(open_time: str, now: datetime, window: timedelta) -> bool:
@@ -67,8 +76,9 @@ async def run_poller() -> None:
         settings.iiko_poll_seconds,
     )
     # Одиночный таймаут — обычное дело, слать по нему сообщение нельзя.
-    # Сообщаем о серии: пять тиков подряд это уже не рябь, а поломка связи.
+    # Сообщаем, когда молчание длится дольше ALERT_AFTER_SEC.
     fails = 0
+    molchit_s = None      # монотонное время начала серии неудач
     announced = False
     async with httpx.AsyncClient() as client:
         while True:
@@ -77,11 +87,15 @@ async def run_poller() -> None:
                 if announced:
                     await notify.notify_poller_back()
                     logger.info("iiko: связь восстановилась после %d неудач", fails)
-                fails, announced = 0, False
+                fails, molchit_s, announced = 0, None, False
             except Exception as exc:  # noqa: BLE001 — best-effort, тик не должен ронять луп
                 fails += 1
-                logger.warning("iiko-поллер: тик пропущен (%d подряд): %s", fails, exc)
-                if fails >= FAILS_BEFORE_ALERT and not announced:
+                if molchit_s is None:
+                    molchit_s = time.monotonic()
+                molchit = time.monotonic() - molchit_s
+                logger.warning("iiko-поллер: тик пропущен (%d подряд, %d с): %s",
+                               fails, round(molchit), exc)
+                if molchit >= ALERT_AFTER_SEC and not announced:
                     announced = True
                     await notify.notify_poller_down(fails, f"{type(exc).__name__}: {exc}")
             await asyncio.sleep(settings.iiko_poll_seconds)

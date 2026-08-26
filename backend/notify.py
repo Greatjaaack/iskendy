@@ -295,11 +295,12 @@ async def notify_poller_down(fails: int, last_error: str) -> int:
     targets = _security_targets()
     if not targets:
         return 0
+    # Телеграфно: что случилось, что делать, короткая причина. Длинный текст с
+    # трассировкой читают по диагонали и перестают замечать суть.
     text = (
-        "🟠 <b>Заказы не приезжают из кассы</b>\n"
-        f"Подряд неудачных попыток: {fails}.\n"
-        "Заносите заказы вручную на экране кассы — табло работает.\n"
-        f"Причина: {_esc(last_error[:150])}"
+        "🟠 Заказы не приезжают из кассы больше 3 минут.\n"
+        "Заносите вручную на экране кассы — табло работает.\n"
+        f"{_esc(last_error[:90])}"
     )
     return await send_throttled("poller_down", text, targets)
 
@@ -310,6 +311,6 @@ async def notify_poller_back() -> int:
     if not targets:
         return 0
     return await send_message(
-        "✅ <b>Заказы снова приезжают из кассы</b>\nРучной ввод больше не нужен.",
+        "✅ Заказы снова приезжают из кассы. Ручной ввод не нужен.",
         targets,
     )
