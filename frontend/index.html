@@ -197,10 +197,7 @@
       display: none;
     }
     .result.show { display: block; }
-    .result.ready { background: var(--ok-bg); border: 1px solid var(--ok-line); color: #d7f0c6; }
-    .result.wait  { background: #2a2013; border: 1px solid #5a4327; color: var(--amber); }
     .result.err   { background: var(--err-bg); border: 1px solid var(--err-line); color: var(--err-text); }
-    .result .hl { font-family: "Bebas Neue", sans-serif; font-size: 34px; display: block; letter-spacing: 1px; }
 
     .staff-line {
       text-align: center;
@@ -855,38 +852,6 @@
       body.stats-view .kpi b { font-size: 42px; }
       body.stats-view .s-charts { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; align-items: start; }
     }
-
-    .links { display: flex; flex-direction: column; gap: 12px; }
-    .link {
-      display: flex; align-items: center; gap: 14px;
-      background: var(--card); border: 1px solid var(--line);
-      border-radius: 16px; padding: 15px 16px;
-      color: var(--text); text-decoration: none;
-      transition: border-color .15s, transform .05s;
-    }
-    .link:active { transform: translateY(1px); }
-    .link:hover { border-color: var(--copper); }
-    .link .ic {
-      flex: 0 0 42px; width: 42px; height: 42px; border-radius: 12px;
-      display: flex; align-items: center; justify-content: center;
-      background: #17110c; border: 1px solid var(--line); color: var(--copper);
-      font-family: "Bebas Neue", sans-serif; font-size: 20px; letter-spacing: 1px;
-    }
-    .link .ic svg { width: 22px; height: 22px; display: block; }
-    .link .tx { flex: 1; min-width: 0; }
-    .link .tx b { display: block; font-size: 16px; font-weight: 600; }
-    .link .tx span { display: block; font-size: 12px; color: var(--muted); margin-top: 2px; }
-    .link .arr { color: var(--muted); flex: 0 0 auto; display: flex; }
-    .link .arr svg { width: 18px; height: 18px; display: block; }
-
-    /* Главный CTA — Яндекс Еда */
-    .link.cta {
-      background: linear-gradient(135deg, var(--amber), var(--copper));
-      border-color: #f0c069; color: #17130f;
-    }
-    .link.cta .ic { background: rgba(23, 19, 15, .14); border-color: rgba(23, 19, 15, .2); color: #17130f; }
-    .link.cta .tx span { color: rgba(23, 19, 15, .72); }
-    .link.cta .arr { color: rgba(23, 19, 15, .6); }
 
     /* ---------- Лендинг: дизайнерский, адаптивный (мобилка + десктоп) ---------- */
     /* Отступы обнулены намеренно: высоту в 100dvh просит и body, и #landing, а

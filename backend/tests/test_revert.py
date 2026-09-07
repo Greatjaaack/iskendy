@@ -33,9 +33,11 @@ def test_vydannyj_vozvrashchaetsya_na_tablo(client, staff):
 def test_metka_vydachi_stiraetsya(client, staff):
     """Иначе заказ разом выдан и не выдан, а «готово → выдано» в аналитике
     посчитается от ошибочного нажатия."""
+    import db
+
     _vydat(client, staff, 42)
     client.post("/api/order/revert", json={"number": 42}, headers=staff)
-    zakaz = client.get("/api/history", headers=staff).json()["orders"][0]
+    zakaz = db.get_board()["orders"][0]
     assert zakaz["servedAt"] is None
     assert zakaz["readyAt"] is not None, "готовность не трогаем, она была настоящей"
 
@@ -79,9 +81,11 @@ def test_vydacha_minuya_gotovo_vosstanavlivaet_otmetku(client, staff):
     """В интерфейсе так не нажать, но через API можно. Заказ, который выдали,
     точно был готов — иначе он выпадет из расчёта времён как готовый без
     времени готовности."""
+    import db
+
     _vydat(client, staff, 42, cherez_gotovo=False)
     client.post("/api/order/revert", json={"number": 42}, headers=staff)
-    zakaz = client.get("/api/history", headers=staff).json()["orders"][0]
+    zakaz = db.get_board()["orders"][0]
     assert zakaz["readyAt"] is not None
     assert zakaz["servedAt"] is None
 

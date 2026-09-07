@@ -375,24 +375,6 @@ def _order_dict(row: sqlite3.Row) -> dict:
     }
 
 
-def get_history(date: str | None = None) -> list[dict]:
-    """Полная история заказов за день (включая выданные) — для персонала.
-
-    Отсортировано по времени приёма. Содержит метки всех статусов.
-    """
-    date = date or today()
-    with _connect() as conn:
-        rows = conn.execute(
-            """
-            SELECT number, status, created_at, ready_at, served_at FROM orders
-             WHERE date = ? AND deleted_at IS NULL
-             ORDER BY created_at, number
-            """,
-            (date,),
-        ).fetchall()
-    return [_order_dict(r) for r in rows]
-
-
 def add_order(number: int) -> dict:
     """Занести новый заказ вручную (статус «готовится»).
 

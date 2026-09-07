@@ -175,7 +175,6 @@ DB_PATH=/tmp/demo.db FEEDBACK_ALERT_ENABLED=false uvicorn main:app --app-dir bac
 | GET  | `/api/order/served`  | касса    | выданные сегодня, свежие сверху (`?limit=`) |
 | POST | `/api/order/revert`  | касса    | вернуть ошибочно выданный заказ в «готово» |
 | POST | `/api/day/reset`     | касса    | убрать активные с табло (выданные — в истории) |
-| GET  | `/api/history`       | касса    | заказы за день с метками времени (`?date=`) |
 | GET  | `/api/events`        | касса    | журнал событий за день (`?date=`) |
 | GET  | `/api/stats/days`    | касса    | сводка по дням (заказов, ср. времена, день недели) |
 | GET  | `/api/stats/range`   | касса    | сводка + по часам за выбранные дни (`?dates=d1,d2`) |
@@ -484,7 +483,7 @@ docker exec iskendy cat /data/logs/app.log | grep ОТЗЫВ
 ```bash
 poetry install --with dev --no-root
 ./scripts/install-hooks.sh    # один раз на машину: git-хук pre-push
-poetry run pytest             # 118 тестов, ~3 секунды
+poetry run pytest             # 120 тестов, ~3 секунды
 ```
 
 Подробности и грабли — в [backend/tests/README.md](backend/tests/README.md).
@@ -505,10 +504,19 @@ poetry run pytest             # 118 тестов, ~3 секунды
   попавший в ветку, доехал бы до прода ближайшей ночью.
 
 ## Чего нет
-- **Шесть ручек работают без экрана** — смотреть их можно только запросом:
+- **Семь ручек работают без экрана** — смотреть их можно только запросом:
   `/api/feedback/list`, `/api/feedback/status` (инбокс отзывов),
   `/api/security/events`, `/api/security/summary` (журнал безопасности),
-  `/api/auth/session`, `/api/backup/list`. Данные копятся, но никто их не видит.
+  `/api/stats/guest` (воронка гостя: шаги, оценки в разрезе ожидания,
+  новые/постоянные), `/api/auth/session`, `/api/backup/list`. Данные копятся,
+  но никто их не видит. Отдельно от них `/api/backup/latest` и
+  `/api/digest/preview` — операционные: экрана им и не нужно, их дёргают руками,
+  когда надо скачать копию базы или посмотреть текст сводки.
+
+  Ручки без экрана выглядят работающими и потому опасны: `/api/history` так и
+  осталась дублем `/api/stats/orders` — её сняли 08.09.2026 вместе с
+  `db.get_history`, а тесты, читавшие через неё метки времени, переведены на
+  строку заказа напрямую.
 
 ## Дальше (не сделано)
 

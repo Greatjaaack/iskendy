@@ -278,18 +278,6 @@ def order_revert(body: OrderBody, _: dict = Depends(require_staff)) -> dict:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc))
 
 
-@app.get("/api/history")
-def history(
-    date: str | None = Query(default=None, pattern=r"^\d{4}-\d{2}-\d{2}$"),
-    _: dict = Depends(require_staff),
-) -> dict:
-    """История заказов за день (включая выданные) с метками времени приёма /
-    готовности / выдачи — для персонала. `date` (YYYY-MM-DD) — по умолчанию
-    сегодня; выданные хранятся постоянно, так что доступны прошлые дни."""
-    day = date or db.today()
-    return {"date": day, "orders": db.get_history(day), "now": db.now_hm()}
-
-
 @app.get("/api/events")
 def events(
     date: str | None = Query(default=None, pattern=r"^\d{4}-\d{2}-\d{2}$"),

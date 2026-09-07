@@ -50,7 +50,7 @@ class TestZakrytye:
 
     def test_bez_tokena_nelzya(self, client):
         zakrytye = [
-            "/api/history", "/api/events", "/api/stats/days", "/api/stats/range",
+            "/api/events", "/api/stats/days", "/api/stats/range",
             "/api/stats/orders", "/api/stats/guest", "/api/stats/feedback",
             "/api/feedback/list", "/api/backup/list", "/api/backup/latest",
             "/api/security/events", "/api/security/summary", "/api/auth/session",

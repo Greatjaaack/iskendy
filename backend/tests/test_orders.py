@@ -11,13 +11,14 @@ def test_zakaz_poyavlyaetsya_na_tablo(client, staff):
 
 
 def test_vydannyj_uhodit_s_tablo_no_ostayotsya_v_istorii(client, staff):
+    import db
+
     client.post("/api/order", json={"number": 42}, headers=staff)
     client.post("/api/order/status", json={"number": 42, "status": "served"}, headers=staff)
     board = client.get("/api/status").json()
     assert board["orders"] == []
     assert board["servedCount"] == 1
-    history = client.get("/api/history", headers=staff).json()
-    assert [o["number"] for o in history["orders"]] == [42]
+    assert [o["number"] for o in db.stats_orders([db.today()])["orders"]] == [42]
 
 
 def test_dubl_nomera_za_den_ne_zavoditsya(client, staff):
@@ -37,11 +38,21 @@ def test_dubl_nomera_posle_vydachi_tozhe_ne_zavoditsya(client, staff):
 
 
 def test_metki_vremeni_prostavlyayutsya(client, staff):
+    """Метки читаем прямо из строки заказа, а не через путь по журналу событий:
+    журнал хранит те же переходы отдельно, и по нему тест остался бы зелёным,
+    даже если метку в строке перестать проставлять."""
+    import sqlite3
+
+    from config import settings
+
     client.post("/api/order", json={"number": 42}, headers=staff)
     client.post("/api/order/status", json={"number": 42, "status": "ready"}, headers=staff)
     client.post("/api/order/status", json={"number": 42, "status": "served"}, headers=staff)
-    zakaz = client.get("/api/history", headers=staff).json()["orders"][0]
-    assert zakaz["acceptedAt"] and zakaz["readyAt"] and zakaz["servedAt"]
+    with sqlite3.connect(settings.db_path) as conn:
+        metki = conn.execute(
+            "SELECT created_at, ready_at, served_at FROM orders WHERE number = 42"
+        ).fetchone()
+    assert all(metki), f"все три метки должны быть проставлены: {metki}"
 
 
 def test_neizvestnyj_status_otklonyaetsya(client, staff):
