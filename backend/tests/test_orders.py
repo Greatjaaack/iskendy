@@ -109,14 +109,23 @@ class TestBezOtkrytogo:
         assert 502 in nomera
 
     def test_vremya_ne_pripisyvaetsya_otkrytomu(self, client, staff):
-        """Время должно лечь в «готовится», а не в «открытый»."""
+        """Время должно лечь в «готовится», а не в «открытый».
+
+        Проверяем именно первый статус в пути заказа, а не длительность
+        «открытого». Прежняя версия теста смотрела на неё — и была зелёной даже
+        со сломанным поведением: в тесте заказ переводят в «готово» в ту же
+        секунду, так что в «открытом» и при заведении открытым выходит ноль.
+        """
         import db
 
         db.ingest_iiko_order(503)
         client.post("/api/order/status", json={"number": 503, "status": "ready"},
                     headers=staff)
-        st = db.stats_po_statusam([db.today()])
-        assert not st["open"], f"в «открытом» ничего не должно быть: {st}"
+        zakaz = next(o for o in db.stats_orders([db.today()])["orders"]
+                     if o["number"] == 503)
+        assert zakaz["timeline"][0]["status"] == "preparing", \
+            f"заказ из iiko должен начинаться с «готовится»: {zakaz['timeline']}"
+        assert not zakaz["openSec"], f"в «открытом» ничего не должно быть: {zakaz}"
 
     def test_staryj_otkrytyj_zakaz_prodolzhaet_rabotat(self, client, staff):
         """В базе есть заказы, заведённые «открытыми», и они не должны сломаться."""
