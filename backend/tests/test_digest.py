@@ -33,8 +33,10 @@ def test_zakazy_i_vremena(client, staff):
     _den(client, staff, nomerov=3)
     text = digest.build_text(db.today())
     assert "Заказов: <b>3</b>" in text
-    assert "Готовится:" in text
-    assert "Весь путь заказа:" in text
+    # Времена живут только в таблице по часам: отдельный блок средних по дню
+    # владелец попросил убрать, он повторял её последнюю строку словами.
+    assert "Гот" in text and "Ждёт" in text
+    assert "Готовится:" not in text
 
 
 def test_pro_vydannye_molchim_poka_vsyo_vydano(client, staff):
@@ -94,14 +96,14 @@ def test_bezopasnost_v_svodku_ne_popadaet(client, staff, served_order):
 
 def test_statusy_nazvany_kak_v_kasse(client, staff):
     """Раньше писали выдуманные «Кухня» и «Выдача» — таких статусов нет, и
-    владелец не понял, что это значит. Плюс «приём → готово» смешивало лежание
-    открытым с настоящей готовкой: 19 минут оказались 2 + 17."""
+    владелец не понял, что это значит. Названия колонок идут от статусов
+    кассы, сокращённые до трёх-четырёх букв ради ширины."""
     import db
 
     _den(client, staff, nomerov=3)
     text = digest.build_text(db.today())
-    for stroka in ("Готовится:", "Готово (ждёт гостя)", "Весь путь заказа"):
-        assert stroka in text, stroka
+    for stolbec in ("Зак", "Гот", "Ждёт", "Итог"):
+        assert stolbec in text, stolbec
     assert "Кухня" not in text
 
 
@@ -142,7 +144,7 @@ def test_za_starye_dni_otkrytyj_pokazyvaetsya(client, staff):
                 " VALUES (?, 77, ?, ?, ?)", (den, sob, st, f"{den}T{kogda}"),
             )
     text = digest.build_text(den)
-    assert "Открытый (ждёт готовки)" in text
+    assert "Отк" in text, "колонка «открытый» нужна для дней, где он был"
 
 
 def test_tablitsa_po_chasam_ne_shire_35(client, staff):
@@ -297,3 +299,29 @@ class TestDengi:
         assert digest._rubli(100000.0) == "100 000 ₽"
         assert digest._rubli(20330.51) == "20 331 ₽"
         assert digest._rubli(0) == "0 ₽"
+
+
+def test_dengi_v_samom_verhu(client, staff):
+    """Владелец открывает сводку ради выручки. Раньше она стояла под таблицей
+    по часам, и до неё надо было доскроллить."""
+    import db
+
+    _den(client, staff, nomerov=3)
+    text = digest.build_text(db.today(),
+                             {"revenue": 148920.0, "checks": 147, "avg_check": 1013.06})
+    assert "Выручка: 148 920 ₽" in text
+    assert text.index("Выручка") < text.index("Заказов")
+    assert "<b>Деньги</b>" not in text, "заголовок лишний: три строки и так читаются"
+
+
+def test_zagolovkov_nad_blokami_net(client, staff):
+    """Сводку читают каждый день с телефона: заголовки и расшифровки к таблице
+    занимали половину сообщения, не добавляя ни одной цифры."""
+    import db
+
+    _den(client, staff, nomerov=3)
+    text = digest.build_text(db.today())
+    for zagolovok in ("Сколько заказ провёл", "По часам приёма",
+                      "Гот — готовится", "Ждёт — ждёт гостя",
+                      "Итог — весь путь заказа"):
+        assert zagolovok not in text, zagolovok
