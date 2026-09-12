@@ -29,6 +29,7 @@ from fastapi.responses import FileResponse, Response
 from fastapi.staticfiles import StaticFiles
 from iiko_poller import run_poller
 from pydantic import BaseModel, Field
+from oshibki import opisanie
 
 # Единый формат для всех строк: раньше события приложения шли со временем, а
 # access-строки uvicorn — вообще без него, и по логу нельзя было сказать, когда
@@ -145,15 +146,54 @@ CSP = "; ".join([
 FRONTEND_DIR = Path(__file__).resolve().parent.parent / "frontend"
 
 
+# Пауза перед подъёмом упавшего фонового цикла: достаточно, чтобы не устроить
+# шторм перезапусков, и достаточно мало, чтобы заказы не встали надолго.
+FON_RESTART_SEC = 30
+_fon_tasks: set[asyncio.Task] = set()
+
+
+def _fon(fabrika, imya: str) -> asyncio.Task:
+    """Запустить фоновый цикл и присмотреть за ним.
+
+    Две беды сразу. `create_task` без ссылки на задачу сборщик мусора вправе
+    убить — рядом, в `_fire`, это уже учтено. И упавшая задача исчезает молча:
+    поллер перестаёт возить заказы, бэкап перестаёт сниматься, а в логе пусто,
+    потому что исключение остаётся внутри мёртвой корутины.
+
+    Поэтому ссылку держим, падение пишем в лог и цикл поднимаем заново.
+    """
+    async def storozh() -> None:
+        while True:
+            try:
+                await fabrika()
+            except asyncio.CancelledError:
+                raise  # остановка сервиса, а не поломка
+            except Exception as exc:  # noqa: BLE001 — цикл важнее своей ошибки
+                logger.warning("фоновый цикл %s упал: %s — подниму через %d с",
+                               imya, opisanie(exc), FON_RESTART_SEC)
+                await asyncio.sleep(FON_RESTART_SEC)
+                continue
+            # Вышел без ошибки — так поллер и сводка сообщают, что выключены в
+            # настройках. Поднимать заново нечего: иначе каждые полминуты в лог
+            # падала бы строка о «перезапуске» того, чего не просили запускать.
+            logger.info("фоновый цикл %s завершён", imya)
+            return
+
+    task = asyncio.create_task(storozh())
+    _fon_tasks.add(task)
+    task.add_done_callback(_fon_tasks.discard)
+    return task
+
+
 @app.on_event("startup")
 async def _startup() -> None:
     db.init_db()
     # Фоновый поллер заказов из iiko (если настроен URL/токен аналитики).
-    asyncio.create_task(run_poller())
+    _fon(run_poller, "iiko-поллер")
     # Ежедневный бэкап БД.
-    asyncio.create_task(backup.run_backup_loop())
+    _fon(backup.run_backup_loop, "бэкап БД")
     # Вечерняя сводка одним сообщением.
-    asyncio.create_task(digest.run_digest_loop())
+    _fon(digest.run_digest_loop, "вечерняя сводка")
 
 
 def _payload(board: dict) -> dict:
@@ -405,6 +445,12 @@ RATE_LIMIT_WRITE = 20  # POST /api/feedback и /api/feedback/detail
 # Шаги воронки: пишет каждый гость по нескольку раз за визит, а в зале все сидят
 # под одним IP. Потолок высокий — потерять шаг не страшно, но и не заваливать БД.
 RATE_LIMIT_STEP = 240  # POST /api/guest/event
+# Отчёты экранов об обрывах и упавшем скрипте. Своя корзина, а не общая с
+# воронкой: одинаковые лимиты молча делят счётчик, и тогда планшет, часто
+# теряющий связь, съедал бы лимит гостям (и наоборот). Клиент шлёт не чаще
+# раза в 30 секунд, так что тридцати в минуту на весь зал хватает с запасом,
+# а залить лог с улицы не выйдет.
+RATE_LIMIT_CLIENT = 30  # POST /api/client/event
 # Вход персонала. Пароль один и открывает всё: кассу, аналитику, инбокс отзывов с
 # контактами гостей и выгрузку базы. Персонал логинится редко (токен живёт сутки),
 # так что десяти попыток в минуту хватает с запасом, а перебор становится
@@ -604,10 +650,10 @@ def client_event(request: Request, body: ClientEventBody) -> dict:
     пустым табло, а заказы копились в базе. Теперь клиент, вернувшись на связь,
     докладывает о разрыве сам, и в журнале остаётся след.
 
-    Лимит тот же, что у гостевой воронки: ручка открыта без токена (её зовут и
-    телевизор, и телефон гостя), а лог — общий ресурс, забить его нельзя.
+    Ручка открыта без токена (её зовут и телевизор, и телефон гостя), поэтому
+    под своим лимитом: лог — общий ресурс, и забить его с улицы нельзя.
     """
-    _guard(request, RATE_LIMIT_STEP, "s")
+    _guard(request, RATE_LIMIT_CLIENT, "c")
     logger.warning(
         "экран %s: %s%s · %s",
         body.screen or "?",

@@ -22,6 +22,7 @@ import re
 
 import httpx
 from config import settings
+from oshibki import opisanie
 
 logger = logging.getLogger("notify")
 
@@ -120,9 +121,8 @@ async def _deliver(url: str, payload: dict, chat_id: str) -> bool:
             # подряд (09–11.09.2026) лог показывал «не отправлено в 121331370:»
             # без единого намёка, что лежит прокси, а не токен.
             logger.warning(
-                "Telegram: прокси %s не отвечает: %s%s",
-                hide_password(proxy), type(exc).__name__,
-                f": {exc}" if str(exc) else "",
+                "Telegram: прокси %s не отвечает: %s",
+                hide_password(proxy), opisanie(exc),
             )
             continue
         if r.status_code == 200:

@@ -16,8 +16,12 @@ import httpx
 
 import db
 from config import settings
+from oshibki import opisanie
 
 logger = logging.getLogger("iiko_poller")
+
+# Сколько ждём ответ аналитики в одном тике.
+POLL_TAYMAUT_SEC = 8
 
 # Молчание кассы в чат НЕ сообщаем: об этом сообщает сама касса (решение
 # Арслана и Ильдара, 27.08.2026). Наше сообщение только дублировало бы чужое.
@@ -79,7 +83,9 @@ async def run_poller() -> None:
     # строке «тик пропущен» нельзя отличить рябь от часовой поломки.
     fails = 0
     molchit_s = None      # монотонное время начала серии неудач
-    async with httpx.AsyncClient() as client:
+    # Таймаут явный: у httpx он по умолчанию 5 секунд, но опрос идёт каждые
+    # 10, и висящий запрос не должен наезжать на следующий тик.
+    async with httpx.AsyncClient(timeout=POLL_TAYMAUT_SEC) as client:
         while True:
             try:
                 await _poll_once(client)
@@ -92,7 +98,7 @@ async def run_poller() -> None:
                     molchit_s = time.monotonic()
                 # Тип исключения, а не только текст: у таймаутов httpx текст
                 # пустой, и строка обрывалась на двоеточии, ничего не объясняя.
-                logger.warning("iiko-поллер: тик пропущен (%d подряд, %d с): %s%s",
+                logger.warning("iiko-поллер: тик пропущен (%d подряд, %d с): %s",
                                fails, round(time.monotonic() - molchit_s),
-                               type(exc).__name__, f": {exc}" if str(exc) else "")
+                               opisanie(exc))
             await asyncio.sleep(settings.iiko_poll_seconds)

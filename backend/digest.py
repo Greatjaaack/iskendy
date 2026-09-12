@@ -19,6 +19,7 @@ import db
 import httpx
 import notify
 from config import settings
+from oshibki import opisanie
 
 logger = logging.getLogger("digest")
 
@@ -175,7 +176,7 @@ async def run_digest_loop() -> None:
             if now.hour >= settings.digest_hour and not db.digest_was_sent(vchera):
                 await send_digest(vchera)
         except Exception as exc:  # noqa: BLE001 — сводка не должна ронять сервис
-            logger.warning("сводка: ошибка: %s", exc)
+            logger.warning("сводка: ошибка: %s", opisanie(exc))
         await asyncio.sleep(3600)
 
 
@@ -205,7 +206,7 @@ async def _dengi_za_den(date: str) -> dict | None:
             r.raise_for_status()
             data = r.json()
     except Exception as exc:  # noqa: BLE001 — деньги вторичны, сводка обязательна
-        logger.warning("сводка: аналитика не ответила: %s", exc)
+        logger.warning("сводка: аналитика не ответила: %s", opisanie(exc))
         return None
     # has_data=false значит «строки за этот день в базе нет», а не «выручка
     # ноль». Разница принципиальная: «Выручка: 0 ₽» в чате прочитают как факт.

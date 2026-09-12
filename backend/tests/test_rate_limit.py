@@ -57,3 +57,16 @@ def test_slovar_schetchikov_ne_rastyot_beskonechno(client):
         client.get("/api/feedback/check", params={"number": 1},
                    headers={"X-Forwarded-For": f"10.1.{i // 256}.{i % 256}"})
     assert len(main._rate_hits) <= 700, "остывшие адреса должны выметаться"
+
+
+def test_otchyoty_ekrana_ne_edyat_limit_gostyam(client):
+    """Планшет кассы и телефоны гостей сидят за одним IP зала. Если отчёты
+    экранов делят корзину с воронкой, часто теряющий связь планшет выест лимит
+    гостям — и наоборот, людный вечер заглушит отчёты о собственных сбоях.
+    """
+    odin_adres = {"X-Forwarded-For": "91.76.12.9"}
+    for _ in range(main.RATE_LIMIT_CLIENT + 5):
+        client.post("/api/client/event", json={"kind": "offline"}, headers=odin_adres)
+    r = client.post("/api/guest/event", json={"step": "open", "session": "s1"},
+                    headers=odin_adres)
+    assert r.status_code == 200, "воронка гостя не должна страдать от отчётов экрана"

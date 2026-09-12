@@ -18,6 +18,7 @@ from pathlib import Path
 from zoneinfo import ZoneInfo
 
 from config import settings
+from oshibki import opisanie
 
 logger = logging.getLogger("backup")
 
@@ -87,12 +88,12 @@ async def run_backup_loop() -> None:
         try:
             make_backup()
         except Exception as exc:  # noqa: BLE001
-            logger.warning("бэкап БД (стартовый): ошибка: %s", exc)
+            logger.warning("бэкап БД (стартовый): ошибка: %s", opisanie(exc))
     while True:
         try:
             hour = datetime.now(ZoneInfo(settings.timezone)).hour
             if hour >= settings.backup_night_hour:
                 make_backup()  # создаст, если сегодняшнего ещё нет
         except Exception as exc:  # noqa: BLE001 — бэкап не должен ронять приложение
-            logger.warning("бэкап БД: ошибка: %s", exc)
+            logger.warning("бэкап БД: ошибка: %s", opisanie(exc))
         await asyncio.sleep(3600)

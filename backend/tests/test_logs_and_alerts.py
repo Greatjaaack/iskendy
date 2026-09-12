@@ -275,3 +275,95 @@ class TestZapasnyeProxy:
         monkeypatch.setattr(settings, "bot_proxy_url", "")
         monkeypatch.setattr(notify, "_zhivoy_proxy", None)
         assert notify.proxy_list() == [None]
+
+
+class TestFonovyeTsikly:
+    """Фоновый цикл, упавший с исключением, исчезает молча: поллер перестаёт
+    возить заказы, бэкап перестаёт сниматься, а в логе пусто — исключение
+    осталось внутри мёртвой корутины. Плюс задача без сохранённой ссылки может
+    быть убита сборщиком мусора.
+    """
+
+    def test_upavshiy_tsikl_popadaet_v_log_i_podnimaetsya(self, monkeypatch, caplog):
+        import main
+
+        monkeypatch.setattr(main, "FON_RESTART_SEC", 0)
+        zapuski = []
+
+        async def padayushchiy():
+            zapuski.append(1)
+            if len(zapuski) < 3:
+                raise RuntimeError("притворяюсь сломанным")
+            await asyncio.sleep(3600)   # третий запуск живёт долго
+
+        async def progon():
+            with caplog.at_level(logging.WARNING, logger="site"):
+                task = main._fon(padayushchiy, "проверка")
+                await asyncio.sleep(0.05)
+                task.cancel()
+
+        asyncio.run(progon())
+        assert len(zapuski) >= 2, "после падения цикл обязан подняться заново"
+        stroki = " ".join(r.getMessage() for r in caplog.records)
+        assert "проверка" in stroki and "упал" in stroki
+        assert "RuntimeError" in stroki, "в логе нужен тип ошибки"
+
+    def test_ssylka_na_zadachu_uderzhivaetsya(self, monkeypatch):
+        """Иначе сборщик мусора вправе убить фоновый цикл на ходу."""
+        import main
+
+        async def tihiy():
+            await asyncio.sleep(3600)
+
+        async def progon():
+            task = main._fon(tihiy, "тихий")
+            assert task in main._fon_tasks
+            task.cancel()
+
+        asyncio.run(progon())
+
+    def test_ostanovka_servisa_ne_schitaetsya_polomkoy(self, monkeypatch, caplog):
+        """CancelledError — это выключение, а не авария: паниковать не о чем."""
+        import main
+
+        monkeypatch.setattr(main, "FON_RESTART_SEC", 0)
+
+        async def tihiy():
+            await asyncio.sleep(3600)
+
+        async def progon():
+            with caplog.at_level(logging.WARNING, logger="site"):
+                task = main._fon(tihiy, "тихий")
+                await asyncio.sleep(0.01)
+                task.cancel()
+                try:
+                    await task
+                except asyncio.CancelledError:
+                    pass
+
+        asyncio.run(progon())
+        assert "упал" not in " ".join(r.getMessage() for r in caplog.records)
+
+    def test_vyklyuchennyy_tsikl_ne_perezapuskaetsya(self, monkeypatch, caplog):
+        """run_poller и run_digest_loop штатно возвращаются, когда выключены в
+        настройках. Принять это за поломку — значит каждые полминуты писать в
+        лог «поднимаю заново» о том, чего не просили запускать.
+        """
+        import main
+
+        monkeypatch.setattr(main, "FON_RESTART_SEC", 0)
+        zapuski = []
+
+        async def vyklyuchennyy():
+            zapuski.append(1)
+            return
+
+        async def progon():
+            with caplog.at_level(logging.INFO, logger="site"):
+                await main._fon(vyklyuchennyy, "выключенный")
+                await asyncio.sleep(0.02)
+
+        asyncio.run(progon())
+        assert zapuski == [1], "повторно запускать выключённый цикл незачем"
+        stroki = " ".join(r.getMessage() for r in caplog.records)
+        assert "завершён" in stroki and "упал" not in stroki
