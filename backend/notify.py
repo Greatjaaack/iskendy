@@ -18,6 +18,7 @@
 import asyncio
 import html
 import logging
+import re
 
 import httpx
 from config import settings
@@ -66,6 +67,78 @@ def targets_for(branch: str) -> list[tuple[str, int | None]]:
     return _dedup(settings.feedback_targets)
 
 
+# Прокси, через который прошло прошлое сообщение. Держим, чтобы не долбиться
+# каждый раз в мёртвый первый адрес и не ждать его таймаут на каждой отправке.
+_zhivoy_proxy: str | None = None
+
+
+def proxy_list() -> list[str | None]:
+    """Адреса прокси по порядку попыток.
+
+    `BOT_PROXY_URL` принимает несколько адресов через запятую: арендованный
+    прокси — расходник, и когда он падает, замолкает разом всё — и вечерняя
+    сводка, и аварии сторожа. Один адрес означает ровно одну точку отказа,
+    поэтому резерв живёт рядом с основным.
+
+    Пустая настройка — прямое соединение (`None`): годится там, где Telegram
+    доступен, на VPS в РФ он не отвечает вовсе.
+    """
+    spisok: list[str | None] = [
+        p.strip() for p in settings.bot_proxy_url.split(",") if p.strip()
+    ]
+    if not spisok:
+        return [None]
+    # Рабочий — первым: после падения основного нет смысла начинать с него.
+    if _zhivoy_proxy in spisok:
+        spisok = [_zhivoy_proxy] + [p for p in spisok if p != _zhivoy_proxy]
+    return spisok
+
+
+def hide_password(proxy: str | None) -> str:
+    """Адрес прокси для лога: host:port без логина и пароля."""
+    if not proxy:
+        return "напрямую"
+    return re.sub(r"://[^@]+@", "://", proxy)
+
+
+async def _deliver(url: str, payload: dict, chat_id: str) -> bool:
+    """Доставить одно сообщение, перебирая прокси до первого успеха.
+
+    Переключаемся только на сетевой ошибке. Ответ Telegram с кодом — это про
+    чат, тему или токен: другой прокси тут ничего не исправит, а повтор разослал
+    бы дубли.
+    """
+    global _zhivoy_proxy
+    for proxy in proxy_list():
+        try:
+            async with httpx.AsyncClient(
+                timeout=SEND_TIMEOUT_SEC, proxy=proxy
+            ) as client:
+                r = await client.post(url, json=payload)
+        except Exception as exc:  # noqa: BLE001 — пробуем следующий адрес
+            # Тип обязателен: у ConnectTimeout пустое сообщение, и две ночи
+            # подряд (09–11.09.2026) лог показывал «не отправлено в 121331370:»
+            # без единого намёка, что лежит прокси, а не токен.
+            logger.warning(
+                "Telegram: прокси %s не отвечает: %s%s",
+                hide_password(proxy), type(exc).__name__,
+                f": {exc}" if str(exc) else "",
+            )
+            continue
+        if r.status_code == 200:
+            if proxy != _zhivoy_proxy:
+                logger.info("Telegram: работает через %s", hide_password(proxy))
+            _zhivoy_proxy = proxy
+            return True
+        # Типовое: бот не добавлен в чат, тема удалена, кривой chat_id.
+        logger.warning(
+            "Telegram: чат %s ответил %s: %s", chat_id, r.status_code, r.text[:200],
+        )
+        return False
+    logger.warning("Telegram: не отправлено в %s — не ответил ни один прокси", chat_id)
+    return False
+
+
 async def send_message(text: str, targets: list[tuple[str, int | None]]) -> int:
     """Разослать текст адресатам. Возвращает число доставленных сообщений.
 
@@ -75,39 +148,17 @@ async def send_message(text: str, targets: list[tuple[str, int | None]]) -> int:
         return 0
     url = TELEGRAM_API.format(token=settings.telegram_bot_token)
     sent = 0
-    # proxy=None — прямое соединение; на VPS в РФ без прокси Bot API недоступен.
-    async with httpx.AsyncClient(
-        timeout=SEND_TIMEOUT_SEC, proxy=settings.bot_proxy_url or None
-    ) as client:
-        for chat_id, thread_id in targets:
-            payload: dict = {
-                "chat_id": chat_id,
-                "text": text,
-                "parse_mode": "HTML",
-                "disable_web_page_preview": True,
-            }
-            if thread_id is not None:
-                payload["message_thread_id"] = thread_id
-            try:
-                r = await client.post(url, json=payload)
-                if r.status_code == 200:
-                    sent += 1
-                else:
-                    # Типовое: бот не добавлен в чат, тема удалена, кривой chat_id.
-                    logger.warning(
-                        "Telegram: чат %s ответил %s: %s",
-                        chat_id, r.status_code, r.text[:200],
-                    )
-            except Exception as exc:  # noqa: BLE001 — уведомление не критично
-                # Тип обязателен: у ConnectTimeout пустое сообщение, и две ночи
-                # подряд (09–11.09.2026) лог показывал «не отправлено в 121331370:»
-                # без единого намёка, что лежит прокси, а не токен.
-                logger.warning(
-                    "Telegram: не отправлено в %s: %s%s",
-                    chat_id,
-                    type(exc).__name__,
-                    f": {exc}" if str(exc) else "",
-                )
+    for chat_id, thread_id in targets:
+        payload: dict = {
+            "chat_id": chat_id,
+            "text": text,
+            "parse_mode": "HTML",
+            "disable_web_page_preview": True,
+        }
+        if thread_id is not None:
+            payload["message_thread_id"] = thread_id
+        if await _deliver(url, payload, chat_id):
+            sent += 1
     return sent
 
 

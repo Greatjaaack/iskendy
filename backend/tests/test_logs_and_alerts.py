@@ -169,3 +169,109 @@ class TestOtchyotEkrana:
         r = client.post("/api/client/event",
                         json={"kind": "js", "detail": "я" * 5000})
         assert r.status_code == 422, "слишком длинный detail не принимаем"
+
+
+class TestZapasnyeProxy:
+    """Арендованный прокси — расходник. 09.09.2026 он умер, и вместе с ним
+    замолчало всё: вечерние сводки и аварии сторожа, двое суток. Один адрес в
+    настройке означает ровно одну точку отказа, поэтому их теперь список.
+    """
+
+    def _fake_httpx(self, monkeypatch, upali: set[str], popytki: list):
+        """Клиент, у которого названные прокси не отвечают."""
+        import httpx
+
+        class FakeResp:
+            status_code = 200
+            text = "ok"
+
+        class FakeClient:
+            def __init__(self, proxy=None, **kw):
+                self.proxy = proxy
+
+            async def __aenter__(self): return self
+            async def __aexit__(self, *a): return False
+
+            async def post(self, *a, **kw):
+                popytki.append(self.proxy)
+                if self.proxy in upali:
+                    raise httpx.ConnectTimeout("")
+                return FakeResp()
+
+        monkeypatch.setattr(httpx, "AsyncClient",
+                            lambda **kw: FakeClient(**kw))
+
+    def test_upal_pervyy_uhodit_cherez_vtoroy(self, monkeypatch):
+        from config import settings
+
+        pervyy, vtoroy = "http://u:p@10.0.0.1:8000", "http://u:p@10.0.0.2:8000"
+        monkeypatch.setattr(settings, "bot_proxy_url", f"{pervyy}, {vtoroy}")
+        monkeypatch.setattr(settings, "telegram_bot_token", "123:ABC")
+        monkeypatch.setattr(notify, "_zhivoy_proxy", None)
+        popytki: list = []
+        self._fake_httpx(monkeypatch, {pervyy}, popytki)
+
+        # send_message в тестах подменён заглушкой (conftest), поэтому зовём
+        # саму доставку: проверяем именно перебор адресов.
+        ok = asyncio.run(notify._deliver("http://api/x", {"chat_id": "-100"}, "-100"))
+        assert ok, "сообщение обязано уйти через запасной адрес"
+        assert popytki == [pervyy, vtoroy]
+
+    def test_rabochiy_proksi_probuem_pervym(self, monkeypatch):
+        """Иначе каждая отправка начинается с таймаута на мёртвом адресе."""
+        from config import settings
+
+        pervyy, vtoroy = "http://u:p@10.0.0.1:8000", "http://u:p@10.0.0.2:8000"
+        monkeypatch.setattr(settings, "bot_proxy_url", f"{pervyy},{vtoroy}")
+        monkeypatch.setattr(settings, "telegram_bot_token", "123:ABC")
+        monkeypatch.setattr(notify, "_zhivoy_proxy", vtoroy)
+        assert notify.proxy_list()[0] == vtoroy
+
+    def test_otvet_telegrama_ne_povod_menyat_proksi(self, monkeypatch):
+        """Код 400 — это про чат или токен. Повтор разослал бы дубли."""
+        import httpx
+        from config import settings
+
+        pervyy, vtoroy = "http://u:p@10.0.0.1:8000", "http://u:p@10.0.0.2:8000"
+        monkeypatch.setattr(settings, "bot_proxy_url", f"{pervyy},{vtoroy}")
+        monkeypatch.setattr(settings, "telegram_bot_token", "123:ABC")
+        monkeypatch.setattr(notify, "_zhivoy_proxy", None)
+        popytki: list = []
+
+        class FakeResp:
+            status_code = 400
+            text = "chat not found"
+
+        class FakeClient:
+            def __init__(self, proxy=None, **kw): self.proxy = proxy
+            async def __aenter__(self): return self
+            async def __aexit__(self, *a): return False
+            async def post(self, *a, **kw):
+                popytki.append(self.proxy)
+                return FakeResp()
+
+        monkeypatch.setattr(httpx, "AsyncClient", lambda **kw: FakeClient(**kw))
+        assert asyncio.run(notify._deliver("http://api/x", {}, "-100")) is False
+        assert popytki == [pervyy], "второй адрес пробовать не должны"
+
+    def test_parol_proksi_ne_popadaet_v_log(self, monkeypatch, caplog):
+        from config import settings
+
+        proxy = "http://login:sekret@10.0.0.1:8000"
+        monkeypatch.setattr(settings, "bot_proxy_url", proxy)
+        monkeypatch.setattr(settings, "telegram_bot_token", "123:ABC")
+        monkeypatch.setattr(notify, "_zhivoy_proxy", None)
+        self._fake_httpx(monkeypatch, {proxy}, [])
+
+        with caplog.at_level(logging.WARNING, logger="notify"):
+            asyncio.run(notify._deliver("http://api/x", {}, "-100"))
+        stroki = " ".join(r.getMessage() for r in caplog.records)
+        assert "sekret" not in stroki and "login" not in stroki
+        assert "10.0.0.1:8000" in stroki, "адрес без пароля знать надо"
+
+    def test_pustaya_nastroyka_znachit_napryamuyu(self, monkeypatch):
+        from config import settings
+
+        monkeypatch.setattr(settings, "bot_proxy_url", "")
+        monkeypatch.setattr(notify, "_zhivoy_proxy", None)
+        assert notify.proxy_list() == [None]
