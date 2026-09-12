@@ -156,3 +156,50 @@ class TestBezOtkrytogo:
         r = client.post("/api/order/status", json={"number": 504, "status": "preparing"},
                         headers=staff)
         assert r.status_code == 200
+
+
+class TestSbrosZaProshlyyDen:
+    """Когда планшет кассы теряет связь, заказы того дня остаются активными
+    навсегда: смена их не отметила, а наступившее завтра до них не дотянется —
+    табло смотрит только на сегодня. Разбирать такое приходится задним числом.
+    """
+
+    def test_snimaet_aktivnye_za_ukazannuyu_datu(self, client, staff):
+        import db
+
+        db.ingest_iiko_order(501, opened_at="2026-09-12T18:20:00")
+        with db._connect() as conn:
+            conn.execute("UPDATE orders SET date = ? WHERE number = ?",
+                         ("2026-09-12", 501))
+
+        assert len(db.get_board("2026-09-12")["orders"]) == 1
+        db.reset_day("2026-09-12")
+        assert db.get_board("2026-09-12")["orders"] == []
+
+    def test_segodnyashnie_zakazy_ne_trogaem(self, client, staff):
+        """Разбор прошлого дня не должен смахнуть текущую смену."""
+        import db
+
+        db.add_order(777)
+        db.ingest_iiko_order(502, opened_at="2026-09-12T18:20:00")
+        with db._connect() as conn:
+            conn.execute("UPDATE orders SET date = ? WHERE number = ?",
+                         ("2026-09-12", 502))
+
+        db.reset_day("2026-09-12")
+        nomera = [o["number"] for o in db.get_board()["orders"]]
+        assert nomera == [777], "сегодняшний заказ обязан остаться на табло"
+
+    def test_kazhdyy_snyatyy_popadaet_v_zhurnal(self, client, staff):
+        """Иначе потом не установить, какие именно заказы сняли."""
+        import db
+
+        db.ingest_iiko_order(503, opened_at="2026-09-12T18:20:00")
+        with db._connect() as conn:
+            conn.execute("UPDATE orders SET date = ? WHERE number = ?",
+                         ("2026-09-12", 503))
+
+        db.reset_day("2026-09-12")
+        sobytiya = [e for e in db.get_events("2026-09-12") if e["event"] == "reset"]
+        assert [e["number"] for e in sobytiya] == [503]
+        assert sobytiya[0]["from_status"] == "preparing"
