@@ -93,3 +93,21 @@ class TestGostNeVidetNepoladok:
     def test_net_otdelnogo_stilya_dlya_televizora(self):
         """Крупный стиль плашки под ТВ означал бы, что её там показывают."""
         assert "body.tv .offline-bar" not in self._front()
+
+    def test_nazhatiya_kassy_ne_glotayut_oshibku(self):
+        """Пустой .catch() у кнопок кассы означает, что при обрыве связи
+        нажатие исчезает бесследно: заказ не двигается, экран молчит, причину
+        взять неоткуда. Ошибка обязана доходить до кассира.
+        """
+        html = self._front()
+        for deystvie in ("/api/order/status", "/api/order/delete", "/api/day/reset"):
+            kusok = html[html.index(deystvie):html.index(deystvie) + 400]
+            assert ".catch(() => {})" not in kusok, (
+                f"{deystvie}: ошибка нажатия проглочена"
+            )
+
+    def test_setevaya_oshibka_obyasnena_po_russki(self):
+        """«Failed to fetch» кассиру ничего не говорит — нужен понятный текст
+        и прямое указание, что нажатие не сохранилось."""
+        html = self._front()
+        assert "проверьте интернет на планшете. Ничего не сохранено." in html

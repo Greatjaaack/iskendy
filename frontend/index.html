@@ -1996,12 +1996,42 @@
 
     // ---------- действия кассы ----------
     // Общий POST под токеном. При 401 — разлогин, при 4xx — бросаем текст ошибки.
+    // Сообщение кассиру под полем ввода: там же, где ошибки ручного заведения.
+    function staffOshibka(text){
+      const err = document.getElementById("addErr");
+      if(!err) return;
+      err.className = "result err show";
+      err.textContent = text;
+    }
+
+    function oshibkaKassy(e){
+      staffOshibka((e && e.message) || "Не удалось — попробуйте ещё раз");
+    }
+
+    // Нажатие не дошло до сервера — зажигаем плашку не дожидаясь опроса.
+    function srazuOffline(){
+      pollFails = OFFLINE_AFTER_FAILS;
+      if(!offlineSince) offlineSince = Date.now();
+      showOfflineBar();
+    }
+
     async function api(path, body){
-      const r = await fetch(API + path, {
-        method: "POST",
-        headers: { "Authorization": "Bearer " + token, "Content-Type": "application/json" },
-        body: JSON.stringify(body || {})
-      });
+      let r;
+      try {
+        r = await fetch(API + path, {
+          method: "POST",
+          headers: { "Authorization": "Bearer " + token, "Content-Type": "application/json" },
+          body: JSON.stringify(body || {})
+        });
+      } catch(e){
+        // Сетевая ошибка, а не отказ сервера. Кассиру бесполезно «Failed to
+        // fetch»: ему надо понять, что дело в интернете планшета, а нажатие
+        // никуда не ушло и заказ не заведён.
+        srazuOffline();
+        const oshibka = new Error("Нет связи с сервером — проверьте интернет на планшете. Ничего не сохранено.");
+        oshibka.setevaya = true;
+        throw oshibka;
+      }
       if(r.status === 401){ logout(); showStaff(); throw new Error("Сессия истекла"); }
       const data = await r.json().catch(() => ({}));
       if(!r.ok){ throw new Error(data.detail || "Ошибка"); }
@@ -2029,18 +2059,21 @@
       }
     }
 
+    // Ошибку нажатия нельзя глотать. Раньше здесь стоял пустой .catch(), и при
+    // обрыве связи кнопка «готово» не делала ничего — вообще ничего, даже не
+    // сообщала. Кассир жмёт, заказ не двигается, и понять причину неоткуда.
     function setStatus(num, status){
       api("/api/order/status", { number: num, status })
         // Список выданных обновляем только когда он раскрыт: иначе лишний запрос
         // на каждое нажатие кнопки, а нажимают их весь день.
         .then(function(){ if(servedOpen) loadServed(); })
-        .catch(() => {});
+        .catch(oshibkaKassy);
     }
     function delOrder(num){
-      if(confirm("Удалить заказ №" + num + "?")) api("/api/order/delete", { number: num }).catch(() => {});
+      if(confirm("Удалить заказ №" + num + "?")) api("/api/order/delete", { number: num }).catch(oshibkaKassy);
     }
     function resetDay(){
-      if(confirm("Убрать с табло активные заказы? (выданные останутся в истории)")) api("/api/day/reset").catch(() => {});
+      if(confirm("Убрать с табло активные заказы? (выданные останутся в истории)")) api("/api/day/reset").catch(oshibkaKassy);
     }
 
     function showQr(){
