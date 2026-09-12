@@ -199,9 +199,10 @@
     .result.show { display: block; }
     .result.err   { background: var(--err-bg); border: 1px solid var(--err-line); color: var(--err-text); }
 
-    /* Плашка обрыва связи. Висит поверх любого экрана: замерший планшет обязан
-       сам сказать, что замер, — иначе «связи нет» выглядит на кассе точно так
-       же, как «заказов нет», и смена ждёт заказы, которых экран уже не видит. */
+    /* Плашка обрыва связи — только на кассе (/staff). Замерший планшет обязан
+       сам сказать, что замер: иначе «связи нет» выглядит точно так же, как
+       «заказов нет», и смена ждёт заказы, которых экран уже не видит.
+       Гостю её не показываем — ни на телефоне, ни на телевизоре в зале. */
     .offline-bar {
       position: fixed; left: 0; right: 0; top: 0; z-index: 9999;
       background: var(--err-bg); color: var(--err-text);
@@ -209,8 +210,6 @@
       padding: 10px 14px; text-align: center; font-size: 14px; line-height: 1.4;
     }
     .offline-bar b { letter-spacing: 0.5px; }
-    /* На телевизоре читать должно быть видно через весь зал. */
-    body.tv .offline-bar { font-size: 30px; padding: 20px; }
 
     .staff-line {
       text-align: center;
@@ -1145,8 +1144,8 @@
   </script>
   <div id="ornament" aria-hidden="true"></div>
 
-  <!-- Одна плашка на все экраны: и касса, и телевизор, и телефон гостя должны
-       узнать, что показывают несвежую картинку. Текст ставит showOfflineBar(). -->
+  <!-- Разметка одна на весь сайт, но показывает её showOfflineBar() только на
+       кассе: гостевые экраны о неполадках молчат. -->
   <div id="offlineBar" class="offline-bar hidden" role="status" aria-live="polite"></div>
 
   <div class="wrap">
@@ -1727,17 +1726,20 @@
       return String(d.getHours()).padStart(2, "0") + ":" + String(d.getMinutes()).padStart(2, "0");
     }
 
+    // Плашка — ТОЛЬКО на кассе. Гостю такое показывать нельзя: ни на телефоне,
+    // ни на телевизоре в зале — человек пришёл за едой, а не за нашими
+    // неполадками, и красная надпись «нет связи» читается как «тут всё
+    // сломалось». Гостевые экраны при обрыве просто показывают последнее, что
+    // успели получить; серверу о разрыве всё равно доложат — молча.
     function showOfflineBar(){
       const bar = document.getElementById("offlineBar");
-      if(!bar) return;
+      if(!bar || !document.body.classList.contains("staff-view")) return;
       const kogda = lastOkAt
         ? "Последнее обновление в " + hhmm(lastOkAt) + "."
         : "Связи не было с самого открытия экрана.";
       // Кассе важно не «ошибка сети», а что делать: экран врёт, заказы копятся.
-      const chto = document.body.classList.contains("staff-view")
-        ? " Новые заказы сюда не приходят — проверьте интернет на планшете."
-        : "";
-      bar.innerHTML = "<b>Нет связи с сервером.</b> " + kogda + chto;
+      bar.innerHTML = "<b>Нет связи с сервером.</b> " + kogda
+                    + " Новые заказы сюда не приходят — проверьте интернет на планшете.";
       bar.classList.remove("hidden");
     }
 

@@ -69,3 +69,27 @@ def test_zashchitnye_zagolovki_na_meste(client):
     assert h["X-Content-Type-Options"] == "nosniff"
     assert "default-src 'self'" in h["Content-Security-Policy"]
     assert "object-src 'none'" in h["Content-Security-Policy"]
+
+
+class TestGostNeVidetNepoladok:
+    """Гость пришёл за едой, а не за нашими неполадками: красная надпись «нет
+    связи» на его телефоне или на телевизоре в зале читается как «тут всё
+    сломалось». Плашка обрыва разрешена только кассе.
+    """
+
+    def _front(self):
+        from pathlib import Path
+        return (Path(__file__).resolve().parents[2] / "frontend" / "index.html").read_text()
+
+    def test_plashka_pokazyvaetsya_tolko_na_kasse(self):
+        html = self._front()
+        nachalo = html.index("function showOfflineBar()")
+        telo = html[nachalo:nachalo + 600]
+        assert "staff-view" in telo, (
+            "showOfflineBar обязана проверять, что экран кассовый — "
+            "иначе плашку увидит гость"
+        )
+
+    def test_net_otdelnogo_stilya_dlya_televizora(self):
+        """Крупный стиль плашки под ТВ означал бы, что её там показывают."""
+        assert "body.tv .offline-bar" not in self._front()
