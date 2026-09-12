@@ -325,3 +325,29 @@ def test_zagolovkov_nad_blokami_net(client, staff):
                       "Гот — готовится", "Ждёт — ждёт гостя",
                       "Итог — весь путь заказа"):
         assert zagolovok not in text, zagolovok
+
+
+class TestDenBezZakazovNaTablo:
+    """Пусто на табло — ещё не пустой день. Когда планшет теряет связь или
+    поллер молчит, заказы не доезжают, а выручка в iiko есть. Сводка «заказов
+    не было» в такой день прячет поломку за правдоподобной фразой.
+    """
+
+    def test_vyruchka_est_a_zakazov_net_nazyvaem_veshchi_svoimi_imenami(self):
+        text = digest.build_text("2026-09-12", {"revenue": 84500, "checks": 225,
+                                                "avg_check": 376})
+        assert "Заказов не было" not in text, "это неправда: деньги за день есть"
+        assert "84 500" in text, "выручку обязаны показать"
+        assert "На табло не попало ни одного заказа" in text
+        assert "связь планшета" in text, "нужно сказать, что проверять"
+
+    def test_nastoyashchiy_pustoy_den_ostayotsya_korotkim(self):
+        """Понедельник-выходной не повод писать простыню."""
+        text = digest.build_text("2026-09-12", None)
+        assert "Заказов не было" in text
+        assert "⚠️" not in text
+
+    def test_nulevaya_vyruchka_tozhe_pustoy_den(self):
+        text = digest.build_text("2026-09-12", {"revenue": 0, "checks": 0,
+                                                "avg_check": 0})
+        assert "Заказов не было" in text
