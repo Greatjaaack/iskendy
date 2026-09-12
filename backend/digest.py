@@ -146,6 +146,11 @@ async def send_digest(date: str | None = None) -> int:
     if sent:
         db.digest_mark_sent(date)
         logger.info("сводка за %s отправлена (%d адресатам)", date, sent)
+    else:
+        # Без этой строки провал виден только по косвенным следам: отметки в базе
+        # нет, а в логе — лишь предупреждения notify. Две сводки так и потерялись.
+        logger.warning("сводка за %s НЕ ушла ни одному из %d адресатов",
+                       date, len(targets))
     return sent
 
 

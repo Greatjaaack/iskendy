@@ -131,3 +131,41 @@ def test_tekst_otzyva_ekraniruetsya_dlya_telegram(monkeypatch):
     text = notify.format_feedback(fb, "negative")
     assert "<script>" not in text
     assert "&lt;script&gt;" in text
+
+
+class TestOtchyotEkrana:
+    """Планшет кассы, потерявший сеть, в логах сервера не оставляет ничего: он
+    просто перестаёт приходить. 12.09.2026 экран провисел так с 18:19 до
+    закрытия, и 87 заказов остались неотмеченными. Теперь клиент, вернувшись на
+    связь, докладывает о разрыве сам.
+    """
+
+    def test_otchyot_ob_obryve_popadaet_v_log(self, client, caplog):
+        with caplog.at_level(logging.WARNING, logger="site"):
+            r = client.post("/api/client/event", json={
+                "kind": "offline", "screen": "/staff",
+                "detail": "экран был без связи 240 с",
+            })
+        assert r.status_code == 200
+        stroka = " ".join(rec.getMessage() for rec in caplog.records)
+        assert "/staff" in stroka and "offline" in stroka
+        assert "240" in stroka, "длительность разрыва должна попасть в лог"
+
+    def test_upavshiy_skript_tozhe_pishetsya(self, client, caplog):
+        with caplog.at_level(logging.WARNING, logger="site"):
+            client.post("/api/client/event", json={
+                "kind": "js", "screen": "/tv", "detail": "x is not defined @ /:12",
+            })
+        stroka = " ".join(rec.getMessage() for rec in caplog.records)
+        assert "js" in stroka and "not defined" in stroka
+
+    def test_ruchka_otkryta_bez_tokena(self, client):
+        """Её зовут и телевизор, и телефон гостя — токена у них нет."""
+        assert client.post("/api/client/event",
+                           json={"kind": "offline"}).status_code == 200
+
+    def test_dlinnyy_detail_obrezaetsya(self, client):
+        """Лог — общий ресурс: в него нельзя залить роман с устройства."""
+        r = client.post("/api/client/event",
+                        json={"kind": "js", "detail": "я" * 5000})
+        assert r.status_code == 422, "слишком длинный detail не принимаем"

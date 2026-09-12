@@ -90,6 +90,9 @@ async def run_poller() -> None:
                 fails += 1
                 if molchit_s is None:
                     molchit_s = time.monotonic()
-                logger.warning("iiko-поллер: тик пропущен (%d подряд, %d с): %s",
-                               fails, round(time.monotonic() - molchit_s), exc)
+                # Тип исключения, а не только текст: у таймаутов httpx текст
+                # пустой, и строка обрывалась на двоеточии, ничего не объясняя.
+                logger.warning("iiko-поллер: тик пропущен (%d подряд, %d с): %s%s",
+                               fails, round(time.monotonic() - molchit_s),
+                               type(exc).__name__, f": {exc}" if str(exc) else "")
             await asyncio.sleep(settings.iiko_poll_seconds)

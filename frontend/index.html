@@ -199,6 +199,19 @@
     .result.show { display: block; }
     .result.err   { background: var(--err-bg); border: 1px solid var(--err-line); color: var(--err-text); }
 
+    /* Плашка обрыва связи. Висит поверх любого экрана: замерший планшет обязан
+       сам сказать, что замер, — иначе «связи нет» выглядит на кассе точно так
+       же, как «заказов нет», и смена ждёт заказы, которых экран уже не видит. */
+    .offline-bar {
+      position: fixed; left: 0; right: 0; top: 0; z-index: 9999;
+      background: var(--err-bg); color: var(--err-text);
+      border-bottom: 1px solid var(--err-line);
+      padding: 10px 14px; text-align: center; font-size: 14px; line-height: 1.4;
+    }
+    .offline-bar b { letter-spacing: 0.5px; }
+    /* На телевизоре читать должно быть видно через весь зал. */
+    body.tv .offline-bar { font-size: 30px; padding: 20px; }
+
     .staff-line {
       text-align: center;
       margin-top: 8px;
@@ -1132,6 +1145,10 @@
   </script>
   <div id="ornament" aria-hidden="true"></div>
 
+  <!-- Одна плашка на все экраны: и касса, и телевизор, и телефон гостя должны
+       узнать, что показывают несвежую картинку. Текст ставит showOfflineBar(). -->
+  <div id="offlineBar" class="offline-bar hidden" role="status" aria-live="polite"></div>
+
   <div class="wrap">
     <!-- ========================= ЛЕНДИНГ (мультиссылка) ========================= -->
     <div id="landing">
@@ -1698,14 +1715,107 @@
 
     function show(id, on){ document.getElementById(id).classList.toggle("hidden", !on); }
 
+    // ---------- сторож связи ----------
+    // Вечером 12.09.2026 планшет кассы потерял сеть в 18:19 и провисел так до
+    // закрытия: опрос падал молча, на экране осталось привычное «Заказов пока
+    // нет», и 87 заказов за вечер никто не отметил. Молчащий обрыв неотличим от
+    // пустого табло, поэтому экран теперь говорит о нём сам.
+    const OFFLINE_AFTER_FAILS = 2;      // два промаха подряд ≈ 10 секунд
+    let pollFails = 0, lastOkAt = null, offlineSince = null;
+
+    function hhmm(d){
+      return String(d.getHours()).padStart(2, "0") + ":" + String(d.getMinutes()).padStart(2, "0");
+    }
+
+    function showOfflineBar(){
+      const bar = document.getElementById("offlineBar");
+      if(!bar) return;
+      const kogda = lastOkAt
+        ? "Последнее обновление в " + hhmm(lastOkAt) + "."
+        : "Связи не было с самого открытия экрана.";
+      // Кассе важно не «ошибка сети», а что делать: экран врёт, заказы копятся.
+      const chto = document.body.classList.contains("staff-view")
+        ? " Новые заказы сюда не приходят — проверьте интернет на планшете."
+        : "";
+      bar.innerHTML = "<b>Нет связи с сервером.</b> " + kogda + chto;
+      bar.classList.remove("hidden");
+    }
+
+    function hideOfflineBar(){
+      const bar = document.getElementById("offlineBar");
+      if(bar) bar.classList.add("hidden");
+    }
+
+    function markPollOk(){
+      const bylo = offlineSince;
+      pollFails = 0;
+      lastOkAt = new Date();
+      offlineSince = null;
+      hideOfflineBar();
+      // Докладываем только о пережитом разрыве и только когда связь вернулась:
+      // пока её нет, отправлять всё равно некуда.
+      if(bylo) reportClient("offline", "экран был без связи " + Math.round((Date.now() - bylo) / 1000) + " с");
+    }
+
+    function markPollFail(){
+      pollFails++;
+      if(pollFails < OFFLINE_AFTER_FAILS) return;
+      if(!offlineSince) offlineSince = Date.now();
+      showOfflineBar();
+    }
+
+    // ---------- отчёт клиента серверу ----------
+    // Сервер не видит того, что случилось в браузере: офлайн планшета и упавший
+    // JS не оставляют в его логах ни строчки. Клиент рассказывает о них сам.
+    let lastReportAt = 0;
+    function reportClient(kind, detail){
+      const now = Date.now();
+      if(now - lastReportAt < 30000) return;   // не чаще раза в 30 секунд
+      lastReportAt = now;
+      try {
+        fetch(API + "/api/client/event", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            kind: kind,
+            screen: location.pathname,
+            detail: String(detail || "").slice(0, 300)
+          }),
+          keepalive: true
+        }).catch(function(){ /* некому жаловаться — молчим */ });
+      } catch(e){ /* отчёт не должен ломать экран */ }
+    }
+
+    // Упавший JS раньше исчезал бесследно: экран замирал, а причина оставалась
+    // только в консоли планшета, куда никто не заглянет.
+    window.addEventListener("error", function(e){
+      reportClient("js", (e.message || "ошибка") + " @ " + (e.filename || "?") + ":" + (e.lineno || 0));
+    });
+    window.addEventListener("unhandledrejection", function(e){
+      reportClient("js", "промис: " + ((e.reason && e.reason.message) || e.reason || "?"));
+    });
+
     // ---------- загрузка статуса (опрос) ----------
     async function loadStatus(){
+      let svezhee;
       try {
-        const r = await fetch(API + "/api/status");
-        state = await r.json();
+        const r = await fetch(API + "/api/status", { cache: "no-store" });
+        if(!r.ok) throw new Error("HTTP " + r.status);
+        svezhee = await r.json();
+      } catch(e){
+        markPollFail();
+        return;
+      }
+      markPollOk();
+      state = svezhee;
+      // Отрисовка — отдельно от сети. Раньше обе жили в одном try, и сломанный
+      // рендер выглядел как обрыв связи: чинили бы не то.
+      try {
         renderGuest();
         renderStaff();
-      } catch(e){ /* сеть моргнула — пропускаем тик */ }
+      } catch(e){
+        reportClient("render", (e && e.message) || e);
+      }
     }
 
     // ---------- переключение экранов + опрос ----------

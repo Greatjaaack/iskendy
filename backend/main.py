@@ -80,6 +80,9 @@ app = FastAPI(title="Искенди — табло заказов")
 QUIET_PATHS = ("/api/status", "/api/health", "/assets/", "/favicon")
 
 access = logging.getLogger("access")
+# Всё, что рассказывает о работе самого сайта, а не об отдельном запросе:
+# отчёты экранов об обрывах и упавшем скрипте.
+logger = logging.getLogger("site")
 
 
 @app.middleware("http")
@@ -582,6 +585,37 @@ def guest_event(request: Request, body: GuestStepBody) -> dict:
     return {
         "ok": db.log_guest_event(body.step, body.session, body.number, body.guest)
     }
+
+
+class ClientEventBody(BaseModel):
+    # Что случилось на устройстве: offline — экран пережил обрыв связи,
+    # render/js — упал скрипт. Новые виды не ломают ручку, просто пишутся как есть.
+    kind: str = Field(max_length=20)
+    screen: str = Field(default="", max_length=40)
+    detail: str = Field(default="", max_length=300)
+
+
+@app.post("/api/client/event")
+def client_event(request: Request, body: ClientEventBody) -> dict:
+    """Экран рассказывает о том, чего сервер увидеть не может.
+
+    Планшет кассы, потерявший сеть, не оставляет в логах сервера ни строчки: он
+    просто перестаёт приходить. 12.09.2026 это стоило вечера — экран висел с
+    пустым табло, а заказы копились в базе. Теперь клиент, вернувшись на связь,
+    докладывает о разрыве сам, и в журнале остаётся след.
+
+    Лимит тот же, что у гостевой воронки: ручка открыта без токена (её зовут и
+    телевизор, и телефон гостя), а лог — общий ресурс, забить его нельзя.
+    """
+    _guard(request, RATE_LIMIT_STEP, "s")
+    logger.warning(
+        "экран %s: %s%s · %s",
+        body.screen or "?",
+        body.kind,
+        f" ({body.detail})" if body.detail else "",
+        _client_ip(request),
+    )
+    return {"ok": True}
 
 
 @app.get("/api/stats/guest")

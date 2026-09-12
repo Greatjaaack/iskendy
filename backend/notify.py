@@ -99,7 +99,15 @@ async def send_message(text: str, targets: list[tuple[str, int | None]]) -> int:
                         chat_id, r.status_code, r.text[:200],
                     )
             except Exception as exc:  # noqa: BLE001 — уведомление не критично
-                logger.warning("Telegram: не отправлено в %s: %s", chat_id, exc)
+                # Тип обязателен: у ConnectTimeout пустое сообщение, и две ночи
+                # подряд (09–11.09.2026) лог показывал «не отправлено в 121331370:»
+                # без единого намёка, что лежит прокси, а не токен.
+                logger.warning(
+                    "Telegram: не отправлено в %s: %s%s",
+                    chat_id,
+                    type(exc).__name__,
+                    f": {exc}" if str(exc) else "",
+                )
     return sent
 
 
