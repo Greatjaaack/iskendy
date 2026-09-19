@@ -746,8 +746,11 @@ def _order_path(row: sqlite3.Row, events: list[sqlite3.Row]) -> dict:
     served = _parse_naive(row["served_at"])
 
     chain = _pick_chain(_event_chains(events), created)
-    # Стартовый статус: из журнала, иначе по источнику (iiko заводит «открытый»).
-    start = "open" if row["source"] == "iiko" else "preparing"
+    # Стартовый статус: из журнала, иначе по источнику (касса заводит «открытый»).
+    # Сравнение именно с "manual", а не с именем кассы: заказы лежат в базе с
+    # меткой той кассы, что стояла в тот день ("iiko", дальше "presto"), и
+    # перечисление имён здесь однажды молча разошлось бы с реальностью.
+    start = "preparing" if row["source"] == "manual" else "open"
     if chain and chain[0]["event"] == "created" and chain[0]["to_status"]:
         start = chain[0]["to_status"]
 
