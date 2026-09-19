@@ -37,9 +37,9 @@ def _prognat(monkeypatch, oshibok, vsego_tikov, pauza=0.01):
     notify._throttle.clear()
     monkeypatch.setattr(settings, "telegram_bot_token", "fake")
     monkeypatch.setattr(settings, "telegram_alert_targets", "-100:858")
-    monkeypatch.setattr(settings, "iiko_orders_url", "http://analytics/api/orders/today")
-    monkeypatch.setattr(settings, "iiko_internal_token", "t")
-    monkeypatch.setattr(settings, "iiko_poll_seconds", pauza)
+    monkeypatch.setattr(settings, "kassa_orders_url", "http://analytics/api/orders/today")
+    monkeypatch.setattr(settings, "kassa_internal_token", "t")
+    monkeypatch.setattr(settings, "kassa_poll_seconds", pauza)
 
     async def fake_poll(client):
         i = obrashcheniy["n"]

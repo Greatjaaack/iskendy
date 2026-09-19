@@ -242,7 +242,7 @@ class TestDengi:
         from config import settings
 
         monkeypatch.setattr(settings, "analytics_summary_url", "http://analytics/api/summary")
-        monkeypatch.setattr(settings, "iiko_internal_token", "t")
+        monkeypatch.setattr(settings, "kassa_internal_token", "t")
 
         class FakeResp:
             def raise_for_status(self): pass
@@ -265,7 +265,7 @@ class TestDengi:
         from config import settings
 
         monkeypatch.setattr(settings, "analytics_summary_url", "http://analytics/api/summary")
-        monkeypatch.setattr(settings, "iiko_internal_token", "t")
+        monkeypatch.setattr(settings, "kassa_internal_token", "t")
 
         class FakeClient:
             async def __aenter__(self): return self
@@ -282,7 +282,7 @@ class TestDengi:
         from config import settings
 
         monkeypatch.setattr(settings, "analytics_summary_url", "")
-        monkeypatch.setattr(settings, "iiko_orders_url", "")
+        monkeypatch.setattr(settings, "kassa_orders_url", "")
         assert asyncio.run(digest._dengi_za_den("2026-08-24")) is None
 
     def test_adres_vyvoditsya_iz_adresa_zakazov(self, monkeypatch):
@@ -291,7 +291,7 @@ class TestDengi:
         from config import settings
 
         monkeypatch.setattr(settings, "analytics_summary_url", "")
-        monkeypatch.setattr(settings, "iiko_orders_url",
+        monkeypatch.setattr(settings, "kassa_orders_url",
                             "http://dashboards-backend-1:8000/api/orders/today")
         assert settings.summary_url == "http://dashboards-backend-1:8000/api/summary"
 

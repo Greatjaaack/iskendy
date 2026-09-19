@@ -209,14 +209,14 @@ async def _dengi_za_den(date: str) -> dict | None:
     аналитика не повод не отправить её вовсе.
     """
     url = settings.summary_url
-    if not url or not settings.iiko_internal_token:
+    if not url or not settings.kassa_internal_token:
         return None
     try:
         async with httpx.AsyncClient(timeout=DENGI_TAYMAUT_SEC) as client:
             r = await client.get(
                 url,
                 params={"date": date},
-                headers={"X-Internal-Token": settings.iiko_internal_token},
+                headers={"X-Internal-Token": settings.kassa_internal_token},
             )
             r.raise_for_status()
             data = r.json()

@@ -4,6 +4,7 @@
 не тянуть os.getenv по коду, брать `from config import settings`.
 """
 
+from pydantic import AliasChoices, Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -15,24 +16,53 @@ class Settings(BaseSettings):
     jwt_secret: str = ""  # при пустом выводится из пароля
     jwt_ttl_hours: int = 24
 
-    # Часовой пояс ресторана — по нему считается «сегодня» и окно свежести iiko.
+    # Часовой пояс ресторана — по нему считается «сегодня» и окно свежести кассы.
     timezone: str = "Europe/Moscow"
 
     # Путь к SQLite-файлу.
     db_path: str = "iskendy.db"
 
-    # --- Подтягивание заказов из iiko (через ручку аналитики) ---
-    # URL внутренней ручки аналитики (напр. http://dashboards-backend-1:8000/api/orders/today).
-    # Пустой — поллинг выключен (табло работает только на ручном вводе).
-    iiko_orders_url: str = ""
-    iiko_internal_token: str = ""  # заголовок X-Internal-Token к ручке аналитики
-    iiko_poll_seconds: int = 30  # период опроса
-    # Ручка аналитики с деньгами за день (выручка, чеки, средний чек).
-    # Пустая — в сводке просто не будет денежного блока.
-    analytics_summary_url: str = ""
+    # --- Подтягивание заказов с кассы (через ручку аналитики) ---
+    # Табло в кассу не ходит и про неё ничего не знает: оно опрашивает ручку
+    # аналитики и ждёт от неё контракт {"orders": [{"number", "openTime"}]}.
+    # Какая касса стоит за аналитикой — iiko, СБИС Presto или что-то ещё — здесь
+    # не имеет значения; при переезде в этом файле меняется только `kassa_source`.
+    #
+    # Старые имена IIKO_* остаются рабочими алиасами: код выкатывается на прод
+    # раньше, чем правится .env, и выкатка не должна гасить поллер.
+    kassa_orders_url: str = Field(
+        "", validation_alias=AliasChoices("KASSA_ORDERS_URL", "IIKO_ORDERS_URL")
+    )
+    kassa_internal_token: str = Field(  # заголовок X-Internal-Token к ручке аналитики
+        "", validation_alias=AliasChoices("KASSA_INTERNAL_TOKEN", "IIKO_INTERNAL_TOKEN")
+    )
+    kassa_poll_seconds: int = Field(  # период опроса
+        30, validation_alias=AliasChoices("KASSA_POLL_SECONDS", "IIKO_POLL_SECONDS")
+    )
     # Окно свежести: заводим только заказы, открытые за последние N минут — чтобы
     # при старте/перезапуске не залить табло старыми уже готовыми заказами.
-    iiko_ingest_window_min: int = 20
+    kassa_ingest_window_min: int = Field(
+        20,
+        validation_alias=AliasChoices(
+            "KASSA_INGEST_WINDOW_MIN", "IIKO_INGEST_WINDOW_MIN"
+        ),
+    )
+    # Чем помечаются в базе заказы, приехавшие с кассы (колонка orders.source).
+    # В день переезда меняется на `presto` — и только эта строка отличает старые
+    # заказы от новых в истории. Логика нигде не завязана на конкретное значение:
+    # «пришёл с кассы» — это `source != "manual"`.
+    kassa_source: str = "iiko"
+
+    # Сервис аналитики: базовый адрес и пути ручек. Раньше адрес сводки
+    # выводился из адреса заказов подстановкой `/api/orders/today` → `/api/summary`
+    # прямо в коде — переезд ручки на стороне аналитики молча оставил бы сводку
+    # без денег. Теперь оба пути видно и правятся они в .env.
+    analytics_base_url: str = ""  # напр. http://dashboards-backend-1:8000
+    analytics_orders_path: str = "/api/orders/today"
+    analytics_summary_path: str = "/api/summary"
+    # Явный адрес ручки с деньгами — override сборки из базы.
+    # Пусто и базы нет — в сводке просто не будет денежного блока.
+    analytics_summary_url: str = ""
 
     # --- Ежедневный бэкап БД (ночью) ---
     backup_enabled: bool = True
@@ -85,15 +115,36 @@ class Settings(BaseSettings):
         return parse_targets(self.telegram_alert_targets)
 
     @property
+    def analytics_base(self) -> str:
+        """Базовый адрес сервиса аналитики.
+
+        Задан явно — берём его. Не задан — выводим из адреса заказов, отрезав
+        путь: на проде в .env лежит только полный URL заказов, и вывод базы
+        держит совместимость со старым окружением. Обе ручки живут на одном
+        сервисе, и держать два почти одинаковых URL в .env значит однажды
+        поменять только один.
+        """
+        if self.analytics_base_url:
+            return self.analytics_base_url.rstrip("/")
+        url, path = self.kassa_orders_url, self.analytics_orders_path
+        if url and path and url.endswith(path):
+            return url[: -len(path)].rstrip("/")
+        return ""
+
+    def _ruchka(self, path: str) -> str:
+        """Собрать адрес ручки аналитики из базы и пути."""
+        base = self.analytics_base
+        return f"{base}/{path.lstrip('/')}" if base and path else ""
+
+    @property
+    def orders_url(self) -> str:
+        """Адрес ручки со списком заказов за сегодня. Пустой — поллер выключен."""
+        return self.kassa_orders_url or self._ruchka(self.analytics_orders_path)
+
+    @property
     def summary_url(self) -> str:
-        """Адрес ручки с деньгами. Если не задан явно — выводим из адреса
-        заказов: обе ручки живут на одном сервисе аналитики, и держать два
-        почти одинаковых URL в .env значит однажды поменять только один."""
-        if self.analytics_summary_url:
-            return self.analytics_summary_url
-        if not self.iiko_orders_url:
-            return ""
-        return self.iiko_orders_url.replace("/api/orders/today", "/api/summary")
+        """Адрес ручки с деньгами за день. Пустой — сводка уйдёт без денег."""
+        return self.analytics_summary_url or self._ruchka(self.analytics_summary_path)
 
     @property
     def digest_targets(self) -> list[tuple[str, int | None]]:

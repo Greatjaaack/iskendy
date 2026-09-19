@@ -1,8 +1,8 @@
 """Фоновый поллер заказов из iiko (через внутреннюю ручку аналитики).
 
-Раз в `iiko_poll_seconds` дёргает ручку аналитики со списком сегодняшних заказов
+Раз в `kassa_poll_seconds` дёргает ручку аналитики со списком сегодняшних заказов
 и заводит новые со статусом «готовится». Свежесть ограничена окном
-`iiko_ingest_window_min` — чтобы при старте/перезапуске не залить табло старыми,
+`kassa_ingest_window_min` — чтобы при старте/перезапуске не залить табло старыми,
 уже готовыми заказами. Всё best-effort: аналитика недоступна — пропускаем тик.
 """
 
@@ -50,14 +50,14 @@ def _is_fresh(open_time: str, now: datetime, window: timedelta) -> bool:
 
 async def _poll_once(client: httpx.AsyncClient) -> None:
     r = await client.get(
-        settings.iiko_orders_url,
-        headers={"X-Internal-Token": settings.iiko_internal_token},
+        settings.orders_url,
+        headers={"X-Internal-Token": settings.kassa_internal_token},
         timeout=30,
     )
     r.raise_for_status()
     data = r.json()
     now = datetime.now(ZoneInfo(settings.timezone)).replace(tzinfo=None)
-    window = timedelta(minutes=settings.iiko_ingest_window_min)
+    window = timedelta(minutes=settings.kassa_ingest_window_min)
     added = 0
     for o in data.get("orders", []):
         num = o.get("number")
@@ -71,13 +71,13 @@ async def _poll_once(client: httpx.AsyncClient) -> None:
 
 
 async def run_poller() -> None:
-    if not settings.iiko_orders_url or not settings.iiko_internal_token:
+    if not settings.orders_url or not settings.kassa_internal_token:
         logger.info("iiko-поллер выключен (URL/токен не заданы)")
         return
     logger.info(
         "iiko-поллер запущен: %s каждые %dс",
-        settings.iiko_orders_url,
-        settings.iiko_poll_seconds,
+        settings.orders_url,
+        settings.kassa_poll_seconds,
     )
     # Серию неудач считаем не ради тревоги, а ради разбора постфактум: по одной
     # строке «тик пропущен» нельзя отличить рябь от часовой поломки.
@@ -101,4 +101,4 @@ async def run_poller() -> None:
                 logger.warning("iiko-поллер: тик пропущен (%d подряд, %d с): %s",
                                fails, round(time.monotonic() - molchit_s),
                                opisanie(exc))
-            await asyncio.sleep(settings.iiko_poll_seconds)
+            await asyncio.sleep(settings.kassa_poll_seconds)

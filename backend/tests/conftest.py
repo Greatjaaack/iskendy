@@ -26,13 +26,19 @@ os.environ.update(
     JWT_SECRET="test-secret-not-derived-from-password",
     JWT_TTL_HOURS="24",
     TIMEZONE="Europe/Moscow",
-    # Ничего наружу: ни Telegram, ни iiko, ни ночной бэкап.
+    # Ничего наружу: ни Telegram, ни касса, ни ночной бэкап.
     TELEGRAM_BOT_TOKEN="",
     TELEGRAM_ALERT_TARGETS="",
     TELEGRAM_FEEDBACK_TARGETS="",
     TELEGRAM_DIGEST_TARGET="",
     BOT_PROXY_URL="",
     FEEDBACK_ALERT_ENABLED="false",
+    KASSA_ORDERS_URL="",
+    KASSA_INTERNAL_TOKEN="",
+    ANALYTICS_BASE_URL="",
+    ANALYTICS_SUMMARY_URL="",
+    # Старые имена тоже гасим: в корне лежит боевой .env, и пока алиасы живы,
+    # забытый IIKO_ORDERS_URL увёл бы тесты на настоящую аналитику.
     IIKO_ORDERS_URL="",
     IIKO_INTERNAL_TOKEN="",
     BACKUP_ENABLED="false",
