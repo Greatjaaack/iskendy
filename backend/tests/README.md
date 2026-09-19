@@ -2,7 +2,7 @@
 
 ```bash
 poetry install --with dev     # один раз
-poetry run pytest             # весь набор, 120 тестов, ~3 секунды
+poetry run pytest             # весь набор, 153 теста, ~4 секунды
 poetry run pytest backend/tests/test_feedback_claim.py -v
 ```
 
@@ -23,7 +23,8 @@ poetry run pytest backend/tests/test_feedback_claim.py -v
 | `test_logs_and_alerts.py` | шум в логах, схлопывание алертов, маршрутизация по темам |
 | `test_revert.py` | откат ошибочной выдачи: метки времени, журнал, список выданных |
 | `test_digest.py` | вечерняя сводка: состав текста, ширина таблицы, отправка один раз |
-| `test_poller.py` | заказы из iiko: окно свежести, дедуп, тревога о молчании |
+| `test_poller.py` | поллер кассы: сбой тика не роняет цикл, молчание не пишется в чат |
+| `test_kassa_istochnik.py` | развязка от имени кассы: метка источника, стартовый статус, алиасы старого окружения |
 
 ## Две вещи, о которые легко споткнуться
 

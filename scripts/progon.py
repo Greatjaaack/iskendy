@@ -17,9 +17,9 @@
       iskendy-check
     poetry run python scripts/progon.py
 
-Интеграционные пути (поллер iiko и деньги для сводки) требуют подставной
+Интеграционные пути (поллер кассы и деньги для сводки) требуют подставной
 аналитики — она поднимается ключом --analytics и слушает 8098; контейнер тогда
-запускать с IIKO_ORDERS_URL/ANALYTICS_SUMMARY_URL на host.docker.internal и
+запускать с KASSA_ORDERS_URL/ANALYTICS_SUMMARY_URL на host.docker.internal и
 флагом --add-host host.docker.internal:host-gateway.
 
 ВАЖНО: только против локального контейнера. Скрипт занимает сессию кассы,
