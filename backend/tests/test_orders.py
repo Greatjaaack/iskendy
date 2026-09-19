@@ -104,7 +104,7 @@ class TestBezOtkrytogo:
     def test_zakaz_iz_iiko_srazu_gotovitsya(self, client):
         import db
 
-        assert db.ingest_iiko_order(501) is True
+        assert db.ingest_kassa_order(501) is True
         board = client.get("/api/status").json()["orders"]
         assert board[0]["number"] == 501
         assert board[0]["status"] == "preparing"
@@ -114,7 +114,7 @@ class TestBezOtkrytogo:
         только после нажатия кассира."""
         import db
 
-        db.ingest_iiko_order(502)
+        db.ingest_kassa_order(502)
         nomera = [o["number"] for o in client.get("/api/status").json()["orders"]
                   if o["status"] in ("preparing", "ready")]
         assert 502 in nomera
@@ -129,7 +129,7 @@ class TestBezOtkrytogo:
         """
         import db
 
-        db.ingest_iiko_order(503)
+        db.ingest_kassa_order(503)
         client.post("/api/order/status", json={"number": 503, "status": "ready"},
                     headers=staff)
         zakaz = next(o for o in db.stats_orders([db.today()])["orders"]
@@ -167,7 +167,7 @@ class TestSbrosZaProshlyyDen:
     def test_snimaet_aktivnye_za_ukazannuyu_datu(self, client, staff):
         import db
 
-        db.ingest_iiko_order(501, opened_at="2026-09-12T18:20:00")
+        db.ingest_kassa_order(501, opened_at="2026-09-12T18:20:00")
         with db._connect() as conn:
             conn.execute("UPDATE orders SET date = ? WHERE number = ?",
                          ("2026-09-12", 501))
@@ -181,7 +181,7 @@ class TestSbrosZaProshlyyDen:
         import db
 
         db.add_order(777)
-        db.ingest_iiko_order(502, opened_at="2026-09-12T18:20:00")
+        db.ingest_kassa_order(502, opened_at="2026-09-12T18:20:00")
         with db._connect() as conn:
             conn.execute("UPDATE orders SET date = ? WHERE number = ?",
                          ("2026-09-12", 502))
@@ -194,7 +194,7 @@ class TestSbrosZaProshlyyDen:
         """Иначе потом не установить, какие именно заказы сняли."""
         import db
 
-        db.ingest_iiko_order(503, opened_at="2026-09-12T18:20:00")
+        db.ingest_kassa_order(503, opened_at="2026-09-12T18:20:00")
         with db._connect() as conn:
             conn.execute("UPDATE orders SET date = ? WHERE number = ?",
                          ("2026-09-12", 503))

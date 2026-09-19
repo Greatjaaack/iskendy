@@ -27,7 +27,7 @@ from config import settings
 from fastapi import Depends, FastAPI, HTTPException, Query, Request, status
 from fastapi.responses import FileResponse, Response
 from fastapi.staticfiles import StaticFiles
-from iiko_poller import run_poller
+from kassa_poller import run_poller
 from pydantic import BaseModel, Field
 from oshibki import opisanie
 
@@ -188,8 +188,8 @@ def _fon(fabrika, imya: str) -> asyncio.Task:
 @app.on_event("startup")
 async def _startup() -> None:
     db.init_db()
-    # Фоновый поллер заказов из iiko (если настроен URL/токен аналитики).
-    _fon(run_poller, "iiko-поллер")
+    # Фоновый поллер заказов с кассы (если настроен URL/токен аналитики).
+    _fon(run_poller, "поллер кассы")
     # Ежедневный бэкап БД.
     _fon(backup.run_backup_loop, "бэкап БД")
     # Вечерняя сводка одним сообщением.

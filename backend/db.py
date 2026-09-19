@@ -20,7 +20,7 @@ from config import settings
 audit = logging.getLogger("orders")
 
 # Разрешённые статусы и их порядок:
-# open (открытый — приехал из iiko, ещё не взяли в работу) → preparing (готовится)
+# open (открытый — приехал с кассы, ещё не взяли в работу) → preparing (готовится)
 # → ready (готово) → served (выдано). «served» снимает заказ с табло.
 STATUSES = ("open", "preparing", "ready", "served")
 # Статусы активных заказов (в панели кассы). Гостю на табло показываем только
@@ -35,7 +35,7 @@ def _connect() -> sqlite3.Connection:
 
 
 def init_db() -> None:
-    # WAL: читатели не ждут писателя. Кассир двигает статусы, iiko-поллер
+    # WAL: читатели не ждут писателя. Кассир двигает статусы, поллер кассы
     # заводит заказы, гости шлют отзывы — всё это идёт одновременно, а в режиме
     # по умолчанию любая запись блокирует чтение табло. Настройка живёт в самом
     # файле БД, так что достаточно включить один раз.
@@ -63,7 +63,7 @@ def init_db() -> None:
             "ON orders (date, status)"
         )
         # Миграции БД, созданных раньше. created_at = время приёма, ready_at =
-        # готово, served_at = выдано; source = откуда заказ (manual/iiko).
+        # готово, served_at = выдано; source = откуда заказ (manual / метка кассы).
         cols = [r[1] for r in conn.execute("PRAGMA table_info(orders)")]
         for col in ("ready_at", "served_at"):
             if col not in cols:
@@ -378,7 +378,7 @@ def _order_dict(row: sqlite3.Row) -> dict:
 def add_order(number: int) -> dict:
     """Занести новый заказ вручную (статус «готовится»).
 
-    Дедуп по (дата, номер) в ЛЮБОМ статусе — как в `ingest_iiko_order`. Раньше
+    Дедуп по (дата, номер) в ЛЮБОМ статусе — как в `ingest_kassa_order`. Раньше
     проверялись только активные, и номер уже выданного заказа заводился второй
     раз: за месяц так набралось 34 дубля, все парой «iiko + вручную». Каждый
     дубль — лишний заказ в счётчике дня и вторая, неверная запись времён.
@@ -411,12 +411,15 @@ def add_order(number: int) -> dict:
     return get_board(date)
 
 
-def ingest_iiko_order(number: int, opened_at: str | None = None) -> bool:
-    """Завести заказ из iiko сразу в «готовится», если его сегодня ещё нет.
+def ingest_kassa_order(number: int, opened_at: str | None = None) -> bool:
+    """Завести заказ с кассы сразу в «готовится», если его сегодня ещё нет.
 
     Дедуп по (дата, номер) в ЛЮБОМ статусе — уже занесённый/продвинутый/выданный
-    заказ повторно не создаём. `opened_at` — время открытия из iiko (идёт как
-    время приёма). Возвращает True, если заказ создан.
+    заказ повторно не создаём. `opened_at` — время открытия чека на кассе (идёт
+    как время приёма). Возвращает True, если заказ создан.
+
+    Метка источника берётся из `settings.kassa_source`: в истории видно, какая
+    касса завела заказ, а логика на конкретное значение не опирается.
     """
     date = today()
     with _connect() as conn:
@@ -434,15 +437,17 @@ def ingest_iiko_order(number: int, opened_at: str | None = None) -> bool:
         # время не видел своего номера на табло: открытые туда не попадают.
         # Разделение «касса приняла» и «кухня взяла» смысла не несло — кнопку
         # жали механически, — поэтому статус при заведении пропускаем.
+        istochnik = settings.kassa_source
         conn.execute(
             """
             INSERT INTO orders
                 (date, number, status, created_at, updated_at, source)
-            VALUES (?, ?, 'preparing', ?, ?, 'iiko')
+            VALUES (?, ?, 'preparing', ?, ?, ?)
             """,
-            (date, number, opened_at or now, now),
+            (date, number, opened_at or now, now, istochnik),
         )
-        _log_event(conn, date, "created", number, to_status="preparing", source="iiko")
+        _log_event(conn, date, "created", number,
+                   to_status="preparing", source=istochnik)
     return True
 
 
@@ -561,7 +566,7 @@ def get_events(date: str | None = None) -> list[dict]:
 
 # ---------- Аналитика (операционные метрики по временам статусов) ----------
 # created_at = приём, ready_at = готово, served_at = выдано. Метки могут быть с
-# tz-сдвигом (ручные) или без (из iiko) — приводим к naive (все в поясе точки).
+# tz-сдвигом (ручные) или без (с кассы) — приводим к naive (все в поясе точки).
 
 def _parse_naive(s: str | None) -> datetime | None:
     if not s:
@@ -761,7 +766,7 @@ def _order_path(row: sqlite3.Row, events: list[sqlite3.Row]) -> dict:
         at = _parse_naive(e["at"])
         if e["event"] != "status" or not e["to_status"] or at is None:
             continue
-        # Приём из iiko — время открытия чека, оно может опережать журнал.
+        # Приём с кассы — время открытия чека, оно может опережать журнал.
         seq.append((e["to_status"], max(at, created) if created else at))
     # Заказы старше журнала: переходы достаём из меток orders.
     logged = {st for st, _ in seq[1:]}
@@ -1480,7 +1485,7 @@ def guest_returning(dates: list[str]) -> dict:
 # целиком; честному гостю он не встретится никогда.
 CLAIM_MAX_PER_GUEST_DAY = 5
 # Занятие номера, которого ещё нет в кассе, живёт столько минут. Гость вбивает
-# номер сразу после оплаты, а из iiko он доезжает за полминуты — этого запаса
+# номер сразу после оплаты, а с кассы он доезжает за полминуты — этого запаса
 # хватает с большим избытком. Без протухания можно было бы утром занять 1..200.
 CLAIM_PENDING_TTL_MIN = 20
 
@@ -1748,7 +1753,7 @@ def stats_po_statusam_chasy(dates: list[str]) -> list[dict]:
 
     Считаем по журналу переходов (`stats_orders` разбирает `order_events`), а не
     по меткам в строке заказа: меток всего три — приём, готово, выдано, момента
-    «взяли в работу» среди них нет. Заказ из iiko может пролежать «открытым»
+    «взяли в работу» среди них нет. Заказ с кассы может пролежать «открытым»
     сколько угодно, пока касса не возьмётся, и это время свалилось бы в готовку,
     хотя кухня к нему не притрагивалась.
     """

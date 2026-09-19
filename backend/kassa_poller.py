@@ -1,9 +1,13 @@
-"""Фоновый поллер заказов из iiko (через внутреннюю ручку аналитики).
+"""Фоновый поллер заказов с кассы (через внутреннюю ручку аналитики).
 
 Раз в `kassa_poll_seconds` дёргает ручку аналитики со списком сегодняшних заказов
 и заводит новые со статусом «готовится». Свежесть ограничена окном
 `kassa_ingest_window_min` — чтобы при старте/перезапуске не залить табло старыми,
 уже готовыми заказами. Всё best-effort: аналитика недоступна — пропускаем тик.
+
+Какая касса стоит за ручкой аналитики, поллер не знает и знать не должен: он
+работает с контрактом `{"orders": [{"number", "openTime"}]}`. Переезд с iiko на
+СБИС Presto — это работа на стороне аналитики; здесь не меняется ничего.
 """
 
 import asyncio
@@ -18,7 +22,7 @@ import db
 from config import settings
 from oshibki import opisanie
 
-logger = logging.getLogger("iiko_poller")
+logger = logging.getLogger("kassa_poller")
 
 # Сколько ждём ответ аналитики в одном тике.
 POLL_TAYMAUT_SEC = 8
@@ -64,18 +68,19 @@ async def _poll_once(client: httpx.AsyncClient) -> None:
         open_time = o.get("openTime", "")
         if not isinstance(num, int) or not _is_fresh(open_time, now, window):
             continue
-        if db.ingest_iiko_order(num, opened_at=open_time):
+        if db.ingest_kassa_order(num, opened_at=open_time):
             added += 1
     if added:
-        logger.info("iiko: заведено новых заказов: %d", added)
+        logger.info("касса: заведено новых заказов: %d", added)
 
 
 async def run_poller() -> None:
     if not settings.orders_url or not settings.kassa_internal_token:
-        logger.info("iiko-поллер выключен (URL/токен не заданы)")
+        logger.info("поллер кассы выключен (URL/токен не заданы)")
         return
     logger.info(
-        "iiko-поллер запущен: %s каждые %dс",
+        "поллер кассы запущен (источник %s): %s каждые %dс",
+        settings.kassa_source,
         settings.orders_url,
         settings.kassa_poll_seconds,
     )
@@ -90,7 +95,7 @@ async def run_poller() -> None:
             try:
                 await _poll_once(client)
                 if fails:
-                    logger.info("iiko: связь есть, до этого неудач подряд: %d", fails)
+                    logger.info("касса: связь есть, до этого неудач подряд: %d", fails)
                 fails, molchit_s = 0, None
             except Exception as exc:  # noqa: BLE001 — best-effort, тик не должен ронять луп
                 fails += 1
@@ -98,7 +103,7 @@ async def run_poller() -> None:
                     molchit_s = time.monotonic()
                 # Тип исключения, а не только текст: у таймаутов httpx текст
                 # пустой, и строка обрывалась на двоеточии, ничего не объясняя.
-                logger.warning("iiko-поллер: тик пропущен (%d подряд, %d с): %s",
+                logger.warning("поллер кассы: тик пропущен (%d подряд, %d с): %s",
                                fails, round(time.monotonic() - molchit_s),
                                opisanie(exc))
             await asyncio.sleep(settings.kassa_poll_seconds)

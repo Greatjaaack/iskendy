@@ -14,7 +14,7 @@
 
 import asyncio
 
-import iiko_poller
+import kassa_poller
 import notify
 
 
@@ -49,11 +49,11 @@ def _prognat(monkeypatch, oshibok, vsego_tikov, pauza=0.01):
         if oshibok(i):
             raise RuntimeError("500 Internal Server Error")
 
-    monkeypatch.setattr(iiko_poller, "_poll_once", fake_poll)
+    monkeypatch.setattr(kassa_poller, "_poll_once", fake_poll)
 
     async def main():
         try:
-            await asyncio.wait_for(iiko_poller.run_poller(), timeout=10)
+            await asyncio.wait_for(kassa_poller.run_poller(), timeout=10)
         except (asyncio.CancelledError, asyncio.TimeoutError):
             pass
 
@@ -93,6 +93,6 @@ def test_net_mertvyh_ruchek_trevogi():
     """
     assert not hasattr(notify, "notify_poller_down")
     assert not hasattr(notify, "notify_poller_back")
-    assert not hasattr(iiko_poller, "ALERT_AFTER_SEC")
-    assert not hasattr(iiko_poller, "RECOVERY_OK_SEC")
-    assert not hasattr(iiko_poller, "FAILS_BEFORE_ALERT")
+    assert not hasattr(kassa_poller, "ALERT_AFTER_SEC")
+    assert not hasattr(kassa_poller, "RECOVERY_OK_SEC")
+    assert not hasattr(kassa_poller, "FAILS_BEFORE_ALERT")
