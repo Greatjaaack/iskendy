@@ -2110,7 +2110,7 @@
       if(e.event === "status"){
         text = (STATUS_LABEL[e.from_status] || e.from_status) + " → " + (STATUS_LABEL[e.to_status] || e.to_status);
       } else if(e.event === "created"){
-        text = e.source === "iiko" ? "принят из кассы (открытый)" : "заведён вручную";
+        text = e.source && e.source !== "manual" ? "принят из кассы (открытый)" : "заведён вручную";
       } else if(e.event === "deleted"){
         text = "удалён (был " + (STATUS_LABEL[e.from_status] || e.from_status) + ")";
       } else if(e.event === "reset"){
@@ -2413,7 +2413,7 @@
       const pair = function(k, v){
         return v ? '<div class="det-pair"><span>' + k + '</span><b>' + v + '</b></div>' : "";
       };
-      const src = o.source === "iiko" ? "из iiko" : "занесён вручную";
+      const src = o.source && o.source !== "manual" ? "из кассы" : "занесён вручную";
       const st = { open: "открыт", preparing: "готовится", ready: "готово", served: "выдан" }[o.status] || o.status;
       let left = '<div class="det-grid">'
         + pair("Заказ", "№" + o.number + " · " + fmtDate(o.date))
