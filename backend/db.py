@@ -411,16 +411,39 @@ def add_order(number: int) -> dict:
     return get_board(date)
 
 
-def ingest_kassa_order(number: int, opened_at: str | None = None) -> bool:
+def kassa_number(raw) -> int | str | None:
+    """Нормализовать номер заказа, пришедший с кассы: цифры → int, иначе строка.
+
+    В iiko номер заказа числовой, в Saby Presto номер продажи — **строка**, и какой
+    он будет на самом деле, узнаем только на первом чеке. Поэтому принимаем оба вида:
+    числовой номер остаётся числом (колонка `orders.number` имеет INTEGER-affinity, и
+    вся накопленная история, сортировки и ввод номера гостем продолжают работать
+    как раньше), а нечисловой сохраняется строкой — SQLite это позволяет.
+
+    Пустое или отсутствующее значение → `None`: такой заказ заводить нечем.
+    """
+    text = str(raw if raw is not None else "").strip()
+    if not text:
+        return None
+    return int(text) if text.isdigit() else text
+
+
+def ingest_kassa_order(number: int | str, opened_at: str | None = None) -> bool:
     """Завести заказ с кассы сразу в «готовится», если его сегодня ещё нет.
 
     Дедуп по (дата, номер) в ЛЮБОМ статусе — уже занесённый/продвинутый/выданный
     заказ повторно не создаём. `opened_at` — время открытия чека на кассе (идёт
     как время приёма). Возвращает True, если заказ создан.
 
+    Номер нормализуется `kassa_number`: с iiko приходит число, с Saby может прийти
+    строка — заводим и такой, иначе заказ не попал бы на табло вовсе.
+
     Метка источника берётся из `settings.kassa_source`: в истории видно, какая
     касса завела заказ, а логика на конкретное значение не опирается.
     """
+    number = kassa_number(number)
+    if number is None:
+        return False
     date = today()
     with _connect() as conn:
         exists = conn.execute(

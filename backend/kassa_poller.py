@@ -6,8 +6,8 @@
 уже готовыми заказами. Всё best-effort: аналитика недоступна — пропускаем тик.
 
 Какая касса стоит за ручкой аналитики, поллер не знает и знать не должен: он
-работает с контрактом `{"orders": [{"number", "openTime"}]}`. Переезд с iiko на
-СБИС Presto — это работа на стороне аналитики; здесь не меняется ничего.
+работает с контрактом `{"orders": [{"number", "openTime"}]}`. Номер может быть как
+числом (iiko), так и строкой (Saby Presto) — нормализует его `db.kassa_number`.
 """
 
 import asyncio
@@ -64,9 +64,11 @@ async def _poll_once(client: httpx.AsyncClient) -> None:
     window = timedelta(minutes=settings.kassa_ingest_window_min)
     added = 0
     for o in data.get("orders", []):
-        num = o.get("number")
+        # Номер принимаем и числом, и строкой: в Saby Presto номер продажи строковый,
+        # и заказ с таким номером должен попасть на табло, а не отсеяться молча.
+        num = db.kassa_number(o.get("number"))
         open_time = o.get("openTime", "")
-        if not isinstance(num, int) or not _is_fresh(open_time, now, window):
+        if num is None or not _is_fresh(open_time, now, window):
             continue
         if db.ingest_kassa_order(num, opened_at=open_time):
             added += 1
