@@ -17,7 +17,7 @@ poetry run pytest backend/tests/test_feedback_claim.py -v
 | `test_feedback_claim.py` | отзыв только от того, кто занял номер; лимиты и протухание занятий |
 | `test_auth_session.py` | одна сессия кассы, отзыв токена, мусор вместо токена |
 | `test_client_ip.py` | разбор X-Forwarded-For во всех топологиях |
-| `test_public_surface.py` | что открыто без токена, QR только на свои адреса, скрытый orderId |
+| `test_public_surface.py` | что открыто без токена, QR только на свои адреса, скрытый orderId, noindex везде кроме главной |
 | `test_rate_limit.py` | лимиты по адресу и раздельность корзин |
 | `test_orders.py` | приём заказа, статусы, дедуп, мягкое удаление |
 | `test_logs_and_alerts.py` | шум в логах, схлопывание алертов, маршрутизация по темам |

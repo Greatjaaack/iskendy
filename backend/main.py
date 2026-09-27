@@ -112,7 +112,22 @@ async def security_headers(request: Request, call_next):
     response.headers["X-Content-Type-Options"] = "nosniff"
     response.headers["Referrer-Policy"] = "same-origin"
     response.headers["Content-Security-Policy"] = CSP
+    if not _indexable(request):
+        response.headers["X-Robots-Tag"] = "noindex, nofollow, noarchive"
     return response
+
+
+# В поиске должна быть только главная iskendy.ru. Табло, экран кассы, статистика,
+# API и www-зеркало гостям из выдачи не нужны. Закрываем заголовком, а не
+# robots.txt: Disallow запрещает обход, и поисковик оставил бы адрес в выдаче по
+# внешней ссылке, так и не увидев noindex. Все страницы отдают один index.html,
+# поэтому meta-тег в разметке не подходит — отличить их можно только здесь.
+INDEXABLE_HOST = "iskendy.ru"
+
+
+def _indexable(request: Request) -> bool:
+    host = request.headers.get("host", "").split(":")[0].lower()
+    return host == INDEXABLE_HOST and request.url.path == "/"
 
 # Content-Security-Policy. Второй рубеж на случай, если где-то пропустят
 # экранирование: даже тогда чужой скрипт с чужого адреса не загрузится, а увести

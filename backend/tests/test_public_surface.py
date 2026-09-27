@@ -111,3 +111,20 @@ class TestGostNeVidetNepoladok:
         и прямое указание, что нажатие не сохранилось."""
         html = self._front()
         assert "проверьте интернет на планшете. Ничего не сохранено." in html
+
+
+class TestIndexaciya:
+    """В поиске только главная iskendy.ru; всё остальное — noindex."""
+
+    def test_glavnaya_indeksiruetsya(self, client):
+        r = client.get("/", headers={"Host": "iskendy.ru"})
+        assert "x-robots-tag" not in r.headers
+
+    def test_www_zakryt(self, client):
+        r = client.get("/", headers={"Host": "www.iskendy.ru"})
+        assert "noindex" in r.headers["x-robots-tag"]
+
+    def test_stranicy_i_api_zakryty(self, client):
+        for path in ("/board", "/tv", "/staff", "/stats", "/api/health", "/nety-takogo"):
+            r = client.get(path, headers={"Host": "iskendy.ru"})
+            assert "noindex" in r.headers["x-robots-tag"], path
