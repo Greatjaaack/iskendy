@@ -303,6 +303,13 @@ DB_PATH=/tmp/demo.db FEEDBACK_ALERT_ENABLED=false uvicorn main:app --app-dir bac
   бесплатно. Смотреть: `GET /api/security/events` и `/api/security/summary`.
   Паролей, токенов и ключей в журнале нет.
 - Токен бота приглушён в логах (`httpx` на WARNING), `.env` и база — вне git.
+- **В поиске — только главная `iskendy.ru/`.** Табло, `/tv`, `/staff`, `/stats`,
+  API и зеркало `www` — служебное, гостю в выдаче не нужно. Middleware ставит
+  `X-Robots-Tag: noindex, nofollow, noarchive` на всё, кроме `/` на хосте
+  `iskendy.ru` (`_indexable` в `main.py`). Заголовок, а не `robots.txt`: Disallow
+  запрещает обход, и поисковик оставил бы адрес в выдаче по внешней ссылке, так
+  и не увидев noindex. Meta-тег не годится — все страницы отдают один
+  `index.html`. Людям это ничего не закрывает: адреса открываются как раньше.
 
 **Telegram в РФ блокируется**, поэтому запросы к Bot API идут через прокси
 (`BOT_PROXY_URL`); пустой — ходим напрямую.
@@ -556,7 +563,7 @@ docker exec iskendy cat /data/logs/app.log | grep ОТЗЫВ
 ```bash
 poetry install --with dev --no-root
 ./scripts/install-hooks.sh    # один раз на машину: git-хук pre-push
-poetry run pytest             # 153 теста, ~4 секунды
+poetry run pytest             # 163 теста, ~4 секунды
 ```
 
 Подробности и грабли — в [backend/tests/README.md](backend/tests/README.md).
@@ -670,6 +677,9 @@ poetry run python scripts/progon.py
   подготовка сделана; остались вопросы к СБИС и адаптер на стороне аналитики.
 - **Вкладка «Отзывы» в `/staff`** со статусами отработки негатива (`новый →
   связались → отработан → гость пришёл`). Ручки готовы, экрана нет.
+- **Сервер: вход по SSH только по ключу, HSTS, `www` → `iskendy.ru`.** Снаружи
+  27.09.2026 видно, что SSH принимает пароль; fail2ban и `PermitRootLogin` не
+  проверены. План — в `PLAN.md` аналитики, раздел «Безопасность сервера».
 - **Внешний уптайм-монитор.** Проверку «сайт жив» нельзя делать с самого
   сервера: он умрёт вместе с ней. Нужен бесплатный внешний сервис, дёргающий
   `/api/health` и пишущий в ту же тему аварий.
