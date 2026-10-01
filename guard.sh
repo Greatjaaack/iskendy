@@ -145,13 +145,25 @@ if analytics_alive; then
   clear_once analytics_down "✅ Аналитика снова отвечает, заказы на табло идут"
 else
   sleep 20
+  # Сколько секунд контейнер уже работает. Старт аналитики — до 2 минут (планировщик
+  # и синхронный синк выручки за 31 день), и всё это время /api/health молчит: без
+  # этой проверки сторож перезапускал бы её посреди старта — например, сразу после
+  # ночного деплоя — и слал в чат ложную тревогу «перезапуск не помог».
+  _started=$(docker inspect -f '{{.State.StartedAt}}' dashboards-backend-1 2>/dev/null)
+  _age=$(( $(date +%s) - $(date -d "$_started" +%s 2>/dev/null || date +%s) ))
   if analytics_alive; then
     log "аналитика: первая проверка не прошла, вторая прошла — пропускаем"
+  elif [ "$_age" -lt 180 ]; then
+    log "аналитика не отвечает, но контейнер поднялся ${_age} с назад — даём стартовать"
   else
     log "аналитика не отвечает, перезапускаю dashboards-backend-1"
     docker restart dashboards-backend-1 >/dev/null 2>&1
-    # Старт тяжелее, чем у сайта: поднимается планировщик и синкается выручка.
-    sleep 45
+    # Ждём старта до 150 секунд, опрашивая раз в 10: фиксированных 45 с не хватало.
+    _waited=0
+    while [ "$_waited" -lt 150 ] && ! analytics_alive; do
+      sleep 10
+      _waited=$((_waited + 10))
+    done
     if analytics_alive; then
       rm -f "$STATE/analytics_down"
       tg "🔄 Аналитика не отвечала, контейнер перезапущен. Заказы на табло снова идут."
