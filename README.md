@@ -244,7 +244,7 @@ DB_PATH=/tmp/demo.db FEEDBACK_ALERT_ENABLED=false uvicorn main:app --app-dir bac
 ручек: заказ закрепляется за первым вбившим его телефоном и без выданного ключа
 оценку не принять, один отзыв на заказ (уникальный индекс), отдельный ключ
 правки в ответе на оценку, rate-limit по IP (раздельные корзины для чтения,
-записи, шагов воронки, занятия номера и входа — в зале все телефоны выходят
+записи, шагов воронки, отчётов экранов, занятия номера и входа — в зале все телефоны выходят
 через один адрес, поэтому лимиты не должны съедать друг друга).
 
 ## Безопасность
@@ -564,7 +564,7 @@ docker exec iskendy cat /data/logs/app.log | grep ОТЗЫВ
 ```bash
 poetry install --with dev --no-root
 ./scripts/install-hooks.sh    # один раз на машину: git-хук pre-push
-poetry run pytest             # 163 теста, ~4 секунды
+poetry run pytest             # 165 тестов, ~4 секунды
 ```
 
 Подробности и грабли — в [backend/tests/README.md](backend/tests/README.md).

@@ -576,7 +576,9 @@ def _guard(request: Request, limit: int = RATE_LIMIT_WRITE, kind: str = "w") -> 
 
     Вид передаётся явно, а не выводится из числа: два разных лимита легко
     оказываются равны (вход и занятие номера — оба по десять), и тогда они
-    молча делят один счётчик, а гость выбивает персоналу вход.
+    молча делят один счётчик, а гость выбивает персоналу вход. Буква у каждого
+    лимита своя: однажды отчёты экранов и занятие номера получили одну («c»), и
+    десяток отчётов за минуту закрывал залу подписку на заказ.
     """
     ip = _client_ip(request)
     if not _rate_ok(f"{kind}:{ip}", limit):
@@ -727,7 +729,7 @@ async def guest_claim(request: Request, body: ClaimBody) -> dict:
     гость делает это сразу после оплаты, а оценка открывается только после
     выдачи, через десяток минут готовки.
     """
-    _guard(request, RATE_LIMIT_CLAIM, "c")
+    _guard(request, RATE_LIMIT_CLAIM, "k")
     result = db.claim_order(body.number, guest=body.guest)
     if not result["ok"]:
         db.log_security(

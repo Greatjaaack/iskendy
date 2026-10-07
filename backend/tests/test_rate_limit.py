@@ -70,3 +70,32 @@ def test_otchyoty_ekrana_ne_edyat_limit_gostyam(client):
     r = client.post("/api/guest/event", json={"step": "open", "session": "s1"},
                     headers=odin_adres)
     assert r.status_code == 200, "воронка гостя не должна страдать от отчётов экрана"
+
+
+def test_otchyoty_ekrana_ne_zakryvayut_podpisku(client):
+    """Отчёты экранов и занятие номера одно время делили корзину «c»: лимит
+    подписки (10) меньше лимита отчётов (30), и десятка отчётов с IP зала
+    хватало, чтобы гости получали 429 вместо подписки на свой заказ.
+    """
+    odin_adres = {"X-Forwarded-For": "91.76.12.11"}
+    for _ in range(main.RATE_LIMIT_CLAIM + 5):
+        client.post("/api/client/event", json={"kind": "offline"}, headers=odin_adres)
+    r = client.post("/api/guest/claim", json={"number": 401, "guest": "g-zal"},
+                    headers=odin_adres)
+    assert r.status_code == 200, "подписка не должна упираться в отчёты экранов"
+    assert r.json()["ok"]
+
+
+def test_u_kazhdogo_limita_svoya_korzina():
+    """Одна буква корзины — один лимит. Ловит повтор ошибки на новой ручке
+    раньше, чем её заметят гости: общий счётчик снаружи не виден."""
+    import re
+    from pathlib import Path
+
+    src = Path(main.__file__).read_text(encoding="utf-8")
+    korziny: dict[str, set[str]] = {}
+    for limit, kind in re.findall(r'_guard\(request,\s*(\w+),\s*"(\w+)"\)', src):
+        korziny.setdefault(kind, set()).add(limit)
+    korziny.setdefault("w", set()).add("RATE_LIMIT_WRITE")  # _guard(request) по умолчанию
+    obshchie = {k: v for k, v in korziny.items() if len(v) > 1}
+    assert not obshchie, f"разные лимиты делят корзину: {obshchie}"
