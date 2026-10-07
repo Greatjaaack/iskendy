@@ -93,9 +93,17 @@ def test_u_kazhdogo_limita_svoya_korzina():
     from pathlib import Path
 
     src = Path(main.__file__).read_text(encoding="utf-8")
+    vyzovy = re.findall(r"^\s+_guard\((.*)\)\s*$", src, re.M)
     korziny: dict[str, set[str]] = {}
-    for limit, kind in re.findall(r'_guard\(request,\s*(\w+),\s*"(\w+)"\)', src):
-        korziny.setdefault(kind, set()).add(limit)
-    korziny.setdefault("w", set()).add("RATE_LIMIT_WRITE")  # _guard(request) по умолчанию
+    for args in vyzovy:
+        if args == "request":  # по умолчанию — RATE_LIMIT_WRITE, корзина «w»
+            korziny.setdefault("w", set()).add("RATE_LIMIT_WRITE")
+            continue
+        m = re.fullmatch(r'request,\s*(\w+),\s*"(\w+)"', args)
+        # Вызов другой формы тест не разберёт — пусть лучше упадёт, чем молча
+        # пропустит ручку.
+        assert m, f"не разобрать вызов _guard({args})"
+        korziny.setdefault(m[2], set()).add(m[1])
+    assert len(vyzovy) >= 8, "вызовы _guard не нашлись — тест ничего не проверяет"
     obshchie = {k: v for k, v in korziny.items() if len(v) > 1}
     assert not obshchie, f"разные лимиты делят корзину: {obshchie}"
