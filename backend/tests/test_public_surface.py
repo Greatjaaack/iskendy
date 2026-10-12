@@ -71,6 +71,19 @@ def test_zashchitnye_zagolovki_na_meste(client):
     assert "object-src 'none'" in h["Content-Security-Policy"]
 
 
+def test_csp_propuskaet_metriku(client):
+    """tag.js грузится с mc.yandex.ru, а хиты шлёт на mc.yandex.com и
+    служебные iframe — на mc.yandex.md. До 12.10.2026 CSP пускал только .ru:
+    скрипт загружался, а все просмотры и цели молча резались браузером."""
+    csp = dict(
+        d.strip().split(" ", 1) for d in
+        client.get("/api/health").headers["Content-Security-Policy"].split(";")
+    )
+    for directive in ("script-src", "img-src", "connect-src", "frame-src"):
+        for host in ("mc.yandex.ru", "mc.yandex.com", "mc.yandex.md"):
+            assert f"https://{host}" in csp[directive], (directive, host)
+
+
 class TestGostNeVidetNepoladok:
     """Гость пришёл за едой, а не за нашими неполадками: красная надпись «нет
     связи» на его телефоне или на телевизоре в зале читается как «тут всё

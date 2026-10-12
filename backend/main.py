@@ -139,18 +139,22 @@ def _indexable(request: Request) -> bool:
 # не внедрённый в разметку код.
 #
 # Что и зачем разрешено, кроме своего origin:
-#   mc.yandex.ru        — Метрика: скрипт, пиксель, отправка данных, iframe вебвизора
+#   mc.yandex.ru/.com/.md — Метрика: скрипт с .ru, а хиты tag.js шлёт на .com
+#                         (домен зашит в счётчике) и служебные iframe на .md.
+#                         До 12.10.2026 был разрешён только .ru — CSP резал
+#                         ВСЕ просмотры и цели у всех гостей, а скрипт грузился.
 #   fonts.googleapis.com / fonts.gstatic.com — шрифты Bebas Neue и IBM Plex
 #   data:               — орнамент и QR рисуются в SVG прямо на странице
 #   blob:               — вебвизор Метрики поднимает воркер
+YM = "https://mc.yandex.ru https://mc.yandex.com https://mc.yandex.md"
 CSP = "; ".join([
     "default-src 'self'",
-    "script-src 'self' 'unsafe-inline' https://mc.yandex.ru",
+    f"script-src 'self' 'unsafe-inline' {YM}",
     "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
     "font-src 'self' https://fonts.gstatic.com",
-    "img-src 'self' data: https://mc.yandex.ru",
-    "connect-src 'self' https://mc.yandex.ru",
-    "frame-src https://mc.yandex.ru",
+    f"img-src 'self' data: {YM}",
+    f"connect-src 'self' {YM}",
+    f"frame-src blob: {YM}",
     "worker-src 'self' blob:",
     "object-src 'none'",
     "base-uri 'self'",
