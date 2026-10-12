@@ -220,7 +220,12 @@ def _payload(board: dict) -> dict:
     return {**board, "now": db.now_hm()}
 
 
-@app.get("/api/health")
+# HEAD — для мониторингов и `curl -I`: роут только на GET отдавал на HEAD 404
+# (запрос проваливался в StaticFiles), и снаружи сайт выглядел лежащим.
+GET_HEAD = ["GET", "HEAD"]
+
+
+@app.api_route("/api/health", methods=GET_HEAD)
 def health() -> dict:
     return {"ok": True}
 
@@ -928,27 +933,27 @@ def security_summary(
 # --- Статика фронта (после API, чтобы не перехватывать /api/*) ---
 if FRONTEND_DIR.exists():
 
-    @app.get("/")
+    @app.api_route("/", methods=GET_HEAD)
     def index() -> FileResponse:
         """Лендинг-мультиссылка (главная)."""
         return FileResponse(FRONTEND_DIR / "index.html")
 
-    @app.get("/board")
+    @app.api_route("/board", methods=GET_HEAD)
     def board() -> FileResponse:
         """Табло заказов — скрытая вкладка (ссылок с лендинга нет)."""
         return FileResponse(FRONTEND_DIR / "index.html")
 
-    @app.get("/tv")
+    @app.api_route("/tv", methods=GET_HEAD)
     def tv() -> FileResponse:
         """ТВ-режим табло — крупная раскладка для телевизора в зале (для персонала)."""
         return FileResponse(FRONTEND_DIR / "index.html")
 
-    @app.get("/staff")
+    @app.api_route("/staff", methods=GET_HEAD)
     def staff() -> FileResponse:
         """Экран кассы — заносить заказы и двигать их статусы."""
         return FileResponse(FRONTEND_DIR / "index.html")
 
-    @app.get("/stats")
+    @app.api_route("/stats", methods=GET_HEAD)
     def stats() -> FileResponse:
         """Аналитика по дням/часам — под паролем кассы (для персонала)."""
         return FileResponse(FRONTEND_DIR / "index.html")

@@ -84,6 +84,18 @@ def test_csp_propuskaet_metriku(client):
             assert f"https://{host}" in csp[directive], (directive, host)
 
 
+def test_head_ne_404(client):
+    """HEAD шлют мониторинги и `curl -I`. До 13.10.2026 страницы и health были
+    только на GET, HEAD проваливался в StaticFiles и получал 404."""
+    for path in ("/", "/board", "/tv", "/staff", "/stats", "/api/health"):
+        r = client.head(path)
+        assert r.status_code == 200, path
+        assert r.content == b"", path
+        assert "Content-Security-Policy" in r.headers, path
+    assert "X-Robots-Tag" not in client.head("/", headers={"host": "iskendy.ru"}).headers
+    assert "noindex" in client.head("/board").headers["X-Robots-Tag"]
+
+
 class TestGostNeVidetNepoladok:
     """Гость пришёл за едой, а не за нашими неполадками: красная надпись «нет
     связи» на его телефоне или на телевизоре в зале читается как «тут всё
