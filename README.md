@@ -567,7 +567,7 @@ docker exec iskendy cat /data/logs/app.log | grep ОТЗЫВ
 ```bash
 poetry install --with dev --no-root
 ./scripts/install-hooks.sh    # один раз на машину: git-хук pre-push
-poetry run pytest             # 165 тестов, ~4 секунды
+poetry run pytest             # 167 тестов, ~4 секунды
 ```
 
 Подробности и грабли — в [backend/tests/README.md](backend/tests/README.md).
