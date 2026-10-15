@@ -1,0 +1,75 @@
+.nav {
+  display: inline-flex;
+  gap: 2px; /* figma: 179:142 */
+  padding: 2px; /* figma: 179:142 */
+  border-radius: var(--radius-capsule);
+  background: var(--iskendi-bg-sunken);
+}
+.segment {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px; /* figma: 179:142 */
+  height: 44px; /* figma: 179:142 */
+  padding-inline: 14px; /* figma: 179:142 */
+  border-radius: var(--radius-capsule);
+  font: var(--t-web-mobile-label);
+  color: var(--iskendi-fg-primary);
+  text-decoration: none;
+  white-space: nowrap;
+}
+.segment[aria-current='page'] {
+  background: var(--iskendi-bg-action-primary-default);
+  color: var(--iskendi-fg-action-primary);
+}
+.segment:focus-visible {
+  outline: 2px solid var(--iskendi-border-focus); /* figma: 179:142 */
+}
+.badge {
+  padding: 1px 7px; /* figma: 179:142 */
+  border-radius: var(--radius-capsule);
+  background: var(--color-status-preparing-bg);
+  color: var(--iskendi-fg-primary);
+}
+.segment[aria-current='page'] .badge {
+  background: var(--iskendi-bg-canvas);
+}
+.icon {
+  width: 22px; /* figma: 204:21535 */
+  height: 22px; /* figma: 204:21535 */
+  flex: none;
+  background: currentColor;
+  mask-repeat: no-repeat;
+  mask-position: center;
+  mask-size: 22px 22px; /* figma: 204:21535 */
+}
+.board {
+  mask-image: url('../../assets/navigation/board.svg?no-inline');
+}
+.help {
+  mask-image: url('../../assets/navigation/help.svg?no-inline');
+}
+.board-solid {
+  mask-image: url('../../assets/navigation/board-solid.svg?no-inline');
+}
+.help-solid {
+  mask-image: url('../../assets/navigation/help-solid.svg?no-inline');
+}
+
+.collection .segment:first-child {
+  gap: var(--space-8);
+  width: 140px; /* figma: 557:12182 */
+}
+.receipt {
+  display: block;
+  width: var(--space-24);
+  height: var(--space-24);
+  flex: none;
+  background: currentColor;
+  mask: url('../../assets/orders/receipt.svg?no-inline') center /
+    var(--space-24) var(--space-24) no-repeat;
+}
+@media (max-width: 1024px /* figma: 558:46155 */) {
+  .collection {
+    display: none;
+  }
+}

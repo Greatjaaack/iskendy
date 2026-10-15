@@ -1,0 +1,14 @@
+<svg preserveAspectRatio="none" overflow="visible" style="display: block;" width="90" height="90" viewBox="0 0 90 90" fill="none" xmlns="http://www.w3.org/2000/svg">
+<g id="&#208;&#187;&#208;&#181;&#208;&#191;&#208;&#181;&#209;&#129;&#209;&#130;&#208;&#186;&#208;&#184;" clip-path="url(#clip0_0_25)">
+<path id="Vector" d="M45 0C58 13 58 31 45 44C32 31 32 13 45 0Z" fill="#F7D66E"/>
+<path id="Vector_2" d="M45 90C58 77 58 59 45 46C32 59 32 77 45 90Z" fill="#F7D66E"/>
+<path id="Vector_3" d="M0 45C13 32 31 32 44 45C31 58 13 58 0 45Z" fill="#F7D66E"/>
+<path id="Vector_4" d="M90 45C77 32 59 32 46 45C59 58 77 58 90 45Z" fill="#F7D66E"/>
+<circle id="Ellipse" cx="45" cy="45" r="7" fill="#FFFCF5"/>
+</g>
+<defs>
+<clipPath id="clip0_0_25">
+<rect width="90" height="90" fill="white"/>
+</clipPath>
+</defs>
+</svg>

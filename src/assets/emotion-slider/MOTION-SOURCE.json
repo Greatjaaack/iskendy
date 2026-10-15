@@ -1,0 +1,42 @@
+{
+  "fileKey": "QDbhShERrxdg5nXHbrr27s",
+  "nodes": ["244:511", "244:512", "244:522", "244:532", "244:542", "244:552"],
+  "files": [
+    {
+      "name": "thumb.svg",
+      "width": "72",
+      "height": "72",
+      "sha256": "dcf4c7ec06b2c880a32062df1a562bd20889591cd95807bc8b45936949e93edd"
+    },
+    {
+      "name": "mark-1.svg",
+      "width": "14",
+      "height": "14",
+      "sha256": "14e3ec2e47522c56fd5338d192299186879001ff08e1fa25288e917df76372b1"
+    },
+    {
+      "name": "mark-2.svg",
+      "width": "14",
+      "height": "14",
+      "sha256": "c9cd6f12ff4466c2e4d03579e4180e96632f30761f264512e867622e4d998d4b"
+    },
+    {
+      "name": "mark-3.svg",
+      "width": "14",
+      "height": "14",
+      "sha256": "2a39a5acca42b234029998fbb4d27f3dde48a98922a2a8aff5065dd7c56d4d34"
+    },
+    {
+      "name": "mark-4.svg",
+      "width": "14",
+      "height": "14",
+      "sha256": "d16d335151d81ac667fccd06faeef5a628055ede7983aecb8711fe77b3fe706d"
+    },
+    {
+      "name": "mark-5.svg",
+      "width": "14",
+      "height": "14",
+      "sha256": "c4a3bf375fad4c06e298144af0973a95703e7f3d1125dad8f91cf47756c52054"
+    }
+  ]
+}

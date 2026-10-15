@@ -1,0 +1,232 @@
+.shell {
+  min-height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-24);
+  padding: var(--space-24) var(--space-24) 124px; /* figma: 68:2 */
+  /* UX-01: landscape iPhone keeps the content out of the notch. */
+  padding-inline: max(var(--space-24), env(safe-area-inset-left))
+    max(var(--space-24), env(safe-area-inset-right));
+  background: var(--color-surface-base);
+}
+.desktopHeader {
+  display: none;
+}
+.shell h1:focus {
+  outline: none;
+}
+.orderMain {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-24);
+}
+.pickupSteps {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-24);
+  color: var(--color-text-primary);
+}
+.pickupSteps h2 {
+  margin: 0;
+  font: var(--t-web-mobile-category);
+}
+.pickupSteps ol {
+  padding: 0;
+  margin: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-24);
+}
+.pickupSteps li {
+  display: flex;
+  gap: var(--space-12);
+  font: var(--t-web-mobile-body);
+}
+.pickupSteps li > span:first-child {
+  font: var(--t-web-desktop-label);
+}
+.board {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-16);
+  color: var(--color-text-primary);
+}
+.board h1 {
+  margin: 0;
+  font: var(--t-web-mobile-h1);
+}
+.board h2 {
+  margin: 0;
+  font: var(--t-web-mobile-category);
+}
+.group {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-12);
+  padding: var(--space-16);
+  border-radius: var(--radius-24);
+}
+.preparing {
+  background: var(--color-surface-board-preparing);
+}
+.ready {
+  background: var(--color-surface-board-ready);
+}
+.chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px; /* figma: 74:255 */
+}
+.groupHeading {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+}
+.pickup {
+  font: var(--t-web-mobile-accent);
+}
+.board p {
+  margin: 0;
+  font: var(--t-web-desktop-small);
+  color: var(--color-text-secondary);
+}
+@media (min-width: 768px /* figma: 80:315 */) {
+  /* figma: 80:315 */
+  .shell {
+    max-width: 1440px; /* figma: 80:315 */
+    margin: 0 auto;
+    padding: 0 var(--space-24) var(--space-40);
+    padding-inline: max(var(--space-24), env(safe-area-inset-left))
+      max(var(--space-24), env(safe-area-inset-right));
+    gap: var(--space-48);
+  }
+  .mobileHeader {
+    display: none;
+  }
+  .desktopHeader {
+    display: flex;
+  }
+  .shell > nav {
+    display: none;
+  }
+}
+@media (min-width: 1440px /* figma: 80:315 */) {
+  /* figma: 80:315 */
+  .shell {
+    padding-inline: 120px; /* figma: 80:315 */
+  }
+}
+
+/* Nonvisual live region: no product geometry or Figma tokens are remapped. */
+.srOnly {
+  position: absolute;
+  width: var(--space-4);
+  height: var(--space-4);
+  padding: 0;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+.issuedMain {
+  gap: var(--space-16);
+}
+@media (max-width: 767px /* figma: 74:185 */) {
+  .issuedShell {
+    gap: var(--space-16);
+  }
+}
+@media (min-width: 768px /* figma: 81:580 */) {
+  .issuedMain {
+    align-self: center;
+    width: 100%;
+    max-width: 720px; /* figma: 81:634 */
+    gap: var(--space-24);
+  }
+}
+
+.help h1 {
+  margin: 0;
+  font: var(--t-web-mobile-h1);
+}
+@media (min-width: 768px /* figma: 79:1512 */) {
+  .shell > footer {
+    margin-top: auto;
+  }
+  .help h1 {
+    font: var(--t-web-desktop-h1);
+  }
+}
+
+.navigationShell {
+  padding-inline: max(var(--space-16), env(safe-area-inset-left))
+    max(var(--space-16), env(safe-area-inset-right));
+}
+.navigationShell .mobileHeader {
+  height: 60px; /* figma: 556:13681 */
+  padding-block: 10px; /* figma: 556:13681 */
+}
+.navigationGrid,
+.detailColumn,
+.queueAside {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-24);
+  width: 100%;
+  min-width: 0;
+}
+.navigationGrid .fullTicket {
+  width: 100%;
+}
+.queueAside .group {
+  padding: var(--space-24);
+}
+.queueAside h2 {
+  margin: 0;
+  font: var(--t-web-desktop-category);
+}
+.queueAside .chips {
+  gap: var(--space-12);
+}
+@media (min-width: 768px /* figma: 558:46155 */) {
+  .navigationShell {
+    padding-inline: max(var(--space-32), env(safe-area-inset-left))
+      max(var(--space-32), env(safe-area-inset-right));
+    gap: var(--space-24);
+  }
+  .detailColumn {
+    gap: var(--space-16);
+  }
+  .navigationGrid.issuedMain {
+    max-width: none;
+    align-self: auto;
+  }
+}
+@media (min-width: 1024px /* figma: 558:16240 */) {
+  .navigationGrid {
+    display: grid;
+    grid-template-columns: minmax(0, 556fr) minmax(0, 380fr);
+    align-items: start;
+  }
+}
+@media (min-width: 1440px /* figma: 557:12181 */) {
+  .navigationShell {
+    padding-inline: 120px; /* figma: 557:12181 */
+    gap: var(--space-32);
+  }
+  .navigationGrid {
+    grid-template-columns: minmax(0, 688fr) minmax(0, 488fr);
+  }
+}
+
+.tiles {
+  display: flex;
+  align-items: stretch;
+  gap: var(--space-12);
+  width: 100%;
+}
+/* Web/ReturnBar 179:153: reserve its height so the lazy bar never shifts the page. */
+.returnSlot {
+  min-height: 52px; /* figma: 179:153 */
+}

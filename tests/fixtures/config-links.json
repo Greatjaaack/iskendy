@@ -1,0 +1,10 @@
+{
+  "promptDelaySec": 180,
+  "links": {
+    "yandex": "https://example.test/yandex",
+    "2gis": "https://example.test/2gis",
+    "telegram": "https://example.test/telegram",
+    "vk": "https://example.test/vk",
+    "instagram": "https://example.test/instagram"
+  }
+}

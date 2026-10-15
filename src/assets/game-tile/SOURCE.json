@@ -1,0 +1,35 @@
+{
+  "fileKey": "QDbhShERrxdg5nXHbrr27s",
+  "nodeId": "184:213",
+  "scope": "Original static game card assets; owner approved Soon instead of an executable game.",
+  "files": [
+    {
+      "name": "vector.svg",
+      "width": "34",
+      "height": "60",
+      "bytes": 231,
+      "sha256": "671eec503c2863e0f9cf0d3186a9912e04b6c181e22508d416d001e8ea6f872f"
+    },
+    {
+      "name": "play.svg",
+      "width": "22",
+      "height": "22",
+      "bytes": 674,
+      "sha256": "064ff904c6c41d98929d36bf65b502ffbf54f01361ac276138e249e371f1c437"
+    },
+    {
+      "name": "petals.svg",
+      "width": "90",
+      "height": "90",
+      "bytes": 805,
+      "sha256": "b303d66614a389166cfdca6fbb0a8d16d26fe990f697cafb624097bc7fcc3b65"
+    }
+  ],
+  "reusedArrow": {
+    "file": "src/assets/orders/board-go.svg",
+    "sha256": "75d7e84c374e25ee461520636631ef04ba5063bbff778572972e23485986ba98",
+    "verifiedAgainst": "https://www.figma.com/api/mcp/asset/71399ea4-a343-4eea-8b3e-b2e3a32fe8cd.svg",
+    "width": "20",
+    "height": "20"
+  }
+}

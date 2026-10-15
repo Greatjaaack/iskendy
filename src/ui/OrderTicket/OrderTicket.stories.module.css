@@ -1,0 +1,33 @@
+.frame {
+  position: relative;
+  width: 1300px; /* figma: 67:1158 */
+  height: 1336px; /* figma: 67:1158 */
+  background: var(--iskendi-bg-canvas);
+}
+.frame > div {
+  position: absolute;
+}
+.mobile-preparing {
+  top: 32px; /* figma: 67:1143 */
+  left: 32px; /* figma: 67:1143 */
+}
+.mobile-ready {
+  top: 32px; /* figma: 67:1150 */
+  left: 398px; /* figma: 67:1150 */
+}
+.desktop-preparing {
+  top: 384px; /* figma: 79:53 */
+  left: 32px; /* figma: 79:53 */
+}
+.desktop-ready {
+  top: 384px; /* figma: 79:60 */
+  left: 616px; /* figma: 79:60 */
+}
+.mobile-issued {
+  top: 856px; /* figma: 179:17289 */
+  left: 32px; /* figma: 179:17289 */
+}
+.desktop-issued {
+  top: 856px; /* figma: 179:17310 */
+  left: 398px; /* figma: 179:17310 */
+}

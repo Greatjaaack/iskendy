@@ -1,0 +1,12 @@
+{
+  "repository": "https://github.com/Greatjaaack/iskendy",
+  "commit": "a0dc17aee0e96ecf31f70800c1d66889acec3397",
+  "capturedAt": "2026-10-12",
+  "sha256": {
+    "legacy/index.html": "f22e60fc26b52929e683f2630a05c5114a3f54adce1dbe5034ba538c761dab2e",
+    "public/sw.js": "5760087e8b3be4e8022595ec9ea689ab6991dd2630737b8d10cd7b9fa6c1b4cb",
+    "legacy/assets/favicon.png": "ea2c006fbe56031673e5b23fdba131050de378ae91308af8552acb1fdcdeb299",
+    "legacy/assets/iskendi_wordmark_white.png": "bded98fbed0de2a0db38bbb72e3e3c88faf4a9dc75a447a4d3cf63137a09a447",
+    "legacy/assets/logo_white.png": "e784864180fe98cfedab9727d76683b91eb26a92b10f70856d68d15a6a2af83a"
+  }
+}

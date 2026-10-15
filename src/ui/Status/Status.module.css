@@ -1,0 +1,36 @@
+.status {
+  display: inline-flex;
+  align-items: center;
+  max-width: 100%;
+  gap: var(--space-8);
+  padding: var(--space-8) var(--space-16);
+  border-radius: var(--radius-capsule);
+  font: var(--t-web-desktop-label);
+  color: var(--iskendi-fg-primary);
+  background: var(--iskendi-bg-canvas);
+}
+.status > span:first-child {
+  flex: none;
+}
+.status > span:last-child {
+  min-width: 0;
+}
+.ready {
+  color: var(--color-status-ready-text);
+  background: var(--color-status-ready-bg);
+}
+.ready > span:first-child {
+  width: 16px; /* figma: 67:71 */
+}
+.not-found {
+  background: var(--color-surface-hero);
+}
+.offline {
+  width: 364px; /* figma: 67:76 */
+  min-height: 39px; /* figma: 67:76 */
+  background: var(--iskendi-bg-surface);
+  border: 1.5px solid var(--iskendi-border-default); /* figma: 67:76 */
+}
+.offline > span:first-child {
+  width: 5px; /* figma: 67:77 */
+}

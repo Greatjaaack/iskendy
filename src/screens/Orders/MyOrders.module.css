@@ -1,0 +1,173 @@
+/* Figma section 13: M390 664:23544 / 664:23656, S3 671:23768; wide rows T768/T1024/D1440. */
+.orders {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-24);
+  width: 100%;
+  min-width: 0;
+  color: var(--color-text-primary);
+}
+.titleRow,
+.topRow {
+  display: flex;
+  align-items: center;
+  gap: var(--space-8);
+}
+.topRow {
+  justify-content: space-between;
+}
+.titleRow h1 {
+  flex: 1;
+  min-width: 0;
+  margin: 0;
+  font: var(--t-web-mobile-h1);
+}
+.titleRow h1:focus {
+  outline: none;
+}
+.plus,
+.round {
+  display: flex;
+  flex: none;
+  width: 44px; /* figma: 468:514 */
+  height: 44px; /* figma: 468:514 */
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  border: 0;
+  border-radius: var(--radius-capsule);
+  color: var(--color-text-primary);
+  background: var(--color-surface-sunken);
+  cursor: pointer;
+}
+.plus {
+  background: var(--color-surface-base);
+}
+.plus:focus-visible,
+.round:focus-visible,
+.stretched:focus-visible {
+  outline: 3px solid var(--color-focus-ring); /* figma: 67:48 */
+  outline-offset: 3px; /* figma: 67:48 */
+}
+.anchor {
+  position: relative;
+}
+.columns,
+.column,
+.queue {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-24);
+  min-width: 0;
+}
+.queue {
+  gap: var(--space-16);
+}
+.card {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-16);
+}
+.ticketWrap {
+  position: relative;
+}
+.ticketWrap > .ticket {
+  width: 100%; /* figma: 684:51370 — the ticket fills its column */
+}
+.stretched {
+  position: absolute;
+  inset: 0;
+  padding: 0;
+  border: 0;
+  border-radius: var(--radius-24);
+  background: none;
+  cursor: pointer;
+}
+.cardActions {
+  position: absolute;
+  top: var(--space-24);
+  right: var(--space-24);
+}
+.cardActions .round {
+  background: var(--color-surface-base);
+}
+/* 664:23749: strips overlap by 14 px */
+.stack {
+  display: flex;
+  flex-direction: column;
+}
+.stack > * + * {
+  margin-top: -14px; /* figma: 664:23750 */
+}
+.completed {
+  display: contents;
+}
+.completed > * {
+  margin-top: -14px; /* figma: 681:24874 */
+}
+.tiles {
+  display: flex;
+  align-items: stretch;
+  gap: var(--space-12);
+  /* Tiles load lazily; the row keeps its height so nothing shifts. */
+  min-height: 186px; /* figma: 684:51376 */
+}
+.pickup {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-24);
+}
+.pickup h2 {
+  margin: 0;
+  font: var(--t-web-mobile-category);
+}
+.pickup ol {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-24);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.pickup li {
+  display: flex;
+  gap: var(--space-12);
+  font: var(--t-web-mobile-body);
+}
+.pickup li > span:first-child {
+  font: var(--t-web-desktop-label);
+}
+.notFound {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-8);
+  padding: var(--space-24);
+  border: 1px solid var(--color-status-error-border);
+  border-radius: var(--radius-24);
+  background: var(--color-surface-raised);
+}
+.notFound p {
+  margin: 0;
+  font: var(--t-web-mobile-body);
+}
+.notFound .notFoundNumber {
+  font: var(--t-web-mobile-category);
+}
+@media (min-width: 768px /* figma: 683:24760 */) {
+  .titleRow h1 {
+    font: var(--t-web-desktop-h1);
+  }
+}
+@media (min-width: 1024px /* figma: 684:25675 */) {
+  .columns {
+    display: grid;
+    grid-template-columns: minmax(0, 556fr) minmax(0, 380fr); /* figma: 684:25677 */
+    align-items: start;
+  }
+}
+@media (min-width: 1440px /* figma: 684:51363 */) {
+  .columns {
+    grid-template-columns: minmax(0, 688fr) minmax(0, 488fr); /* figma: 684:51368 */
+  }
+}

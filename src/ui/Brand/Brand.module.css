@@ -1,0 +1,26 @@
+.logo {
+  display: block;
+  position: relative;
+  width: 600px; /* figma: 66:1135 */
+  max-width: 100%;
+  aspect-ratio: 600 / 86.6775894165039;
+  overflow: clip;
+}
+.logo img {
+  position: absolute;
+  top: 1.66%;
+  width: 100%;
+  height: auto;
+  transform: scaleY(-1);
+}
+.rosette {
+  display: block;
+  width: 100px; /* figma: 53:13 */
+  max-width: 100%;
+  aspect-ratio: 100 / 101.3328628540039;
+}
+.rosette img {
+  width: 100%;
+  height: auto;
+  transform: scaleY(-1);
+}

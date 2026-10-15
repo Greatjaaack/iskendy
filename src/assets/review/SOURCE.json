@@ -1,0 +1,103 @@
+{
+  "fileKey": "QDbhShERrxdg5nXHbrr27s",
+  "date": "2026-10-15",
+  "assets": [
+    {
+      "name": "tulip",
+      "url": "https://www.figma.com/api/mcp/asset/c12f4113-0eac-4260-8912-7d73be925663.svg",
+      "file": "tulip.svg"
+    },
+    {
+      "name": "tulip-mini",
+      "url": "https://www.figma.com/api/mcp/asset/88e5a86f-d386-4e16-a963-6cb37385a87c.svg",
+      "file": "tulip-mini.svg"
+    },
+    {
+      "name": "rosette",
+      "url": "https://www.figma.com/api/mcp/asset/80cd8196-cf16-4fca-9b6e-644160f3c00c.svg",
+      "file": "rosette.svg"
+    },
+    {
+      "name": "rosette-lines",
+      "url": "https://www.figma.com/api/mcp/asset/696b2cbc-5a11-4c0d-b061-7f1f7413a6a9.svg",
+      "file": "rosette-lines.svg"
+    },
+    {
+      "name": "board",
+      "url": "https://www.figma.com/api/mcp/asset/29c958ff-4b71-491b-8c81-fdbef0401cf5.svg",
+      "file": "board.svg"
+    },
+    {
+      "name": "manager",
+      "url": "https://www.figma.com/api/mcp/asset/f4da3d38-3143-4a13-9189-954817d46295.svg",
+      "file": "manager.svg"
+    },
+    {
+      "name": "game",
+      "url": "https://www.figma.com/api/mcp/asset/16b4554c-fa33-4e5b-ae9b-8db80e6405e8.svg",
+      "file": "game.svg"
+    },
+    {
+      "name": "attach",
+      "url": "https://www.figma.com/api/mcp/asset/3a686850-4897-4a04-a2a1-c0f93bb31ccd.svg",
+      "file": "attach.svg"
+    },
+    {
+      "name": "dock-orders",
+      "url": "https://www.figma.com/api/mcp/asset/e57dd81f-35e1-402e-9ca5-5f913520da04.svg",
+      "file": "dock-orders.svg"
+    },
+    {
+      "name": "dock-board",
+      "url": "https://www.figma.com/api/mcp/asset/7cfaa5aa-a80b-46c2-a6de-9a8f7cc6d3e8.svg",
+      "file": "dock-board.svg"
+    },
+    {
+      "name": "dock-help",
+      "url": "https://www.figma.com/api/mcp/asset/87f9b24a-032f-4207-aad0-5c74137ae99b.svg",
+      "file": "dock-help.svg"
+    },
+    {
+      "name": "nazar",
+      "url": "https://www.figma.com/api/mcp/asset/3da479ec-4f11-40fb-a200-6486fb14c4c2.svg",
+      "file": "nazar.svg"
+    },
+    {
+      "name": "nazar-lines",
+      "url": "https://www.figma.com/api/mcp/asset/cd2ae14a-9ba4-4e52-97e5-db3dbc5bcefd.svg",
+      "file": "nazar-lines.svg"
+    },
+    {
+      "name": "review",
+      "url": "https://www.figma.com/api/mcp/asset/6c5b8c36-2767-406a-ae3a-dcab120de3ee.svg",
+      "file": "review.svg"
+    },
+    {
+      "name": "review-alt",
+      "url": "https://www.figma.com/api/mcp/asset/617388ae-f0e5-4237-9fed-e8ad42068434.svg",
+      "file": "review-alt.svg"
+    },
+    {
+      "name": "photo",
+      "url": "https://www.figma.com/api/mcp/asset/6531fbd6-d99b-492c-8d8c-72b43c294155.svg",
+      "file": "photo.svg"
+    },
+    {
+      "name": "video",
+      "url": "https://www.figma.com/api/mcp/asset/ddf7de91-366f-4f5f-a4fb-a02c64dcf00f.svg",
+      "file": "video.svg"
+    },
+    {
+      "name": "dock-board-active",
+      "url": "https://www.figma.com/api/mcp/asset/0396b948-2d39-4854-8661-929dbb132286.svg",
+      "file": "dock-board-active.svg",
+      "sourceNode": "790:124"
+    },
+    {
+      "name": "dock-help-active",
+      "url": "https://www.figma.com/api/mcp/asset/5e9304b1-d34c-4e0a-8225-775321fac80c.svg",
+      "file": "dock-help-active.svg",
+      "sourceNode": "790:137"
+    }
+  ]
+}

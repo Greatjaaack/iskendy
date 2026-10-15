@@ -1,0 +1,159 @@
+.wrapper {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-8);
+  width: 342px; /* figma: 67:66 */
+  max-width: 100%;
+  color: var(--iskendi-fg-primary);
+}
+.label {
+  font: var(--t-web-desktop-label);
+}
+.field {
+  display: flex;
+  align-items: center;
+  gap: var(--space-12);
+  width: 100%;
+  height: 56px; /* figma: 67:48 */
+  padding: 10px 12px 10px 10px; /* figma: 67:48 */
+  overflow: clip;
+  border: 1px solid var(--iskendi-border-field-default); /* figma: 851:50 */
+  border-radius: 20px; /* figma: 67:48 */
+  background: var(--iskendi-bg-field-default);
+}
+.control {
+  min-width: 0;
+  width: 100%;
+  flex: 1;
+  border: 0;
+  padding: 0;
+  outline: none;
+  background: var(--iskendi-bg-action-secondary-default);
+  color: var(--iskendi-fg-primary);
+  font: var(--t-web-mobile-body);
+}
+.control::placeholder {
+  color: var(--iskendi-fg-placeholder);
+  opacity: 1;
+}
+.wrapper[data-kind='order-number'][data-state='filled'] .control,
+.wrapper[data-kind='order-number'][data-state='error'] .control {
+  font-family: 'Rubik', sans-serif;
+  font-size: 30px; /* figma: 188:17797 */
+  font-weight: 700;
+  line-height: var(--space-24);
+  letter-spacing: 3.6px; /* figma: 188:17797 */
+}
+.hint {
+  margin: 0;
+  color: var(--iskendi-fg-secondary);
+  font: var(--t-web-desktop-small);
+}
+.wrapper[data-kind='comment'] .field {
+  height: 120px; /* figma: 81:1911 */
+  align-items: flex-start;
+  padding: var(--space-16);
+  border-radius: 18px; /* figma: 81:1911 */
+}
+.comment {
+  height: 100%;
+  resize: none;
+}
+.wrapper:not([data-state='disabled']):not([data-state='error']):not(
+    [data-state='warning']
+  ):not(:focus-within):not([data-state='focus']):hover
+  .field,
+.wrapper[data-state='hover'] .field {
+  border-color: var(--iskendi-border-field-hover);
+  background: var(--iskendi-bg-field-hover);
+}
+.wrapper:not([data-state='disabled']):not([data-state='error']):focus-within
+  .field,
+.wrapper[data-state='focus'] .field {
+  border: 2px solid var(--iskendi-border-field-focus); /* figma: 67:53 */
+  background: var(--iskendi-bg-field-focus);
+}
+.wrapper[data-state='error'] .field {
+  border: 2px solid var(--iskendi-border-field-error); /* figma: 67:58 */
+  background: var(--iskendi-bg-field-error);
+}
+.wrapper[data-state='error'] .hint {
+  color: var(--iskendi-fg-danger);
+}
+.wrapper[data-state='warning'] .field {
+  border: 2px solid var(--iskendi-border-warning); /* figma: 679:24334 */
+  background: var(--iskendi-bg-warning-soft);
+}
+.wrapper[data-state='warning'] .hint {
+  color: var(--iskendi-fg-warning);
+}
+.wrapper[data-state='disabled'] {
+  color: var(--iskendi-fg-disabled);
+}
+.wrapper[data-state='disabled'] .field {
+  background: var(--iskendi-bg-field-disabled);
+  border-color: var(--iskendi-border-field-disabled);
+}
+.wrapper[data-state='disabled'] .control,
+.wrapper[data-state='disabled'] .control::placeholder,
+.wrapper[data-state='disabled'] .hint {
+  color: var(--iskendi-fg-disabled);
+  -webkit-text-fill-color: var(--iskendi-fg-disabled);
+  opacity: 1;
+}
+.ok {
+  width: 28px; /* figma: 188:17798 */
+  height: 28px; /* figma: 188:17798 */
+  flex: none;
+  background: var(--color-status-ready-bg);
+  mask-image: url('../../assets/input/ok.svg?no-inline');
+  mask-position: center;
+  mask-repeat: no-repeat;
+  mask-size: 28px 28px; /* figma: 188:17798 */
+}
+
+/* Glass input · 851:50. */
+.wrapper {
+  width: 100%;
+}
+.field {
+  background: var(--review-glass-light);
+  border: 1px solid var(--review-glass-edge-light); /* figma: 851:50 */
+  box-shadow: 0 4px 16px var(--review-glass-shadow); /* figma: 851:50 */
+  backdrop-filter: blur(12px) saturate(1.25); /* figma: 851:50 */
+  overflow: visible;
+  padding: 16px; /* figma: 851:50 */
+} /* figma: 851:50 */
+.control {
+  background: transparent;
+  caret-color: var(--iskendi-fg-primary);
+}
+.wrapper[data-state='focus'] .field,
+.wrapper:not([data-state='disabled']):not([data-state='error']):focus-within
+  .field {
+  border: 1px solid var(--review-glass-edge-light);
+  background: var(--review-glass-light);
+  outline: 2px solid var(--review-pink); /* figma: 851:50 */
+  outline-offset: 2px; /* figma: 851:50 */
+} /* figma: 851:50 */
+.wrapper[data-kind='comment'] .field {
+  min-height: 144px; /* figma: 851:50 */
+  height: 144px; /* figma: 851:50 */
+  border-radius: var(--radius-24);
+} /* figma: 851:50 */
+.wrapper[data-kind='order-number'][data-state='filled'] .control {
+  font: var(--t-web-mobile-body);
+  letter-spacing: 0;
+}
+.ok {
+  display: none;
+}
+
+/* The field owns focus; the native text control must not draw a second ring. */
+.control:focus-visible {
+  outline: none;
+}
+.wrapper[data-kind='order-number'][data-state='error'] .control {
+  font: var(--t-web-mobile-body);
+  letter-spacing: 0;
+}

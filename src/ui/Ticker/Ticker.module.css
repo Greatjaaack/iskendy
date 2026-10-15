@@ -1,0 +1,55 @@
+.ticker {
+  width: 100%;
+  height: 56px; /* figma: 228:21535 */
+  border-radius: 28px; /* figma: 228:21535 */
+  background: var(--color-surface-footer);
+  color: var(--iskendi-fg-primary);
+  overflow-x: auto;
+  overflow-y: hidden;
+  scrollbar-width: none;
+}
+.ticker::-webkit-scrollbar {
+  display: none;
+}
+.ticker:focus-visible {
+  outline: 2px solid var(--color-focus-ring); /* figma: 228:21535 */
+  outline-offset: 2px; /* figma: 228:21535 */
+}
+.track {
+  display: flex;
+  align-items: center;
+  width: max-content;
+  padding-inline: var(--space-20);
+  gap: 28px; /* figma: 228:21535 */
+  font: var(--t-web-desktop-label);
+  font-size: 20px; /* figma: 228:21535 */
+  line-height: 32px; /* figma: 228:21535 */
+  white-space: nowrap;
+  position: relative;
+  top: -5px; /* figma: 228:21535 */
+}
+.message {
+  display: flex;
+  align-items: center;
+  gap: var(--space-12);
+}
+.accent {
+  font: var(--t-web-desktop-accent);
+  font-size: 28px; /* figma: 228:21535 */
+  line-height: 66px; /* figma: 228:21535 */
+}
+.star {
+  flex: none;
+  width: 18.6667px; /* figma: 228:21542 */
+}
+.heart {
+  flex: none;
+  width: var(--space-20);
+}
+
+.cycle {
+  display: flex;
+  align-items: center;
+  gap: 28px; /* figma: 228:21535 */
+  flex: none;
+}

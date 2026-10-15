@@ -1,0 +1,248 @@
+.dock {
+  position: fixed;
+  z-index: 10;
+  left: 50%;
+  bottom: max(14px, env(safe-area-inset-bottom)); /* figma: 184:17829 */
+  transform: translateX(-50%);
+  /* prettier-ignore */
+  width: min(366px, calc(100% - var(--space-24) - env(safe-area-inset-left) - env(safe-area-inset-right))); /* figma: 183:363 */
+  height: 76px; /* figma: 183:363 */
+  display: flex;
+  gap: 96px; /* figma: 183:363 */
+  padding: 7px; /* figma: 183:363 */
+  background: var(--iskendi-bg-action-primary-default);
+  border-radius: var(--radius-capsule);
+  filter: drop-shadow(
+    0 12px 16px /* figma: 183:363 */
+      color-mix(
+        in srgb,
+        var(--iskendi-bg-action-primary-default) 25%,
+        transparent
+      )
+  ); /* figma: 183:363 */
+}
+.tab {
+  display: flex;
+  flex: 1;
+  min-width: 0;
+  height: 100%;
+  gap: 2px; /* figma: 208:20795 */
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-decoration: none;
+  border-radius: var(--radius-capsule);
+  color: var(--iskendi-fg-action-primary);
+  font: var(--t-web-desktop-label);
+  font-size: 13px; /* figma: 208:20798 */
+}
+.tab[aria-current='page'] {
+  color: var(--iskendi-fg-primary);
+  background: var(--iskendi-bg-canvas);
+}
+.icon,
+.hash {
+  display: block;
+  flex: none;
+  background: currentColor;
+  mask-position: center;
+  mask-repeat: no-repeat;
+}
+.icon {
+  width: var(--space-24);
+  height: var(--space-24);
+  mask-size: var(--space-24) var(--space-24);
+}
+.board {
+  mask-image: url('../../assets/dock/board.svg?no-inline');
+}
+.help {
+  mask-image: url('../../assets/dock/chat.svg?no-inline');
+}
+.boardSolid {
+  mask-image: url('../../assets/dock/board-solid.svg?no-inline');
+}
+.helpSolid {
+  mask-image: url('../../assets/dock/chat-solid.svg?no-inline');
+}
+.order {
+  position: absolute;
+  left: 50%;
+  top: -34px; /* figma: 208:20803 */
+  transform: translateX(-50%);
+  width: 86px; /* figma: 208:20803 */
+  height: 86px; /* figma: 208:20803 */
+  border: 0;
+  /* Figma places the stroke outside the 86px circle. */
+  box-shadow: 0 0 0 5px var(--iskendi-bg-action-primary-default); /* figma: 208:20890 */
+  border-radius: var(--radius-capsule);
+  background: var(--iskendi-bg-canvas);
+  color: var(--iskendi-fg-primary);
+  text-decoration: none;
+}
+.orderLabel {
+  position: absolute;
+  inset: 19px 0 auto; /* figma: 208:20804 */
+  display: flex;
+  align-items: center;
+  flex-direction: column;
+  gap: 2px; /* figma: 208:20804 */
+  font: var(--t-web-desktop-small);
+  font-size: 11px; /* figma: 208:20807 */
+  white-space: nowrap;
+}
+.order:has(.number) .orderLabel {
+  top: 17px; /* figma: 208:20848 */
+}
+.hash {
+  width: 26px; /* figma: 208:20805 */
+  height: 26px; /* figma: 208:20805 */
+  mask-size: 26px 26px; /* figma: 208:20805 */
+  mask-image: url('../../assets/dock/hash.svg?no-inline');
+}
+.number {
+  font: var(--t-web-mobile-price);
+  font-size: 23px; /* figma: 208:20849 */
+}
+.ring,
+.progress {
+  position: absolute;
+  left: 0;
+  top: 0;
+}
+.ring,
+.progress img {
+  max-width: none;
+}
+.progress.half {
+  left: 50%;
+  width: 50%;
+  height: 100%;
+  overflow: clip;
+}
+.progress.half img {
+  position: absolute;
+  right: 0;
+}
+.dock a:focus-visible {
+  outline: 2px solid var(--iskendi-border-focus); /* figma: 179:143 */
+  outline-offset: var(--space-4);
+}
+
+/* Compact navigation, exact current author component. */
+.compactDock {
+  position: fixed;
+  z-index: 10;
+  left: 50%;
+  bottom: calc(12px + env(safe-area-inset-bottom)); /* figma: 590:23219 */
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  gap: var(--space-8);
+  max-width: calc(
+    100% - var(--space-32) - env(safe-area-inset-left) -
+      env(safe-area-inset-right)
+  );
+  height: 56px; /* figma: 590:23219 */
+}
+.compactDock[data-visibility='hidden']:not([data-motion='active']),
+.compactDock[data-visibility='keyboard']:not([data-motion='active']) {
+  transform: translate(
+    -50%,
+    calc(100% + var(--space-12) + env(safe-area-inset-bottom))
+  ); /* figma: 590:23219 */
+}
+.compactDock:focus-within {
+  transform: translateX(-50%);
+}
+.collection,
+.back {
+  background: var(--iskendi-bg-action-primary-default);
+  border-radius: var(--radius-capsule);
+  filter: drop-shadow(
+    0 12px 16px /* figma: 590:23219 */
+      color-mix(
+        in srgb,
+        var(--iskendi-bg-action-primary-default) 25%,
+        transparent
+      )
+  ); /* figma: 590:23219 */
+}
+.collection {
+  display: flex;
+  width: 306px; /* figma: 590:23223 */
+  max-width: 100%;
+  min-width: 0;
+  height: 56px; /* figma: 590:23223 */
+  padding: var(--space-4);
+}
+.collection .tab {
+  height: 48px; /* figma: 590:23206 */
+  font-size: 12px; /* figma: 590:23208 */
+  line-height: var(--space-16);
+}
+.back {
+  width: 44px; /* figma: 590:23220 */
+  height: 44px; /* figma: 590:23220 */
+  flex: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--iskendi-fg-action-primary);
+}
+.back span,
+.receipt {
+  display: block;
+  flex: none;
+  width: var(--space-24);
+  height: var(--space-24);
+  background: currentColor;
+  mask-position: center;
+  mask-repeat: no-repeat;
+  mask-size: var(--space-24) var(--space-24);
+}
+.back span {
+  mask-image: url('../../assets/orders/back-compact.svg?no-inline');
+}
+.receipt {
+  mask-image: url('../../assets/orders/receipt.svg?no-inline');
+}
+/* 706:33398: the receipt glyph is a mask, so the badge sits on its wrapper tab. */
+.collection .tab {
+  position: relative;
+}
+.ready {
+  position: absolute;
+  top: var(--space-4);
+  left: calc(50% + var(--space-4));
+  width: 18px; /* figma: 706:33398 */
+  height: 18px; /* figma: 706:33398 */
+  border: 2px solid var(--color-surface-base); /* figma: 706:33398 */
+  border-radius: var(--radius-capsule);
+  background: var(--color-status-ready-bg);
+}
+.ready::after {
+  content: '';
+  position: absolute;
+  inset: 1px; /* figma: 706:33398 */
+  background: var(--color-text-primary);
+  mask: url('../../assets/icons/check.svg?no-inline') center / contain no-repeat;
+}
+.compactDock a:focus-visible {
+  outline: 2px solid var(--iskendi-border-focus); /* figma: 468:514 */
+  outline-offset: var(--space-4);
+}
+@media (min-width: 1025px /* figma: 557:12182 */) {
+  .compactDock {
+    display: none;
+  }
+}
+
+.motionPanel {
+  display: flex;
+  align-items: center;
+  gap: var(--space-8);
+  max-width: 100%;
+  min-width: 0;
+  height: 100%;
+}

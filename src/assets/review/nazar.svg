@@ -1,0 +1,10 @@
+<svg preserveAspectRatio="none" overflow="visible" style="display: block;" width="140" height="170" viewBox="0 0 140 170" fill="none" xmlns="http://www.w3.org/2000/svg">
+<g id="&#208;&#148;&#208;&#181;&#208;&#186;&#208;&#190;&#209;&#128;&#208;&#176;&#209;&#130;&#208;&#184;&#208;&#178;&#208;&#189;&#208;&#176;&#209;&#143; &#208;&#186;&#208;&#190;&#208;&#188;&#208;&#191;&#208;&#190;&#208;&#183;&#208;&#184;&#209;&#134;&#208;&#184;&#209;&#143; &#194;&#183; Nazar">
+<path id="Blue-field" opacity="0.35" d="M42 4C81 -2 124 27 131 64C138 102 128 137 97 153C67 169 34 147 18 120C4.76837e-07 89 6 50 21 22C27 13 32 6 42 4Z" fill="#B6CAEB"/>
+<path id="Diamond-left" d="M18 118L29 132L18 146L7 132L18 118Z" fill="#FFFCF5" stroke="#43342B" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+<path id="Diamond-right" d="M110 126L125 144L110 162L95 144L110 126Z" fill="#B6CAEB" stroke="#43342B" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+<path id="Diamond-small" d="M62 144L69 153L62 162L55 153L62 144Z" fill="#FFFCF5" stroke="#43342B" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+<path id="Bead-one" d="M126 32C128.209 32 130 30.2091 130 28C130 25.7909 128.209 24 126 24C123.791 24 122 25.7909 122 28C122 30.2091 123.791 32 126 32Z" fill="#FFFCF5" stroke="#43342B" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+<path id="Bead-two" d="M16 72C17.6569 72 19 70.6569 19 69C19 67.3431 17.6569 66 16 66C14.3431 66 13 67.3431 13 69C13 70.6569 14.3431 72 16 72Z" fill="#B6CAEB"/>
+</g>
+</svg>

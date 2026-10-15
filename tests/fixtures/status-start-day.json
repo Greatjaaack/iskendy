@@ -1,0 +1,78 @@
+{
+  "date": "2026-10-07",
+  "orders": [
+    {
+      "number": 102,
+      "status": "ready",
+      "acceptedAt": "2026-10-07T13:08:00+03:00",
+      "readyAt": "2026-10-07T13:08:00+03:00",
+      "servedAt": null
+    },
+    {
+      "number": 104,
+      "status": "ready",
+      "acceptedAt": "2026-10-07T13:08:00+03:00",
+      "readyAt": "2026-10-07T13:08:00+03:00",
+      "servedAt": null
+    },
+    {
+      "number": 107,
+      "status": "ready",
+      "acceptedAt": "2026-10-07T13:08:00+03:00",
+      "readyAt": "2026-10-07T13:08:00+03:00",
+      "servedAt": null
+    },
+    {
+      "number": 108,
+      "status": "open",
+      "acceptedAt": "2026-10-07T13:08:00+03:00",
+      "readyAt": null,
+      "servedAt": null
+    },
+    {
+      "number": 109,
+      "status": "ready",
+      "acceptedAt": "2026-10-07T13:08:00+03:00",
+      "readyAt": "2026-10-07T13:08:00+03:00",
+      "servedAt": null
+    },
+    {
+      "number": 110,
+      "status": "preparing",
+      "acceptedAt": "2026-10-07T13:08:00+03:00",
+      "readyAt": null,
+      "servedAt": null
+    },
+    {
+      "number": 111,
+      "status": "preparing",
+      "acceptedAt": "2026-10-07T13:08:00+03:00",
+      "readyAt": null,
+      "servedAt": null
+    },
+    {
+      "number": 112,
+      "status": "preparing",
+      "acceptedAt": "2026-10-07T13:08:00+03:00",
+      "readyAt": null,
+      "servedAt": null
+    },
+    {
+      "number": 113,
+      "status": "preparing",
+      "acceptedAt": "2026-10-07T13:08:00+03:00",
+      "readyAt": null,
+      "servedAt": null
+    },
+    {
+      "number": 114,
+      "status": "preparing",
+      "acceptedAt": "2026-10-07T13:08:00+03:00",
+      "readyAt": null,
+      "servedAt": null
+    }
+  ],
+  "servedCount": 0,
+  "updatedAt": "2026-10-07T13:08:00+03:00",
+  "now": "13:08"
+}

@@ -1,0 +1,9 @@
+.pair {
+  display: flex;
+  flex-direction: column;
+  width: 680px; /* figma: 66:1135 */
+  max-width: 100%;
+  padding: var(--space-40);
+  gap: var(--space-40);
+  background: var(--color-surface-info);
+}

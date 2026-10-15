@@ -1,0 +1,77 @@
+/* 664:23495; placement 13.10: centred above the dock below 1025 px, bottom-right from 1025 px. */
+.toast {
+  position: fixed;
+  left: 50%;
+  bottom: calc(80px + env(safe-area-inset-bottom)); /* figma: 664:23672 */
+  z-index: 15;
+  display: flex;
+  width: min(358px, calc(100% - var(--space-32))); /* figma: 664:23495 */
+  min-height: 72px; /* figma: 664:23495 */
+  align-items: center;
+  gap: var(--space-4);
+  padding: var(--space-8) 6px var(--space-8) var(--space-16); /* figma: 664:23495 */
+  border-radius: var(--radius-24);
+  background: var(--color-surface-soft-success);
+  color: var(--color-text-primary);
+  filter: drop-shadow(
+    0 12px 16px /* figma: 664:23672 */
+      color-mix(in srgb, var(--color-rating-scrim) 25%, transparent)
+  );
+  translate: -50% 0;
+}
+.open,
+.close {
+  display: flex;
+  align-items: center;
+  border: 0;
+  background: none;
+  color: inherit;
+  cursor: pointer;
+}
+.open {
+  flex: 1;
+  min-height: 44px; /* figma: 664:23495 */
+  gap: var(--space-12);
+  padding: 0;
+  font: var(--t-web-mobile-label);
+  text-align: start;
+}
+.close {
+  flex: none;
+  width: 44px; /* figma: 665:23681 */
+  height: 44px; /* figma: 665:23681 */
+  justify-content: center;
+  border-radius: var(--radius-capsule);
+}
+.open:focus-visible,
+.close:focus-visible {
+  outline: 3px solid var(--color-focus-ring); /* figma: 67:48 */
+  outline-offset: 2px; /* figma: 67:48 */
+}
+@media (min-width: 1025px /* figma: 684:51949 */) {
+  .toast {
+    left: auto;
+    /* Aligned to the 1200 px content edge (684:51949). */
+    right: max(
+      var(--space-24),
+      calc((100% - 1200px /* figma: 684:51949 */) / 2)
+    );
+    bottom: var(--space-24);
+    translate: none;
+  }
+}
+/* Own glyphs instead of Web/Icon: this chunk must not share modules with the first screen. */
+.check,
+.cross {
+  flex: none;
+  width: var(--space-24);
+  height: var(--space-24);
+  background: currentColor;
+  mask: center / var(--space-24) no-repeat;
+}
+.check {
+  mask-image: url('../../assets/icons/check-circle.svg?no-inline');
+}
+.cross {
+  mask-image: url('../../assets/icons/close.svg?no-inline');
+}

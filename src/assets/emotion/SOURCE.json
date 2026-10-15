@@ -1,0 +1,221 @@
+{
+  "figmaFile": "QDbhShERrxdg5nXHbrr27s",
+  "exportMethod": "read-only node.exportAsync, figma.io.write; exact bytes from MCP output",
+  "files": [
+    {
+      "name": "emotion-1-lg.png",
+      "nodeId": "244:400",
+      "width": 240,
+      "height": 240,
+      "bytes": 65290,
+      "sha256": "ebdc931d79be23a0590ed59eba54cf4a0e62928b0931d77a7c528264c5515cb6"
+    },
+    {
+      "name": "emotion-1-sm.png",
+      "nodeId": "244:410",
+      "width": 72,
+      "height": 72,
+      "bytes": 8561,
+      "sha256": "ac09250ed7a6deb06db43592030a9f0f121a79f591691e358cabd70a8781ddd1"
+    },
+    {
+      "name": "emotion-2-lg.png",
+      "nodeId": "244:420",
+      "width": 240,
+      "height": 240,
+      "bytes": 59241,
+      "sha256": "4e3cfbe332bb7faee7c451949ca24a9d4837c786a6f0377e84a78b916834176f"
+    },
+    {
+      "name": "emotion-2-sm.png",
+      "nodeId": "244:431",
+      "width": 72,
+      "height": 72,
+      "bytes": 7559,
+      "sha256": "9c2f2752b2e2916ab3140decdf02b8e40b8d85cd7daafab2720b86d3b3b888a9"
+    },
+    {
+      "name": "emotion-3-lg.png",
+      "nodeId": "244:442",
+      "width": 240,
+      "height": 240,
+      "bytes": 58247,
+      "sha256": "ee23227b9cf938ee2d8698a92b1bf1157c38443395926f0bf7898e74985caa67"
+    },
+    {
+      "name": "emotion-3-sm.png",
+      "nodeId": "244:452",
+      "width": 72,
+      "height": 72,
+      "bytes": 7736,
+      "sha256": "245f648a14073c6c60163572302ac4bd8382218f6a40b251abe0e236f908d512"
+    },
+    {
+      "name": "emotion-4-lg.png",
+      "nodeId": "244:462",
+      "width": 240,
+      "height": 240,
+      "bytes": 62226,
+      "sha256": "7b1c13b38fcbdd9dfe69e6d96f8046778ff5bd9904f622413fb5f31d81867e25"
+    },
+    {
+      "name": "emotion-4-sm.png",
+      "nodeId": "244:470",
+      "width": 72,
+      "height": 72,
+      "bytes": 8235,
+      "sha256": "c0fe3447866f27027596f1b708baadcea691b374647f1e1eef77a7a3a5d63a5d"
+    },
+    {
+      "name": "emotion-5-lg.png",
+      "nodeId": "244:478",
+      "width": 240,
+      "height": 240,
+      "bytes": 61909,
+      "sha256": "79ae7d6ac7baadbeb11f6fe5f25f2e5ef225707439970ba90ccdc6073f6ec712"
+    },
+    {
+      "name": "emotion-5-sm.png",
+      "nodeId": "244:490",
+      "width": 72,
+      "height": 72,
+      "bytes": 8133,
+      "sha256": "9cd3f62ce1972828329289b6168be4e0f28cc162be1751754a1a25e6cbf32e41"
+    },
+    {
+      "name": "emotion-slider/value-1.svg",
+      "nodeId": "244:503",
+      "width": 342,
+      "height": 56,
+      "bytes": 1276,
+      "sha256": "43e95e390683807eb1efb92032e5b37c49132e91d4ebd975f8a9b0a2d55292c6",
+      "svgWidth": "350",
+      "svgHeight": "72",
+      "viewBox": "0 0 350 72"
+    },
+    {
+      "name": "emotion-slider/value-2.svg",
+      "nodeId": "244:513",
+      "width": 342,
+      "height": 56,
+      "bytes": 1273,
+      "sha256": "48c8f22eb07971f9226f4e0efe57374ae95b7fee78111b0e947e8d32ec8aa225",
+      "svgWidth": "342",
+      "svgHeight": "72",
+      "viewBox": "0 0 342 72"
+    },
+    {
+      "name": "emotion-slider/value-3.svg",
+      "nodeId": "244:523",
+      "width": 342,
+      "height": 56,
+      "bytes": 1268,
+      "sha256": "75a5919fafbef1f82a8040618c3463bfb322983e24a319ff8ed0a1017dc824fd",
+      "svgWidth": "342",
+      "svgHeight": "72",
+      "viewBox": "0 0 342 72"
+    },
+    {
+      "name": "emotion-slider/value-4.svg",
+      "nodeId": "244:533",
+      "width": 342,
+      "height": 56,
+      "bytes": 1276,
+      "sha256": "ca1bb868fa84eb1037d122216bccf0e627ac2940bb99e148eba051cd76179384",
+      "svgWidth": "342",
+      "svgHeight": "72",
+      "viewBox": "0 0 342 72"
+    },
+    {
+      "name": "emotion-slider/value-5.svg",
+      "nodeId": "244:543",
+      "width": 342,
+      "height": 56,
+      "bytes": 1268,
+      "sha256": "08786a5a4dd7f4c4ce670e33ca4b76fddeee0f7013edb1a3b1ea0e7d3401824b",
+      "svgWidth": "350",
+      "svgHeight": "72",
+      "viewBox": "0 0 350 72"
+    },
+    {
+      "name": "emotion-1-720.png",
+      "nodeId": "244:400",
+      "width": 720,
+      "height": 720,
+      "bytes": 471010,
+      "sha256": "da6bbefc7c56cf3bcd6ea6a557f75d9d755e258e1642182b69d9da01ac25dc53"
+    },
+    {
+      "name": "emotion-2-720.png",
+      "nodeId": "244:420",
+      "width": 720,
+      "height": 720,
+      "bytes": 449573,
+      "sha256": "e036f728746a3e512bb795f5dcd6140273b858aca4788e375e599ccedb556301"
+    },
+    {
+      "name": "emotion-3-720.png",
+      "nodeId": "244:442",
+      "width": 720,
+      "height": 720,
+      "bytes": 434647,
+      "sha256": "98b44e000e220a1ff32d7466f2a9eb1f8a81bc9e25b8e82130dbec6443525569"
+    },
+    {
+      "name": "emotion-4-720.png",
+      "nodeId": "244:462",
+      "width": 720,
+      "height": 720,
+      "bytes": 438459,
+      "sha256": "b38631fb10563952851113e63086de90355666e3df89165c16e380fece8f0423"
+    },
+    {
+      "name": "emotion-5-720.png",
+      "nodeId": "244:478",
+      "width": 720,
+      "height": 720,
+      "bytes": 434622,
+      "sha256": "74c907f95fa9c94bafc4d6734cbc35743aa4905bf53f3ada22abcfa027ebef62"
+    },
+    {
+      "name": "emotion-1-180.png",
+      "nodeId": "244:410",
+      "width": 180,
+      "height": 180,
+      "bytes": 39715,
+      "sha256": "3e727aa25383bc00c2f0edad5f128127b7920aea1cc66ce04f27ceabcf9d6b7c"
+    },
+    {
+      "name": "emotion-2-180.png",
+      "nodeId": "244:431",
+      "width": 180,
+      "height": 180,
+      "bytes": 35581,
+      "sha256": "fd3433fd4b1414827452906f665608544ada8eb6ef9eb825c91cd2e81d143481"
+    },
+    {
+      "name": "emotion-3-180.png",
+      "nodeId": "244:452",
+      "width": 180,
+      "height": 180,
+      "bytes": 35139,
+      "sha256": "d2a23096d3b6c44ea2cc1704ae94ec2d16037d90971f82dce1e3b41eb5051d72"
+    },
+    {
+      "name": "emotion-4-180.png",
+      "nodeId": "244:470",
+      "width": 180,
+      "height": 180,
+      "bytes": 37963,
+      "sha256": "a460642f2f9eef81a0043426e9fca52b44aa03613defc03418b0fe21405e88ed"
+    },
+    {
+      "name": "emotion-5-180.png",
+      "nodeId": "244:490",
+      "width": 180,
+      "height": 180,
+      "bytes": 37625,
+      "sha256": "a9c045a42cde996ec5b2132136ece831e4730196bcbcbfb3cd6cdea346424c2e"
+    }
+  ]
+}

@@ -1,0 +1,41 @@
+.bar {
+  display: flex;
+  align-items: center;
+  gap: 10px; /* figma: 179:153 */
+  min-height: 52px; /* figma: 179:153 */
+  width: 342px; /* figma: 179:153 */
+  max-width: 100%;
+  padding: var(--space-12) var(--space-16);
+  border-radius: var(--radius-16);
+  color: var(--iskendi-fg-primary);
+  background: var(--color-status-preparing-bg);
+  font: var(--t-web-mobile-label);
+  text-decoration: none;
+}
+.ready {
+  background: var(--color-status-ready-bg);
+}
+.bar:focus-visible {
+  outline: 2px solid var(--iskendi-border-focus); /* figma: 179:153 */
+}
+.label {
+  flex: 1;
+  min-width: 0;
+}
+.chip {
+  padding: var(--space-4) 10px; /* figma: 179:153 */
+  flex: none;
+  border-radius: var(--radius-capsule);
+  background: var(--iskendi-bg-canvas);
+  font: var(--t-web-mobile-small);
+}
+.chevron {
+  flex: none;
+  width: 22px; /* figma: 206:21008 */
+  height: 22px; /* figma: 206:21008 */
+  background: var(--color-text-primary);
+  mask-image: url('../../assets/return-bar/chevron-left.svg?no-inline');
+  mask-size: 22px 22px; /* figma: 206:21008 */
+  mask-position: center;
+  mask-repeat: no-repeat;
+}

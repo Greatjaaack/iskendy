@@ -1,0 +1,67 @@
+@import '@fontsource/onest/cyrillic-400.css';
+@import '@fontsource/onest/latin-400.css';
+@import '@fontsource/onest/cyrillic-700.css';
+@import '@fontsource/onest/latin-700.css';
+@import '@fontsource/rubik/cyrillic-700.css';
+@import '@fontsource/rubik/latin-700.css';
+@import '@fontsource/rubik/cyrillic-900.css';
+@import '@fontsource/rubik/latin-900.css';
+@import '@fontsource/cormorant-garamond/cyrillic-600-italic.css';
+@import '@fontsource/cormorant-garamond/latin-600-italic.css';
+@import './tokens.css';
+@import './typography.css';
+
+* {
+  box-sizing: border-box;
+}
+body {
+  margin: 0;
+  background: var(--iskendi-bg-canvas);
+  color: var(--iskendi-fg-primary);
+  font: var(--t-web-mobile-body);
+}
+button,
+input,
+textarea {
+  font: inherit;
+}
+a {
+  color: var(--iskendi-fg-link-default);
+  text-decoration: underline;
+}
+img {
+  display: block;
+  max-width: 100%;
+}
+
+:root {
+  color-scheme: light;
+}
+button,
+a,
+input,
+textarea {
+  -webkit-tap-highlight-color: transparent;
+}
+button:focus-visible,
+a:focus-visible,
+input:focus-visible,
+textarea:focus-visible {
+  outline: 2px solid var(--iskendi-border-focus); /* figma: 791:22 */
+  outline-offset: 4px; /* figma: 791:22 */
+} /* figma: 791:22 */
+main h1:focus,
+header h1:focus {
+  outline: none;
+}
+::selection {
+  background: var(--review-pink-soft);
+  color: var(--iskendi-fg-primary);
+}
+body {
+  scrollbar-color: var(--review-sand) var(--review-paper);
+}
+input,
+textarea {
+  caret-color: var(--iskendi-fg-primary);
+}

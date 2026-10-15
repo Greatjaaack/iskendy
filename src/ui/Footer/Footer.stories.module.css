@@ -1,0 +1,13 @@
+.mobile {
+  width: 342px; /* figma: 90:109 */
+  max-width: 100%;
+}
+.desktop {
+  width: 1200px; /* figma: 79:1512 */
+  max-width: 100%;
+}
+.variants {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-24);
+}

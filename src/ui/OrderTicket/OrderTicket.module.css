@@ -1,0 +1,122 @@
+.ticket {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  position: relative;
+  overflow: clip;
+  width: 342px; /* figma: 67:1143 */
+  max-width: 100%;
+  gap: var(--space-12);
+  padding: var(--space-24);
+  border-radius: var(--radius-24);
+  color: var(--iskendi-fg-primary);
+  background: var(--color-status-preparing-bg);
+}
+.ticket p {
+  margin: 0;
+}
+.ticket[data-size='desktop'] {
+  width: 560px; /* figma: 79:53 */
+  padding: var(--space-40);
+  gap: var(--space-16);
+  border-radius: var(--radius-32);
+}
+.ticket[data-status='ready'] {
+  background: var(--color-status-ready-bg);
+  color: var(--color-status-ready-text);
+}
+.ticket[data-status='issued'] {
+  background: var(--color-status-issued-bg);
+  color: var(--color-status-issued-text);
+}
+.caption {
+  margin: 0;
+  font: var(--t-web-desktop-label);
+}
+.number {
+  font: var(--t-web-mobile-order-number);
+}
+.ticket[data-size='desktop'] .number {
+  font: var(--t-web-desktop-order-number);
+}
+.description {
+  font: var(--t-web-desktop-small);
+  width: 100%;
+}
+.ticket[data-size='desktop'] .description {
+  font: var(--t-web-desktop-body);
+}
+.accent {
+  font: var(--t-web-mobile-accent);
+  white-space: nowrap;
+}
+.ticket[data-size='desktop'] .accent {
+  font: var(--t-web-desktop-accent);
+}
+.facts {
+  display: flex;
+  gap: var(--space-8);
+  width: 100%;
+  margin: 0;
+}
+.fact {
+  display: flex;
+  align-items: center;
+  flex: 1;
+  min-width: 0;
+  gap: 10px; /* figma: 184:17566 */
+  padding: var(--space-8) var(--space-12);
+  border-radius: 14px; /* figma: 184:17566 */
+  background: var(--iskendi-bg-canvas);
+}
+.factText {
+  flex: 1;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.fact dt {
+  font: var(--t-web-desktop-small);
+  font-size: 12px; /* figma: 184:17567 */
+  color: var(--iskendi-fg-secondary);
+}
+.fact dd {
+  margin: 0;
+  font: var(--t-web-desktop-label);
+  font-size: 15px; /* figma: 184:17568 */
+  color: var(--iskendi-fg-primary);
+}
+.icon {
+  width: 22px; /* figma: 206:21235 */
+  height: 22px; /* figma: 206:21235 */
+  flex: none;
+  background: var(--iskendi-fg-primary);
+  mask-position: center;
+  mask-repeat: no-repeat;
+  mask-size: 22px 22px; /* figma: 206:21235 */
+}
+.clock {
+  mask-image: url('../../assets/order-ticket/clock.svg?no-inline');
+}
+.check {
+  mask-image: url('../../assets/order-ticket/check.svg?no-inline');
+}
+.pin {
+  mask-image: url('../../assets/order-ticket/pin.svg?no-inline');
+}
+.steps {
+  width: 100%;
+}
+.ticket picture {
+  display: contents; /* the ornament stays an absolute layer, not a flex item */
+}
+.ornament {
+  position: absolute;
+  top: -34px; /* figma: 184:17561 */
+  left: 222px; /* figma: 184:17561 */
+  max-width: none;
+  pointer-events: none;
+}
+.ticket[data-size='desktop'] .ornament {
+  top: -50px; /* figma: 184:17583 */
+  left: 360px; /* figma: 184:17583 */
+}

@@ -1,0 +1,63 @@
+{
+  "figmaFile": "QDbhShERrxdg5nXHbrr27s",
+  "exportMethod": "read-only instance node.exportAsync SVG_STRING; resolved V4 mode; no canvas mutations",
+  "reason": "get_design_context SVG downloads use stale V3 colors; exact live instance export matches current screenshot",
+  "files": [
+    {
+      "name": "pin.svg",
+      "nodeId": "I204:17889;204:191",
+      "width": "24",
+      "height": "24",
+      "bytes": 1010,
+      "sha256": "374b6071867da0e45d870f3d62ca7ad708587f8fb853b1d549c0801355236054"
+    },
+    {
+      "name": "clock.svg",
+      "nodeId": "I204:17898;204:200",
+      "width": "24",
+      "height": "24",
+      "bytes": 750,
+      "sha256": "4f2ad0237acad5c07292620a6e5d688d349a7104220818c646c3c279263f2385"
+    },
+    {
+      "name": "chat.svg",
+      "nodeId": "I204:17905;204:207",
+      "width": "24",
+      "height": "24",
+      "bytes": 2077,
+      "sha256": "063610d0c7b7e45c20ceb121e5bc1507cd18bdc874935b94a03b0f772fd6a0cf"
+    },
+    {
+      "name": "go.svg",
+      "nodeId": "I204:17889;204:196",
+      "width": "22",
+      "height": "22",
+      "bytes": 601,
+      "sha256": "c0d6ffa59d012a83f45f78860a494743a212f3f64b03422f9edcceccb9dde7cf"
+    },
+    {
+      "name": "telegram.svg",
+      "nodeId": "I204:17915;204:225",
+      "width": "24",
+      "height": "24",
+      "bytes": 662,
+      "sha256": "2dbb7134b0d43e8b03853502b23caebd49209ca3530867054dbecf441e05f0fb"
+    },
+    {
+      "name": "vk.svg",
+      "nodeId": "I204:17918;204:228",
+      "width": "24",
+      "height": "24",
+      "bytes": 388,
+      "sha256": "18b4971dea2c3c0cdbbd23c14d5c94d6654dc6d169c258defb267187f0154956"
+    },
+    {
+      "name": "instagram.svg",
+      "nodeId": "I204:17921;204:231",
+      "width": "24",
+      "height": "24",
+      "bytes": 1095,
+      "sha256": "3f84262fdaa69439627031db6d7a73a55b732a9225d0c22ca710e84f6a14408f"
+    }
+  ]
+}

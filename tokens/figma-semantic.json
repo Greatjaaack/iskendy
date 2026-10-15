@@ -1,0 +1,1182 @@
+{
+  "part": "semantic",
+  "collection": "Semantic",
+  "mode": "V4 · основной",
+  "exportedAt": "2026-10-15",
+  "tokens": [
+    {
+      "name": "rating/invitation/text",
+      "type": "COLOR",
+      "value": "#000000",
+      "css": "var(--color-rating-invitation-text)",
+      "sourceNode": "246:22878,246:22936",
+      "approval": "Q-25 owner 2026-10-08; exact Figma fill and node opacity 1"
+    },
+    {
+      "name": "rating/surface/1",
+      "type": "COLOR",
+      "value": "#fae0e4",
+      "alias": "color/v4/pink-soft",
+      "css": "var(--color-rating-surface-1)",
+      "sourceNode": "245:3378",
+      "approval": "Q-24 2026-10-08"
+    },
+    {
+      "name": "rating/surface/2",
+      "type": "COLOR",
+      "value": "#eaf0f9",
+      "alias": "color/v4/blue-soft",
+      "css": "var(--color-rating-surface-2)",
+      "sourceNode": "245:3418",
+      "approval": "Q-24 2026-10-08"
+    },
+    {
+      "name": "rating/surface/3",
+      "type": "COLOR",
+      "value": "#f8f3e7",
+      "alias": "color/v4/cream",
+      "css": "var(--color-rating-surface-3)",
+      "sourceNode": "245:3459",
+      "approval": "Q-24 2026-10-08"
+    },
+    {
+      "name": "rating/surface/4",
+      "type": "COLOR",
+      "value": "#e1e6d1",
+      "alias": "color/v4/sage",
+      "css": "var(--color-rating-surface-4)",
+      "sourceNode": "245:3499",
+      "approval": "Q-24 2026-10-08"
+    },
+    {
+      "name": "rating/surface/5",
+      "type": "COLOR",
+      "value": "#feefbf",
+      "alias": "color/v4/yellow-soft",
+      "css": "var(--color-rating-surface-5)",
+      "sourceNode": "245:3537",
+      "approval": "Q-24 2026-10-08"
+    },
+    {
+      "name": "rating/scrim",
+      "type": "COLOR",
+      "value": "#43342b",
+      "alias": "color/v4/cocoa",
+      "css": "var(--color-rating-scrim)",
+      "sourceNode": "246:3883",
+      "approval": "Q-24 2026-10-08"
+    },
+    {
+      "name": "rating/shadow",
+      "type": "COLOR",
+      "value": "#43342b4d",
+      "css": "var(--color-rating-shadow)",
+      "sourceNode": "246:3884",
+      "approval": "Q-24 2026-10-08; cocoa, alpha 0.3 represented as 8-bit export"
+    },
+    {
+      "name": "emotion/1",
+      "type": "COLOR",
+      "value": "#ffb2dd",
+      "alias": "color/v4/pink",
+      "css": "var(--color-emotion-1)",
+      "sourceNode": "244:553",
+      "approval": "Q-24, owner approval 2026-10-08"
+    },
+    {
+      "name": "emotion/2",
+      "type": "COLOR",
+      "value": "#b6caeb",
+      "alias": "color/v4/blue",
+      "css": "var(--color-emotion-2)",
+      "sourceNode": "244:553",
+      "approval": "Q-24, owner approval 2026-10-08"
+    },
+    {
+      "name": "emotion/3",
+      "type": "COLOR",
+      "value": "#efe6d6",
+      "alias": "color/v4/sand",
+      "css": "var(--color-emotion-3)",
+      "sourceNode": "244:553",
+      "approval": "Q-24, owner approval 2026-10-08"
+    },
+    {
+      "name": "emotion/4",
+      "type": "COLOR",
+      "value": "#9aab65",
+      "alias": "color/v4/olive",
+      "css": "var(--color-emotion-4)",
+      "sourceNode": "244:553",
+      "approval": "Q-24, owner approval 2026-10-08"
+    },
+    {
+      "name": "emotion/5",
+      "type": "COLOR",
+      "value": "#f7d66e",
+      "alias": "color/v4/yellow",
+      "css": "var(--color-emotion-5)",
+      "sourceNode": "244:553",
+      "approval": "Q-24, owner approval 2026-10-08"
+    },
+    {
+      "name": "emotion/track-point",
+      "type": "COLOR",
+      "value": "#43342b",
+      "alias": "color/v4/cocoa",
+      "css": "var(--color-emotion-track-point)",
+      "sourceNode": "244:553",
+      "approval": "Q-24, owner approval 2026-10-08"
+    },
+    {
+      "name": "text/primary",
+      "type": "COLOR",
+      "value": "#43342b",
+      "alias": "color/v4/cocoa",
+      "css": "var(--color-text-primary)"
+    },
+    {
+      "name": "text/secondary",
+      "type": "COLOR",
+      "value": "#6b574a",
+      "alias": "color/v4/cocoa-2",
+      "css": "var(--color-text-secondary)"
+    },
+    {
+      "name": "text/muted-large",
+      "type": "COLOR",
+      "value": "#6b574a",
+      "alias": "color/v4/cocoa-2",
+      "css": "var(--color-text-muted-large)"
+    },
+    {
+      "name": "text/inverse",
+      "type": "COLOR",
+      "value": "#fffcf5",
+      "alias": "color/v4/paper",
+      "css": "var(--color-text-inverse)"
+    },
+    {
+      "name": "text/link",
+      "type": "COLOR",
+      "value": "#43342b",
+      "alias": "color/v4/cocoa",
+      "css": "var(--color-text-link)"
+    },
+    {
+      "name": "surface/base",
+      "type": "COLOR",
+      "value": "#fffcf5",
+      "alias": "color/v4/paper",
+      "css": "var(--color-surface-base)"
+    },
+    {
+      "name": "surface/hero",
+      "type": "COLOR",
+      "value": "#feefbf",
+      "alias": "color/v4/yellow-soft",
+      "css": "var(--color-surface-hero)"
+    },
+    {
+      "name": "surface/info",
+      "type": "COLOR",
+      "value": "#eaf0f9",
+      "alias": "color/v4/blue-soft",
+      "css": "var(--color-surface-info)"
+    },
+    {
+      "name": "surface/soft-success",
+      "type": "COLOR",
+      "value": "#e1e6d1",
+      "alias": "color/v4/sage",
+      "css": "var(--color-surface-soft-success)"
+    },
+    {
+      "name": "surface/raised",
+      "type": "COLOR",
+      "value": "#ffffff",
+      "alias": "color/white",
+      "css": "var(--color-surface-raised)"
+    },
+    {
+      "name": "action/primary/bg",
+      "type": "COLOR",
+      "value": "#2d2d2b",
+      "alias": "color/v4/ink",
+      "css": "var(--color-action-primary-bg)"
+    },
+    {
+      "name": "action/primary/text",
+      "type": "COLOR",
+      "value": "#fffcf5",
+      "alias": "color/v4/paper",
+      "css": "var(--color-action-primary-text)"
+    },
+    {
+      "name": "action/secondary/text",
+      "type": "COLOR",
+      "value": "#43342b",
+      "alias": "color/v4/cocoa",
+      "css": "var(--color-action-secondary-text)"
+    },
+    {
+      "name": "action/secondary/border",
+      "type": "COLOR",
+      "value": "#43342b",
+      "alias": "color/v4/cocoa",
+      "css": "var(--color-action-secondary-border)"
+    },
+    {
+      "name": "accent/sticker/bg",
+      "type": "COLOR",
+      "value": "#ffb2dd",
+      "alias": "color/v4/pink",
+      "css": "var(--color-accent-sticker-bg)"
+    },
+    {
+      "name": "accent/sticker/text",
+      "type": "COLOR",
+      "value": "#2d2d2b",
+      "alias": "color/v4/ink",
+      "css": "var(--color-accent-sticker-text)"
+    },
+    {
+      "name": "status/preparing/bg",
+      "type": "COLOR",
+      "value": "#f7d66e",
+      "alias": "color/v4/yellow",
+      "css": "var(--color-status-preparing-bg)"
+    },
+    {
+      "name": "status/preparing/text",
+      "type": "COLOR",
+      "value": "#43342b",
+      "alias": "color/v4/cocoa",
+      "css": "var(--color-status-preparing-text)"
+    },
+    {
+      "name": "status/ready/bg",
+      "type": "COLOR",
+      "value": "#9aab65",
+      "alias": "color/v4/olive",
+      "css": "var(--color-status-ready-bg)"
+    },
+    {
+      "name": "status/ready/text",
+      "type": "COLOR",
+      "value": "#43342b",
+      "alias": "color/v4/cocoa",
+      "css": "var(--color-status-ready-text)"
+    },
+    {
+      "name": "border/decorative",
+      "type": "COLOR",
+      "value": "#2d2d2b24",
+      "alias": "color/v4/line",
+      "css": "var(--color-border-decorative)"
+    },
+    {
+      "name": "border/control",
+      "type": "COLOR",
+      "value": "#8f7a6b",
+      "alias": "color/v4/field",
+      "css": "var(--color-border-control)"
+    },
+    {
+      "name": "focus/ring",
+      "type": "COLOR",
+      "value": "#2563eb",
+      "alias": "color/focus-blue",
+      "css": "var(--color-focus-ring)"
+    },
+    {
+      "name": "brand/logo",
+      "type": "COLOR",
+      "value": "#db5d00",
+      "alias": "color/v4/orange",
+      "css": "var(--color-brand-logo)"
+    },
+    {
+      "name": "action/overlay/hover",
+      "type": "COLOR",
+      "value": "#43342b14",
+      "css": "var(--color-action-overlay-hover)"
+    },
+    {
+      "name": "action/overlay/pressed",
+      "type": "COLOR",
+      "value": "#43342b1f",
+      "css": "var(--color-action-overlay-pressed)"
+    },
+    {
+      "name": "brand/logo-ink",
+      "type": "COLOR",
+      "value": "#2d2d2b",
+      "alias": "color/v4/ink",
+      "css": "var(--color-brand-logo-ink)"
+    },
+    {
+      "name": "action/disabled/bg",
+      "type": "COLOR",
+      "value": "#efe6d6",
+      "alias": "color/v4/sand",
+      "css": "var(--color-action-disabled-bg)"
+    },
+    {
+      "name": "action/disabled/text",
+      "type": "COLOR",
+      "value": "#6b574a",
+      "alias": "color/v4/cocoa-2",
+      "css": "var(--color-action-disabled-text)"
+    },
+    {
+      "name": "status/error/text",
+      "type": "COLOR",
+      "value": "#b3261e",
+      "alias": "color/v4/error",
+      "css": "var(--color-status-error-text)"
+    },
+    {
+      "name": "status/issued/bg",
+      "type": "COLOR",
+      "value": "#ffb2dd",
+      "alias": "color/v4/pink"
+    },
+    {
+      "name": "status/issued/text",
+      "type": "COLOR",
+      "value": "#43342b",
+      "alias": "color/v4/cocoa"
+    },
+    {
+      "name": "surface/game",
+      "type": "COLOR",
+      "value": "#fae0e4",
+      "alias": "color/v4/pink-soft"
+    },
+    {
+      "name": "surface/board-ready",
+      "type": "COLOR",
+      "value": "#e1e6d1",
+      "alias": "color/v4/sage"
+    },
+    {
+      "name": "surface/board-preparing",
+      "type": "COLOR",
+      "value": "#eaf0f9",
+      "alias": "color/v4/blue-soft"
+    },
+    {
+      "name": "surface/footer",
+      "type": "COLOR",
+      "value": "#f8f3e7",
+      "alias": "color/v4/cream"
+    },
+    {
+      "name": "surface/sunken",
+      "type": "COLOR",
+      "value": "#f8f3e7",
+      "alias": "color/v4/cream"
+    },
+    {
+      "name": "action/primary/bg-hover",
+      "type": "COLOR",
+      "value": "#3d3d3a",
+      "alias": "color/v4/ink-hover"
+    },
+    {
+      "name": "action/primary/bg-pressed",
+      "type": "COLOR",
+      "value": "#1e1e1c",
+      "alias": "color/v4/ink-press"
+    },
+    {
+      "name": "status/error/border",
+      "type": "COLOR",
+      "value": "#b3261e",
+      "alias": "color/v4/error"
+    },
+    {
+      "name": "border/field",
+      "type": "COLOR",
+      "value": "#8f7a6b",
+      "alias": "color/v4/field"
+    },
+    {
+      "name": "fg/primary",
+      "type": "COLOR",
+      "value": "#43342b",
+      "alias": "color/v4/cocoa",
+      "css": "var(--iskendi-fg-primary)"
+    },
+    {
+      "name": "fg/secondary",
+      "type": "COLOR",
+      "value": "#6b574a",
+      "alias": "color/v4/cocoa-2",
+      "css": "var(--iskendi-fg-secondary)"
+    },
+    {
+      "name": "fg/placeholder",
+      "type": "COLOR",
+      "value": "#6b574a",
+      "alias": "color/v4/cocoa-2",
+      "css": "var(--iskendi-fg-placeholder)"
+    },
+    {
+      "name": "fg/disabled",
+      "type": "COLOR",
+      "value": "#6b574a",
+      "alias": "color/v4/cocoa-2",
+      "css": "var(--iskendi-fg-disabled)"
+    },
+    {
+      "name": "fg/inverse",
+      "type": "COLOR",
+      "value": "#fffcf5",
+      "alias": "color/v4/paper",
+      "css": "var(--iskendi-fg-inverse)"
+    },
+    {
+      "name": "fg/action/primary",
+      "type": "COLOR",
+      "value": "#fffcf5",
+      "alias": "color/v4/paper",
+      "css": "var(--iskendi-fg-action-primary)"
+    },
+    {
+      "name": "fg/action/secondary",
+      "type": "COLOR",
+      "value": "#43342b",
+      "alias": "color/v4/cocoa",
+      "css": "var(--iskendi-fg-action-secondary)"
+    },
+    {
+      "name": "fg/link/default",
+      "type": "COLOR",
+      "value": "#43342b",
+      "alias": "color/v4/cocoa",
+      "css": "var(--iskendi-fg-link-default)"
+    },
+    {
+      "name": "fg/link/hover",
+      "type": "COLOR",
+      "value": "#9e3f0a",
+      "alias": "color/v4/terracotta-hover",
+      "css": "var(--iskendi-fg-link-hover)"
+    },
+    {
+      "name": "fg/link/pressed",
+      "type": "COLOR",
+      "value": "#8c3a12",
+      "alias": "color/v4/terracotta-press",
+      "css": "var(--iskendi-fg-link-pressed)"
+    },
+    {
+      "name": "fg/selected",
+      "type": "COLOR",
+      "value": "#43342b",
+      "alias": "color/v4/cocoa",
+      "css": "var(--iskendi-fg-selected)"
+    },
+    {
+      "name": "fg/positive",
+      "type": "COLOR",
+      "value": "#4e602b",
+      "alias": "color/v4/olive-dark",
+      "css": "var(--iskendi-fg-positive)"
+    },
+    {
+      "name": "fg/danger",
+      "type": "COLOR",
+      "value": "#b3261e",
+      "alias": "color/v4/error",
+      "css": "var(--iskendi-fg-danger)"
+    },
+    {
+      "name": "fg/warning",
+      "type": "COLOR",
+      "value": "#715200",
+      "alias": "color/amber-dark",
+      "css": "var(--iskendi-fg-warning)"
+    },
+    {
+      "name": "fg/info",
+      "type": "COLOR",
+      "value": "#43342b",
+      "alias": "color/v4/cocoa",
+      "css": "var(--iskendi-fg-info)"
+    },
+    {
+      "name": "fg/on-positive",
+      "type": "COLOR",
+      "value": "#43342b",
+      "alias": "color/v4/cocoa",
+      "css": "var(--iskendi-fg-on-positive)"
+    },
+    {
+      "name": "fg/on-danger",
+      "type": "COLOR",
+      "value": "#fffcf5",
+      "alias": "color/v4/paper",
+      "css": "var(--iskendi-fg-on-danger)"
+    },
+    {
+      "name": "fg/on-warning",
+      "type": "COLOR",
+      "value": "#43342b",
+      "alias": "color/v4/cocoa",
+      "css": "var(--iskendi-fg-on-warning)"
+    },
+    {
+      "name": "fg/on-info",
+      "type": "COLOR",
+      "value": "#43342b",
+      "alias": "color/v4/cocoa",
+      "css": "var(--iskendi-fg-on-info)"
+    },
+    {
+      "name": "bg/canvas",
+      "type": "COLOR",
+      "value": "#fffcf5",
+      "alias": "color/v4/paper",
+      "css": "var(--iskendi-bg-canvas)"
+    },
+    {
+      "name": "bg/surface",
+      "type": "COLOR",
+      "value": "#ffffff",
+      "alias": "color/white",
+      "css": "var(--iskendi-bg-surface)"
+    },
+    {
+      "name": "bg/sunken",
+      "type": "COLOR",
+      "value": "#f8f3e7",
+      "alias": "color/v4/cream",
+      "css": "var(--iskendi-bg-sunken)"
+    },
+    {
+      "name": "bg/inverse",
+      "type": "COLOR",
+      "value": "#2d2d2b",
+      "alias": "color/v4/ink",
+      "css": "var(--iskendi-bg-inverse)"
+    },
+    {
+      "name": "bg/disabled",
+      "type": "COLOR",
+      "value": "#efe6d6",
+      "alias": "color/v4/sand",
+      "css": "var(--iskendi-bg-disabled)"
+    },
+    {
+      "name": "bg/action/primary/default",
+      "type": "COLOR",
+      "value": "#2d2d2b",
+      "alias": "color/v4/ink",
+      "css": "var(--iskendi-bg-action-primary-default)"
+    },
+    {
+      "name": "bg/action/primary/hover",
+      "type": "COLOR",
+      "value": "#3d3d3a",
+      "alias": "color/v4/ink-hover",
+      "css": "var(--iskendi-bg-action-primary-hover)"
+    },
+    {
+      "name": "bg/action/primary/pressed",
+      "type": "COLOR",
+      "value": "#1e1e1c",
+      "alias": "color/v4/ink-press",
+      "css": "var(--iskendi-bg-action-primary-pressed)"
+    },
+    {
+      "name": "bg/action/secondary/default",
+      "type": "COLOR",
+      "value": "#ffffff00",
+      "alias": "color/transparent",
+      "css": "var(--iskendi-bg-action-secondary-default)"
+    },
+    {
+      "name": "bg/action/secondary/hover",
+      "type": "COLOR",
+      "value": "#43342b14",
+      "alias": "color/v4/cocoa-alpha-8",
+      "css": "var(--iskendi-bg-action-secondary-hover)"
+    },
+    {
+      "name": "bg/action/secondary/pressed",
+      "type": "COLOR",
+      "value": "#43342b1f",
+      "alias": "color/v4/cocoa-alpha-12",
+      "css": "var(--iskendi-bg-action-secondary-pressed)"
+    },
+    {
+      "name": "bg/field/default",
+      "type": "COLOR",
+      "value": "#fffcf5",
+      "alias": "color/v4/paper",
+      "css": "var(--iskendi-bg-field-default)"
+    },
+    {
+      "name": "bg/field/hover",
+      "type": "COLOR",
+      "value": "#ffffff",
+      "alias": "color/white",
+      "css": "var(--iskendi-bg-field-hover)"
+    },
+    {
+      "name": "bg/field/focus",
+      "type": "COLOR",
+      "value": "#fffcf5",
+      "alias": "color/v4/paper",
+      "css": "var(--iskendi-bg-field-focus)"
+    },
+    {
+      "name": "bg/field/error",
+      "type": "COLOR",
+      "value": "#fffcf5",
+      "alias": "color/v4/paper",
+      "css": "var(--iskendi-bg-field-error)"
+    },
+    {
+      "name": "bg/field/disabled",
+      "type": "COLOR",
+      "value": "#efe6d6",
+      "alias": "color/v4/sand",
+      "css": "var(--iskendi-bg-field-disabled)"
+    },
+    {
+      "name": "bg/selected",
+      "type": "COLOR",
+      "value": "#efe6d6",
+      "alias": "color/v4/sand",
+      "css": "var(--iskendi-bg-selected)"
+    },
+    {
+      "name": "bg/positive/default",
+      "type": "COLOR",
+      "value": "#9aab65",
+      "alias": "color/v4/olive",
+      "css": "var(--iskendi-bg-positive-default)"
+    },
+    {
+      "name": "bg/positive/soft",
+      "type": "COLOR",
+      "value": "#e1e6d1",
+      "alias": "color/v4/sage",
+      "css": "var(--iskendi-bg-positive-soft)"
+    },
+    {
+      "name": "bg/danger/default",
+      "type": "COLOR",
+      "value": "#b3261e",
+      "alias": "color/v4/error",
+      "css": "var(--iskendi-bg-danger-default)"
+    },
+    {
+      "name": "bg/danger/soft",
+      "type": "COLOR",
+      "value": "#fbe8e5",
+      "alias": "color/error-soft",
+      "css": "var(--iskendi-bg-danger-soft)"
+    },
+    {
+      "name": "bg/warning/default",
+      "type": "COLOR",
+      "value": "#f7d66e",
+      "alias": "color/v4/yellow",
+      "css": "var(--iskendi-bg-warning-default)"
+    },
+    {
+      "name": "bg/warning/soft",
+      "type": "COLOR",
+      "value": "#feefbf",
+      "alias": "color/v4/yellow-soft",
+      "css": "var(--iskendi-bg-warning-soft)"
+    },
+    {
+      "name": "bg/info/default",
+      "type": "COLOR",
+      "value": "#b6caeb",
+      "alias": "color/v4/blue",
+      "css": "var(--iskendi-bg-info-default)"
+    },
+    {
+      "name": "bg/info/soft",
+      "type": "COLOR",
+      "value": "#eaf0f9",
+      "alias": "color/v4/blue-soft",
+      "css": "var(--iskendi-bg-info-soft)"
+    },
+    {
+      "name": "border/default",
+      "type": "COLOR",
+      "value": "#8f7a6b",
+      "alias": "color/v4/field",
+      "css": "var(--iskendi-border-default)"
+    },
+    {
+      "name": "border/subtle",
+      "type": "COLOR",
+      "value": "#2d2d2b24",
+      "alias": "color/v4/line",
+      "css": "var(--iskendi-border-subtle)"
+    },
+    {
+      "name": "border/strong",
+      "type": "COLOR",
+      "value": "#43342b",
+      "alias": "color/v4/cocoa",
+      "css": "var(--iskendi-border-strong)"
+    },
+    {
+      "name": "border/disabled",
+      "type": "COLOR",
+      "value": "#efe6d6",
+      "alias": "color/v4/sand",
+      "css": "var(--iskendi-border-disabled)"
+    },
+    {
+      "name": "border/focus",
+      "type": "COLOR",
+      "value": "#2563eb",
+      "alias": "color/focus-blue",
+      "css": "var(--iskendi-border-focus)"
+    },
+    {
+      "name": "border/focus-inverse",
+      "type": "COLOR",
+      "value": "#b6caeb",
+      "alias": "color/v4/blue",
+      "css": "var(--iskendi-border-focus-inverse)"
+    },
+    {
+      "name": "border/field/default",
+      "type": "COLOR",
+      "value": "#8f7a6b",
+      "alias": "color/v4/field",
+      "css": "var(--iskendi-border-field-default)"
+    },
+    {
+      "name": "border/field/hover",
+      "type": "COLOR",
+      "value": "#6b574a",
+      "alias": "color/v4/cocoa-2",
+      "css": "var(--iskendi-border-field-hover)"
+    },
+    {
+      "name": "border/field/focus",
+      "type": "COLOR",
+      "value": "#2563eb",
+      "alias": "color/focus-blue",
+      "css": "var(--iskendi-border-field-focus)"
+    },
+    {
+      "name": "border/field/error",
+      "type": "COLOR",
+      "value": "#b3261e",
+      "alias": "color/v4/error",
+      "css": "var(--iskendi-border-field-error)"
+    },
+    {
+      "name": "border/field/disabled",
+      "type": "COLOR",
+      "value": "#efe6d6",
+      "alias": "color/v4/sand",
+      "css": "var(--iskendi-border-field-disabled)"
+    },
+    {
+      "name": "border/selected",
+      "type": "COLOR",
+      "value": "#43342b",
+      "alias": "color/v4/cocoa",
+      "css": "var(--iskendi-border-selected)"
+    },
+    {
+      "name": "border/positive",
+      "type": "COLOR",
+      "value": "#4e602b",
+      "alias": "color/v4/olive-dark",
+      "css": "var(--iskendi-border-positive)"
+    },
+    {
+      "name": "border/danger",
+      "type": "COLOR",
+      "value": "#b3261e",
+      "alias": "color/v4/error",
+      "css": "var(--iskendi-border-danger)"
+    },
+    {
+      "name": "border/warning",
+      "type": "COLOR",
+      "value": "#715200",
+      "alias": "color/amber-dark",
+      "css": "var(--iskendi-border-warning)"
+    },
+    {
+      "name": "border/info",
+      "type": "COLOR",
+      "value": "#43342b",
+      "alias": "color/v4/cocoa",
+      "css": "var(--iskendi-border-info)"
+    },
+    {
+      "name": "border/action/secondary",
+      "type": "COLOR",
+      "value": "#43342b",
+      "alias": "color/v4/cocoa",
+      "css": "var(--iskendi-border-action-secondary)"
+    },
+    {
+      "name": "info/chip/address",
+      "type": "COLOR",
+      "value": "#f7d66e",
+      "alias": "color/v4/yellow",
+      "css": "var(--color-info-chip-address)",
+      "sourceNode": "204:190",
+      "approval": "Q-24 2026-10-08; exact Figma binding"
+    },
+    {
+      "name": "info/chip/hours",
+      "type": "COLOR",
+      "value": "#9aab65",
+      "alias": "color/v4/olive",
+      "css": "var(--color-info-chip-hours)",
+      "sourceNode": "204:199",
+      "approval": "Q-24 2026-10-08; exact Figma binding"
+    },
+    {
+      "name": "info/chip/contact",
+      "type": "COLOR",
+      "value": "#ffb2dd",
+      "alias": "color/v4/pink",
+      "css": "var(--color-info-chip-contact)",
+      "sourceNode": "204:206",
+      "approval": "Q-24 2026-10-08; exact Figma binding"
+    },
+    {
+      "name": "info/chip/telegram",
+      "type": "COLOR",
+      "value": "#b6caeb",
+      "alias": "color/v4/blue",
+      "css": "var(--color-info-chip-telegram)",
+      "sourceNode": "204:215",
+      "approval": "Q-24 2026-10-08; exact Figma binding"
+    },
+    {
+      "name": "social/telegram",
+      "type": "COLOR",
+      "value": "#b6caeb",
+      "alias": "color/v4/blue",
+      "css": "var(--color-social-telegram)",
+      "sourceNode": "204:224",
+      "approval": "Q-24 2026-10-08; exact Figma binding"
+    },
+    {
+      "name": "social/vk",
+      "type": "COLOR",
+      "value": "#f7d66e",
+      "alias": "color/v4/yellow",
+      "css": "var(--color-social-vk)",
+      "sourceNode": "204:227",
+      "approval": "Q-24 2026-10-08; exact Figma binding"
+    },
+    {
+      "name": "social/instagram",
+      "type": "COLOR",
+      "value": "#ffb2dd",
+      "alias": "color/v4/pink",
+      "css": "var(--color-social-instagram)",
+      "sourceNode": "204:230",
+      "approval": "Q-24 2026-10-08; exact Figma binding"
+    },
+    {
+      "name": "order/row/preparing",
+      "type": "COLOR",
+      "value": "#feefbf",
+      "alias": "color/v4/yellow-soft",
+      "css": "var(--color-order-row-preparing)",
+      "sourceNode": "556:13684",
+      "approval": "Q-24 exact semantic alias policy; approved author scenarios 2026-10-09"
+    },
+    {
+      "name": "order/row/ready",
+      "type": "COLOR",
+      "value": "#e1e6d1",
+      "alias": "color/v4/sage",
+      "css": "var(--color-order-row-ready)",
+      "sourceNode": "556:13685",
+      "approval": "Q-24 exact semantic alias policy; approved author scenarios 2026-10-09"
+    },
+    {
+      "name": "order/row/issued",
+      "type": "COLOR",
+      "value": "#f8f3e7",
+      "alias": "color/v4/cream",
+      "css": "var(--color-order-row-issued)",
+      "sourceNode": "556:13686",
+      "approval": "Q-24 exact semantic alias policy; approved author scenarios 2026-10-09"
+    },
+    {
+      "name": "order/row/text",
+      "type": "COLOR",
+      "value": "#43342b",
+      "alias": "color/v4/cocoa",
+      "css": "var(--color-order-row-text)",
+      "sourceNode": "556:13684",
+      "approval": "Q-24 exact semantic alias policy; approved author scenarios 2026-10-09"
+    },
+    {
+      "name": "order/row/hint",
+      "type": "COLOR",
+      "value": "#6b574a",
+      "alias": "color/v4/cocoa-2",
+      "css": "var(--color-order-row-hint)",
+      "sourceNode": "556:13684",
+      "approval": "Q-24 exact semantic alias policy; approved author scenarios 2026-10-09"
+    },
+    {
+      "name": "order/ready-chip",
+      "type": "COLOR",
+      "value": "#9aab65",
+      "alias": "color/v4/olive",
+      "css": "var(--color-order-ready-chip)",
+      "sourceNode": "556:14060",
+      "approval": "Q-24 exact semantic alias policy; approved author scenarios 2026-10-09"
+    },
+    {
+      "name": "rating/comment/bg",
+      "type": "COLOR",
+      "value": "#eaf0f9",
+      "alias": "color/v4/blue-soft",
+      "css": "var(--color-rating-comment-bg)",
+      "sourceNode": "556:14254",
+      "approval": "Q-24 owner 2026-10-08; exact current Figma binding"
+    },
+    {
+      "name": "rating/reasons/negative",
+      "type": "COLOR",
+      "value": "#fae0e4",
+      "alias": "color/v4/pink-soft",
+      "css": "var(--color-rating-reasons-negative)",
+      "sourceNode": "556:14210",
+      "approval": "Q-24 owner 2026-10-08; exact current Figma binding"
+    },
+    {
+      "name": "rating/reasons/positive",
+      "type": "COLOR",
+      "value": "#feefbf",
+      "alias": "color/v4/yellow-soft",
+      "css": "var(--color-rating-reasons-positive)",
+      "sourceNode": "556:14232",
+      "approval": "Q-24 owner 2026-10-08; exact current Figma binding"
+    },
+    {
+      "name": "tile/board/art",
+      "type": "COLOR",
+      "value": "#b6caeb",
+      "alias": "color/v4/blue",
+      "css": "var(--color-tile-board-art)",
+      "sourceNode": "556:14070",
+      "approval": "Q-24 owner 2026-10-08; exact current Figma binding"
+    },
+    {
+      "name": "tile/board/chip",
+      "type": "COLOR",
+      "value": "#fffcf5",
+      "alias": "color/v4/paper",
+      "css": "var(--color-tile-board-chip)",
+      "sourceNode": "556:14070",
+      "approval": "Q-24 owner 2026-10-08; exact current Figma binding"
+    },
+    {
+      "name": "tile/board/ready",
+      "type": "COLOR",
+      "value": "#9aab65",
+      "alias": "color/v4/olive",
+      "css": "var(--color-tile-board-ready)",
+      "sourceNode": "556:14070",
+      "approval": "Q-24 owner 2026-10-08; exact current Figma binding"
+    },
+    {
+      "name": "tile/board/outline",
+      "type": "COLOR",
+      "value": "#ffb2dd",
+      "alias": "color/v4/pink",
+      "css": "var(--color-tile-board-outline)",
+      "sourceNode": "556:14070",
+      "approval": "Q-24 owner 2026-10-08; exact current Figma binding"
+    },
+    {
+      "name": "tile/game/art",
+      "type": "COLOR",
+      "value": "#ffb2dd",
+      "alias": "color/v4/pink",
+      "css": "var(--color-tile-game-art)",
+      "sourceNode": "184:190",
+      "approval": "Q-24 owner; exact current Figma binding"
+    },
+    {
+      "name": "emotion/active",
+      "type": "COLOR",
+      "value": "#ffb2dd",
+      "alias": "color/v4/pink",
+      "css": "var(--color-emotion-active)",
+      "sourceNode": "244:505",
+      "approval": "Q-24 exact source binding; local variants use existing emotion tokens"
+    },
+    {
+      "name": "review-glass-light",
+      "type": "COLOR",
+      "value": "#ffffff80",
+      "css": "var(--review-glass-light)",
+      "sourceNode": "791:22,790:150,790:18",
+      "approval": "Owner approved Figma review 2026-10-15"
+    },
+    {
+      "name": "review-glass-edge-light",
+      "type": "COLOR",
+      "value": "#ffffffcc",
+      "css": "var(--review-glass-edge-light)",
+      "sourceNode": "791:22,790:150,790:18",
+      "approval": "Owner approved Figma review 2026-10-15"
+    },
+    {
+      "name": "review-glass-dark",
+      "type": "COLOR",
+      "value": "#2d2d2bdb",
+      "css": "var(--review-glass-dark)",
+      "sourceNode": "791:22,790:150,790:18",
+      "approval": "Owner approved Figma review 2026-10-15"
+    },
+    {
+      "name": "review-glass-edge-dark",
+      "type": "COLOR",
+      "value": "#ffffff3d",
+      "css": "var(--review-glass-edge-dark)",
+      "sourceNode": "791:22,790:150,790:18",
+      "approval": "Owner approved Figma review 2026-10-15"
+    },
+    {
+      "name": "color-mobile-review-dock-light",
+      "type": "COLOR",
+      "value": "#fffcf5d6",
+      "css": "var(--color-mobile-review-dock-light)",
+      "sourceNode": "791:22,790:150,790:18",
+      "approval": "Owner approved Figma review 2026-10-15"
+    },
+    {
+      "name": "color-mobile-review-dock-selected-light",
+      "type": "COLOR",
+      "value": "#ffb2dd75",
+      "css": "var(--color-mobile-review-dock-selected-light)",
+      "sourceNode": "791:22,790:150,790:18",
+      "approval": "Owner approved Figma review 2026-10-15"
+    },
+    {
+      "name": "review-glass-shadow",
+      "type": "COLOR",
+      "value": "#332b211f",
+      "css": "var(--review-glass-shadow)",
+      "sourceNode": "791:22,790:150,790:18",
+      "approval": "Owner approved Figma review 2026-10-15"
+    },
+    {
+      "name": "review-dock-shadow",
+      "type": "COLOR",
+      "value": "#42332b1a",
+      "css": "var(--review-dock-shadow)",
+      "sourceNode": "791:22,790:150,790:18",
+      "approval": "Owner approved Figma review 2026-10-15"
+    },
+    {
+      "name": "review-pink",
+      "type": "COLOR",
+      "value": "#ffb2dd",
+      "css": "var(--review-pink)",
+      "sourceNode": "791:22,790:150,790:18",
+      "approval": "Owner approved Figma review 2026-10-15"
+    },
+    {
+      "name": "review-pink-soft",
+      "type": "COLOR",
+      "value": "#fae0e4",
+      "css": "var(--review-pink-soft)",
+      "sourceNode": "791:22,790:150,790:18",
+      "approval": "Owner approved Figma review 2026-10-15"
+    },
+    {
+      "name": "review-blue",
+      "type": "COLOR",
+      "value": "#b6caeb",
+      "css": "var(--review-blue)",
+      "sourceNode": "791:22,790:150,790:18",
+      "approval": "Owner approved Figma review 2026-10-15"
+    },
+    {
+      "name": "review-blue-soft",
+      "type": "COLOR",
+      "value": "#eaf0f9",
+      "css": "var(--review-blue-soft)",
+      "sourceNode": "791:22,790:150,790:18",
+      "approval": "Owner approved Figma review 2026-10-15"
+    },
+    {
+      "name": "review-cream",
+      "type": "COLOR",
+      "value": "#f8f3e7",
+      "css": "var(--review-cream)",
+      "sourceNode": "791:22,790:150,790:18",
+      "approval": "Owner approved Figma review 2026-10-15"
+    },
+    {
+      "name": "review-yellow",
+      "type": "COLOR",
+      "value": "#f7d66e",
+      "css": "var(--review-yellow)",
+      "sourceNode": "791:22,790:150,790:18",
+      "approval": "Owner approved Figma review 2026-10-15"
+    },
+    {
+      "name": "review-olive",
+      "type": "COLOR",
+      "value": "#9aab65",
+      "css": "var(--review-olive)",
+      "sourceNode": "791:22,790:150,790:18",
+      "approval": "Owner approved Figma review 2026-10-15"
+    },
+    {
+      "name": "review-ink",
+      "type": "COLOR",
+      "value": "#2d2d2b",
+      "css": "var(--review-ink)",
+      "sourceNode": "791:22,790:150,790:18",
+      "approval": "Owner approved Figma review 2026-10-15"
+    },
+    {
+      "name": "review-sand",
+      "type": "COLOR",
+      "value": "#efe6d6",
+      "css": "var(--review-sand)",
+      "sourceNode": "791:22,790:150,790:18",
+      "approval": "Owner approved Figma review 2026-10-15"
+    },
+    {
+      "name": "review-paper",
+      "type": "COLOR",
+      "value": "#fffcf5",
+      "css": "var(--review-paper)",
+      "sourceNode": "791:22,790:150,790:18",
+      "approval": "Owner approved Figma review 2026-10-15"
+    },
+    {
+      "name": "review/dock/lens-x",
+      "type": "FLOAT",
+      "value": 58,
+      "css": "var(--review-dock-lens-x)",
+      "sourceNode": "822:1438"
+    }
+  ]
+}

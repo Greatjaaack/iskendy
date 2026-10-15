@@ -1,0 +1,41 @@
+.group {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-12);
+  padding: var(--space-16);
+  border-radius: var(--radius-24);
+  color: var(--color-text-primary);
+}
+.preparing {
+  background: var(--color-surface-board-preparing);
+}
+.ready {
+  background: var(--color-surface-board-ready);
+}
+.heading {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+}
+.heading h2 {
+  margin: 0;
+  font: var(--t-web-mobile-category);
+}
+.pickup {
+  font: var(--t-web-mobile-accent);
+}
+.chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px; /* figma: 74:255 */
+}
+.aside {
+  padding: var(--space-24);
+}
+.aside h2 {
+  font: var(--t-web-desktop-category);
+}
+.aside .chips {
+  gap: var(--space-12);
+}

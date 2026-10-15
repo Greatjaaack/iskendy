@@ -1,0 +1,50 @@
+.footer {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-12);
+  width: 100%;
+  color: var(--color-text-primary);
+}
+.cards {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-12);
+  width: 100%;
+}
+.brandSocial {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-12);
+  width: 100%;
+}
+.socials {
+  display: flex;
+  gap: var(--space-12);
+}
+.logo {
+  width: 300px; /* figma: 204:17867 */
+}
+.legal {
+  margin: 0;
+  width: 100%;
+  white-space: pre-wrap;
+  font: var(--t-web-mobile-small);
+  color: var(--color-text-secondary);
+}
+.footer[data-size='desktop'] {
+  gap: var(--space-24);
+}
+.footer[data-size='desktop'] .cards {
+  flex-direction: row;
+  align-items: flex-start; /* figma: 204:17840 — cards hug their height */
+  gap: var(--space-16);
+}
+@media (max-width: 1023px /* figma: 85:1441 */) {
+  .footer[data-size='desktop'] .cards {
+    flex-wrap: wrap;
+  }
+  .footer[data-size='desktop'] .cards > * {
+    flex: 1 1 300px; /* figma: 204:17867 */
+  }
+}

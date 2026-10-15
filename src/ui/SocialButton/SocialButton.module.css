@@ -1,0 +1,31 @@
+.button {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+  width: var(--space-48);
+  height: var(--space-48);
+  border-radius: var(--radius-24);
+  background: var(--color-social-telegram);
+}
+.button[data-kind='vk'] {
+  background: var(--color-social-vk);
+}
+.button[data-kind='instagram'] {
+  background: var(--color-social-instagram);
+}
+.button img {
+  display: block;
+}
+.button:focus-visible {
+  outline: 3px solid var(--color-focus-ring); /* figma: 67:48 */
+  outline-offset: 3px; /* figma: 67:48 */
+}
+.mark {
+  position: absolute;
+  top: var(--space-0);
+  right: 2px; /* figma: 684:52668 */
+  font: var(--t-web-mobile-label);
+  color: var(--color-text-primary);
+}

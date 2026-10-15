@@ -1,0 +1,38 @@
+/* Generated from Figma exports 2026-10-07T19:25:36.252Z. Do not edit. */
+:root {
+  --t-web-desktop-hero: 900 64px/68px "Rubik", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --t-web-desktop-h1: 700 40px/46px "Rubik", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --t-web-desktop-category: 700 28px/34px "Rubik", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --t-web-desktop-body: 400 16px/24px "Onest", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --t-web-desktop-label: 700 14px/20px "Onest", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --t-web-desktop-small: 400 14px/20px "Onest", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --t-web-desktop-price: 700 28px/34px "Rubik", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --t-web-desktop-accent: italic 600 44px/48px "Cormorant Garamond", Georgia, serif;
+  --t-web-mobile-hero: 900 40px/44px "Rubik", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --t-web-mobile-h1: 700 32px/38px "Rubik", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --t-web-mobile-category: 700 24px/30px "Rubik", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --t-web-mobile-body: 400 16px/24px "Onest", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --t-web-mobile-label: 700 14px/20px "Onest", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --t-web-mobile-small: 400 14px/20px "Onest", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --t-web-mobile-price: 700 24px/30px "Rubik", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --t-web-mobile-accent: italic 600 32px/36px "Cormorant Garamond", Georgia, serif;
+  --t-web-mobile-order-number: 700 72px/76px "Rubik", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --t-web-link: 700 14px/20px "Onest", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --t-web-desktop-order-number: 700 128px/128px "Rubik", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --t-tv-768-hero: 900 65px/65px "Rubik", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --t-tv-768-title: 700 33px/37px "Rubik", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --t-tv-768-category: 700 24px/28px "Rubik", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --t-tv-768-body: 400 21px/27px "Onest", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --t-tv-768-label: 700 19px/23px "Onest", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --t-tv-768-small: 400 16px/20px "Onest", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --t-tv-768-price: 700 26px/30px "Rubik", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --t-tv-768-accent: italic 600 44px/47px "Cormorant Garamond", Georgia, serif;
+  --t-tv-768-queue-number: 700 94px/101px "Rubik", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --t-tv-768-price-hero: 900 56px/60px "Rubik", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --t-tv-body: 400 30px/38px "Onest", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --t-tv-title: 700 46px/52px "Rubik", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --t-tv-queue-number: 700 132px/142px "Rubik", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --t-tv-accent: italic 600 62px/66px "Cormorant Garamond", Georgia, serif;
+  --t-tv-small: 400 22px/28px "Onest", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --t-tv-category: 700 34px/40px "Rubik", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+}

@@ -1,0 +1,167 @@
+.button {
+  display: inline-grid;
+  align-items: center;
+  position: relative;
+  justify-content: center;
+  height: var(--space-48);
+  min-width: 120px; /* figma: 67:44 */
+  padding: 0 var(--space-24);
+  gap: var(--space-8);
+  border: 0;
+  border-radius: var(--radius-capsule);
+  font: var(--t-web-desktop-label);
+  cursor: pointer;
+}
+.label {
+  white-space: nowrap;
+}
+.primary {
+  color: var(--iskendi-fg-action-primary);
+  background: var(--iskendi-bg-action-primary-default);
+  padding: 0 var(--space-24);
+}
+.primary .label {
+  min-width: 0;
+  text-align: center;
+}
+.primary:not(:disabled):hover,
+.primary[data-state='hover'] {
+  background: var(--iskendi-bg-action-primary-hover);
+}
+.primary:not(:disabled):active,
+.primary[data-state='pressed'] {
+  background: var(--iskendi-bg-action-primary-pressed);
+}
+.secondary {
+  color: var(--iskendi-fg-action-secondary);
+  background: var(--iskendi-bg-action-secondary-default);
+  border: 2px solid var(--iskendi-border-action-secondary); /* figma: 67:44 */
+  padding-inline: calc(var(--space-24) - 2px); /* figma: 617:23426 */
+}
+.tertiary {
+  color: var(--iskendi-fg-link-default);
+  background: var(--iskendi-bg-action-secondary-default);
+  font: var(--t-web-link);
+}
+.tertiary .label {
+  text-decoration: underline;
+  text-underline-position: from-font;
+}
+.secondary:not(:disabled):hover,
+.secondary[data-state='hover'],
+.tertiary:not(:disabled):hover,
+.tertiary[data-state='hover'] {
+  background: var(--iskendi-bg-action-secondary-hover);
+}
+.secondary:not(:disabled):active,
+.secondary[data-state='pressed'],
+.tertiary:not(:disabled):active,
+.tertiary[data-state='pressed'] {
+  background: var(--iskendi-bg-action-secondary-pressed);
+}
+.tertiary:not(:disabled):hover,
+.tertiary[data-state='hover'] {
+  color: var(--iskendi-fg-link-hover);
+}
+.tertiary:not(:disabled):active,
+.tertiary[data-state='pressed'] {
+  color: var(--iskendi-fg-link-pressed);
+}
+.button:focus-visible,
+.button[data-state='focus'] {
+  outline: none;
+  border: 2px solid var(--iskendi-border-focus); /* figma: 67:44 */
+  padding-inline: calc(var(--space-24) - 2px); /* figma: 67:44 */
+}
+.primary:focus-visible,
+.primary[data-state='focus'] {
+  border-color: var(--iskendi-bg-canvas);
+  outline: 2px solid var(--iskendi-border-focus); /* figma: 67:11 */
+  outline-offset: 2px; /* figma: 67:11 */
+  padding-inline: calc(var(--space-24) - 2px); /* figma: 67:11 */
+}
+.button[data-state='disabled'] {
+  background: var(--iskendi-bg-disabled);
+  color: var(--iskendi-fg-disabled);
+  border-color: var(--iskendi-border-disabled);
+  cursor: default;
+}
+.button[data-state='loading'] {
+  cursor: wait;
+}
+.link {
+  text-decoration: none;
+}
+
+.label,
+.loadingLabel {
+  grid-area: 1 / 1;
+  justify-self: center;
+}
+.loadingLabel {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-8);
+  white-space: nowrap;
+}
+.primary .loadingLabel {
+  gap: var(--space-12);
+}
+.button [data-hidden='true'] {
+  visibility: hidden;
+}
+.loaderGlyph {
+  display: block;
+  flex: none;
+  width: var(--space-24);
+  height: var(--space-24);
+  background: currentColor;
+  mask: url('../../assets/button/loader.svg?no-inline') center / var(--space-24)
+    var(--space-24) no-repeat;
+}
+.primary .loaderGlyph {
+  width: var(--space-24);
+  height: var(--space-24);
+  mask-size: var(--space-24) var(--space-24);
+}
+
+/* Glass controls · 790:18. */
+.button {
+  height: 56px; /* figma: 790:18 */
+  border: 1px solid var(--review-glass-edge-dark); /* figma: 790:18 */
+  box-shadow: 0 4px 16px var(--review-glass-shadow); /* figma: 790:18 */
+  backdrop-filter: blur(12px) saturate(1.25); /* figma: 790:18 */
+  font: var(--t-web-mobile-label);
+} /* figma: 790:18 */
+.primary {
+  background: var(--review-glass-dark);
+  color: var(--iskendi-fg-inverse);
+}
+.secondary {
+  background: var(--review-glass-light);
+  border: 1px solid var(--review-glass-edge-light); /* figma: 790:18 */
+  color: var(--iskendi-fg-primary);
+} /* figma: 790:18 */
+.secondary:not(:disabled):hover {
+  background: var(--color-mobile-review-dock-light);
+}
+.tertiary {
+  box-shadow: none;
+  border-color: transparent;
+  backdrop-filter: none;
+}
+.label {
+  white-space: normal;
+  text-wrap: balance;
+}
+
+/* Keep intrinsic width stable when the glass edge becomes a two-pixel focus ring. */
+.button:focus-visible,
+.button[data-state='focus'] {
+  padding-inline: calc(var(--space-24) - 1px); /* figma: 790:18 */
+}
+.secondary:focus-visible,
+.secondary[data-state='focus'] {
+  padding-inline: calc(var(--space-24) - 3px); /* figma: 790:18 */
+}

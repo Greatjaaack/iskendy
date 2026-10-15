@@ -1,0 +1,160 @@
+.overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 20;
+  background: var(--color-rating-scrim);
+  opacity: 0.55;
+}
+/* 672:23871 / 669:23692 */
+.sheet {
+  position: fixed;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  z-index: 21;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-16);
+  max-height: 100dvh;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: var(--space-8) var(--space-20)
+    max(var(--space-16), env(safe-area-inset-bottom));
+  border-radius: var(--radius-32) var(--radius-32) 0 0;
+  background: var(--color-surface-base);
+  color: var(--color-text-primary);
+}
+.sheet p {
+  margin: 0;
+}
+.grabber {
+  align-self: center;
+  width: var(--space-40);
+  height: 5px; /* figma: 673:24053 */
+  margin-block: var(--space-8) var(--space-4);
+  border-radius: var(--radius-capsule);
+  background: var(--color-border-control);
+  opacity: 0.5;
+}
+.header {
+  display: flex;
+  align-items: center;
+  gap: var(--space-8);
+}
+.title {
+  flex: 1;
+  margin: 0;
+  font: var(--t-web-mobile-category);
+}
+.close {
+  display: flex;
+  flex: none;
+  width: 44px; /* figma: 468:514 */
+  height: 44px; /* figma: 468:514 */
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  border: 0;
+  border-radius: var(--radius-capsule);
+  color: var(--color-text-primary);
+  background: var(--color-surface-sunken);
+  cursor: pointer;
+}
+.close:focus-visible {
+  outline: 3px solid var(--color-focus-ring); /* figma: 67:48 */
+  outline-offset: 3px; /* figma: 67:48 */
+}
+@media (min-width: 768px /* figma: 684:52232 */) {
+  .sheet {
+    top: 160px; /* figma: 684:52494 */
+    right: auto;
+    bottom: auto;
+    left: 50%;
+    width: 480px; /* figma: 684:52494 */
+    max-height: calc(100dvh - 160px - var(--space-24)); /* figma: 684:52494 */
+    padding: var(--space-24) var(--space-20) var(--space-20);
+    border-radius: var(--radius-32);
+    translate: -50% 0;
+  }
+  .grabber {
+    display: none;
+  }
+}
+
+/* Sheet · 794:396 / desktop 882:6335. Inner fields keep their own shadows. */
+.overlay {
+  z-index: 50;
+  opacity: 0.32;
+}
+.sheet {
+  z-index: 51;
+  padding: 8px 16px max(24px, env(safe-area-inset-bottom)); /* figma: 794:396 */
+  border: 1px solid var(--review-glass-edge-light); /* figma: 794:396 */
+  background: color-mix(in srgb, var(--review-paper) 92%, transparent);
+  box-shadow: 0 4px 24px var(--review-glass-shadow); /* figma: 794:396 */
+  backdrop-filter: blur(24px) saturate(1.2); /* figma: 794:396 */
+} /* figma: 794:396 */
+.close {
+  background: var(--review-glass-light);
+  border: 1px solid var(--review-glass-edge-light); /* figma: 794:396 */
+  box-shadow: 0 4px 16px var(--review-glass-shadow); /* figma: 794:396 */
+} /* figma: 794:396 */
+.sheet form {
+  min-height: 0;
+}
+/* prettier-ignore */
+@media (min-width: 768px) { /* figma: 794:396 */
+  /* figma: 794:396 */
+  .sheet {
+    width: min(560px, calc(100% - 48px)); /* figma: 794:396 */
+    padding: 24px; /* figma: 794:396 */
+  }
+} /* figma: 794:396 */
+
+/* The visible handle stays small; its native touch target is 88 × 44. */
+/* prettier-ignore */
+.grabber {
+  position: absolute;
+  top: 0;
+  left: 50%;
+  translate: -50% 0;
+  width: 88px; /* figma: 794:396 */
+  height: 44px; /* figma: 794:396 */
+  margin: 0;
+  padding: 0;
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  border: 0;
+  background: transparent;
+  touch-action: none;
+  cursor: grab;
+} /* figma: 794:396 */
+/* prettier-ignore */
+.grabber span {
+  width: 40px; /* figma: 794:396 */
+  height: 5px; /* figma: 794:396 */
+  margin-top: 8px; /* figma: 794:396 */
+  background: var(--color-border-control);
+  border-radius: var(--radius-capsule);
+} /* figma: 794:396 */
+.sheet .header {
+  margin-top: var(--space-16);
+}
+/* prettier-ignore */
+@media (min-width: 768px) { /* figma: 794:396 */
+  .grabber {
+    display: none;
+  }
+  .sheet .header {
+    margin-top: 0;
+  }
+} /* figma: 882:6335 */
+
+/* A reason editor above the full-screen rating dialog. */
+.overlay[data-layer='nested'] {
+  z-index: 60;
+}
+.sheet[data-layer='nested'] {
+  z-index: 61;
+}

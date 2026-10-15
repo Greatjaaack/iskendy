@@ -1,0 +1,23 @@
+{
+  "file": "QDbhShERrxdg5nXHbrr27s",
+  "node": "556:14056",
+  "downloadedAt": "2026-10-09",
+  "assets": [
+    {
+      "name": "receipt",
+      "url": "https://www.figma.com/api/mcp/asset/7a05340f-408a-484a-a564-5f47d09bec82.svg"
+    }
+  ],
+  "compactBack": {
+    "nodeId": "590:23220",
+    "assetUrl": "https://www.figma.com/api/mcp/asset/4cda54aa-e50e-4efb-bd00-10f30ad3eddf.svg",
+    "file": "back-compact.svg",
+    "intrinsicSize": [24, 24]
+  },
+  "boardGo": {
+    "nodeId": "556:14070",
+    "assetUrl": "https://www.figma.com/api/mcp/asset/0b2099dd-c94b-4708-8255-20afed436239.svg",
+    "file": "board-go.svg",
+    "intrinsicSize": [20, 20]
+  }
+}

@@ -1,0 +1,16 @@
+{
+  "ok": true,
+  "feedbackId": 1,
+  "editToken": "<token>",
+  "branch": "positive",
+  "number": 997,
+  "rating": 5,
+  "waitSeconds": 0,
+  "links": {
+    "yandex": "https://example.test/yandex",
+    "2gis": "https://example.test/2gis",
+    "telegram": "https://example.test/telegram",
+    "vk": "https://example.test/vk",
+    "instagram": "https://example.test/instagram"
+  }
+}

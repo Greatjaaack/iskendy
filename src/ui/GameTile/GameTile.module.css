@@ -1,0 +1,67 @@
+.tile {
+  width: calc((100% - var(--space-12)) / 2);
+  min-width: 0;
+  min-height: 206px; /* figma: 184:189 */
+  display: flex;
+  flex-direction: column;
+  border-radius: var(--radius-24);
+  overflow: clip;
+  background: var(--color-surface-game);
+  color: var(--iskendi-fg-primary);
+}
+.art {
+  width: 100%;
+  height: 104px; /* figma: 184:190 */
+  flex: none;
+  position: relative;
+  overflow: clip;
+  border-radius: 0 0 var(--radius-24) var(--radius-24);
+  background: var(--color-tile-game-art);
+}
+.motif {
+  position: absolute;
+  inset: 0;
+}
+.motif:nth-child(2) {
+  display: none;
+}
+.petals {
+  position: absolute;
+  left: -6px; /* figma: 184:191 */
+  top: 7px; /* figma: 184:191 */
+}
+.vector {
+  position: absolute;
+  left: 92px; /* figma: 184:197 */
+  top: 22px; /* figma: 184:197 */
+}
+.vector:last-child {
+  left: 128px; /* figma: 184:198 */
+}
+.text {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  padding: var(--space-12) var(--space-16) var(--space-16);
+}
+.text strong {
+  display: flex;
+  align-items: center;
+  gap: var(--space-8);
+  font: var(--t-web-mobile-category);
+  font-size: 18px; /* figma: 204:237 */
+  line-height: 30px; /* figma: 204:237 */
+}
+.text > span {
+  font: var(--t-web-mobile-small);
+  color: var(--iskendi-fg-secondary);
+}
+@media (min-width: 768px /* figma: 204:21859 */) {
+  .tile {
+    min-height: 186px; /* figma: 204:21859 */
+  }
+  .motif:nth-child(2) {
+    display: block;
+    left: 165px; /* figma: 204:21876 */
+  }
+}

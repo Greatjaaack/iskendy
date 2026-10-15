@@ -1,0 +1,8 @@
+<svg preserveAspectRatio="none" overflow="visible" style="display: block;" width="149" height="66" viewBox="0 0 149 66" fill="none" xmlns="http://www.w3.org/2000/svg">
+<g id="Artwork &#194;&#183; &#208;&#180;&#208;&#184;&#208;&#176;&#208;&#187;&#208;&#190;&#208;&#179; &#209;&#129; &#209;&#131;&#208;&#191;&#209;&#128;&#208;&#176;&#208;&#178;&#208;&#187;&#209;&#143;&#209;&#142;&#209;&#137;&#208;&#184;&#208;&#188;">
+<path id="Bubble-back" d="M27 10H72C79.3333 10 83 13.6667 83 21V31C83 38.3333 79.3333 42 72 42H39L26 49L28 42H27C19.6667 42 16 38.3333 16 31V21C16 13.6667 19.6667 10 27 10Z" fill="#FAE0E4" stroke="#43342B" stroke-width="1.8" stroke-linejoin="round"/>
+<path id="Back-lines" d="M29 22H66M29 29H55" stroke="#43342B" stroke-width="1.8" stroke-linecap="round"/>
+<path id="Bubble-front" d="M80 27H121C129 27 133 31 133 39V44C133 52 129 56 121 56L124 61L111 56H80C72 56 68 52 68 44V39C68 31 72 27 80 27Z" fill="#FFFCF5" stroke="#43342B" stroke-width="1.8" stroke-linejoin="round"/>
+<path id="Front-lines" d="M81 39H119M81 46H108" stroke="#43342B" stroke-width="1.8" stroke-linecap="round"/>
+</g>
+</svg>

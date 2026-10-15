@@ -1,0 +1,8 @@
+.mobile {
+  width: 342px; /* figma: 74:197 */
+  max-width: 100%;
+}
+.desktop {
+  width: 720px; /* figma: 81:634 */
+  max-width: 100%;
+}

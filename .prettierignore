@@ -1,0 +1,13 @@
+node_modules
+dist
+coverage
+playwright-report
+test-results
+legacy
+tokens
+design
+
+src/styles/tokens.css
+src/styles/typography.css
+tests/msw/public/
+source-revision.json

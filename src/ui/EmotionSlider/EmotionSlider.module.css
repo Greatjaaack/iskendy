@@ -1,0 +1,121 @@
+.frame {
+  position: relative;
+  width: 342px; /* figma: 244:553 */
+  max-width: 100%;
+  height: 56px; /* figma: 244:553 */
+}
+.visual {
+  position: absolute;
+  left: 0;
+  width: 342px; /* figma: 244:553 */
+  height: 56px; /* figma: 244:553 */
+  transform-origin: top left;
+  pointer-events: none;
+}
+.visual img {
+  max-width: none;
+  position: absolute;
+  top: -4px; /* figma: 244:503 */
+  left: 0;
+}
+.visual img.first {
+  left: -8px; /* figma: 244:503 */
+}
+.slider {
+  position: absolute;
+  top: 0;
+  display: flex;
+  align-items: center;
+  height: 56px; /* figma: 244:553 */
+  touch-action: none;
+  user-select: none;
+}
+.track {
+  position: relative;
+  flex-grow: 1;
+  height: 56px; /* figma: 244:553 */
+}
+.thumb {
+  display: block;
+  width: 56px; /* figma: 244:553 */
+  height: 56px; /* figma: 244:553 */
+  border-radius: var(--radius-capsule);
+}
+.thumb:focus-visible {
+  outline: 2px solid var(--color-focus-ring); /* figma: 244:553 */
+  outline-offset: 2px; /* figma: 244:553 */
+}
+
+.layers {
+  position: absolute;
+  inset: 0;
+}
+.canvas {
+  position: absolute;
+  top: 0;
+  left: 0;
+  height: 56px; /* figma: 244:504 */
+  border-radius: 28px; /* figma: 244:504 */
+}
+.canvas {
+  width: 100%;
+  background: var(--iskendi-bg-canvas);
+}
+.frame {
+  --color-emotion-active: var(--color-emotion-1);
+}
+.frame[data-value='2'] {
+  --color-emotion-active: var(--color-emotion-2);
+}
+.frame[data-value='3'] {
+  --color-emotion-active: var(--color-emotion-3);
+}
+.frame[data-value='4'] {
+  --color-emotion-active: var(--color-emotion-4);
+}
+.frame[data-value='5'] {
+  --color-emotion-active: var(--color-emotion-5);
+}
+.fillBody {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 56px; /* figma: 244:553 */
+  height: 56px; /* figma: 244:505 */
+  border-radius: 28px; /* figma: 244:505 */
+  background: var(--color-emotion-active);
+}
+.stop {
+  position: absolute;
+  top: 24px; /* figma: 244:506 */
+  width: 8px; /* figma: 244:506 */
+  height: 8px; /* figma: 244:506 */
+  border-radius: var(--radius-capsule);
+  background: var(--color-emotion-track-point);
+}
+.indicator {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 56px; /* figma: 244:503 */
+  height: 56px; /* figma: 244:503 */
+}
+.visual .thumbArt {
+  left: -8px; /* figma: 244:511 */
+  top: -4px; /* figma: 244:511 */
+}
+.visual .mark {
+  left: 21px; /* figma: 244:512 */
+  top: 21px; /* figma: 244:512 */
+}
+/* 680:24349 value=none: nothing chosen yet, no thumb. */
+.frame[data-value='none'] .thumb:not(:focus-visible) {
+  opacity: 0;
+}
+
+.mark {
+  opacity: 0;
+}
+.mark[data-active='true'] {
+  opacity: 1;
+}

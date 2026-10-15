@@ -1,0 +1,64 @@
+.card {
+  display: flex;
+  width: 100%;
+  min-width: 0;
+  min-height: 72px; /* figma: 204:189 */
+  align-items: center;
+  gap: 14px; /* figma: 204:189 */
+  padding: 14px var(--space-16) 14px 14px; /* figma: 204:189 */
+  border-radius: var(--radius-24);
+  color: var(--color-text-primary);
+  text-decoration: none;
+  background: var(--color-surface-hero);
+}
+.card[data-kind='hours'] {
+  background: var(--color-surface-soft-success);
+}
+.card[data-kind='telegram'] {
+  background: var(--color-surface-info);
+}
+.chip {
+  display: flex;
+  flex: none;
+  width: 44px; /* figma: 204:190 */
+  height: 44px; /* figma: 204:190 */
+  border-radius: 22px; /* figma: 204:190 */
+  align-items: center;
+  justify-content: center;
+  background: var(--color-info-chip-address);
+}
+.card[data-kind='hours'] .chip {
+  background: var(--color-info-chip-hours);
+}
+.card[data-kind='telegram'] .chip {
+  background: var(--color-info-chip-telegram);
+}
+.chip img,
+.go {
+  display: block;
+  flex: none;
+}
+.text {
+  display: flex;
+  flex: 1;
+  min-width: 0;
+  flex-direction: column;
+  overflow-wrap: anywhere;
+  gap: 2px; /* figma: 204:193 */
+}
+.title {
+  font: var(--t-web-desktop-label);
+  font-size: 15px; /* figma: 204:194 */
+}
+.value {
+  font: var(--t-web-desktop-body);
+  font-size: 14px; /* figma: 204:195 */
+  color: var(--color-text-secondary);
+}
+.line {
+  display: block; /* figma: 204:204 — hours lines stack without the text gap */
+}
+.card:focus-visible {
+  outline: 3px solid var(--color-focus-ring); /* figma: 67:48 */
+  outline-offset: 3px; /* figma: 67:48 */
+}

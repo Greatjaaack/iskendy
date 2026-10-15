@@ -1,0 +1,8 @@
+.frame {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-16);
+  width: 390px; /* figma: 179:153 */
+  padding: var(--space-24);
+  background: var(--iskendi-bg-canvas);
+}

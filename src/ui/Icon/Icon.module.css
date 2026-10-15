@@ -1,0 +1,79 @@
+.icon {
+  display: inline-block;
+  width: var(--space-24);
+  height: var(--space-24);
+  flex: none;
+  background-color: currentColor;
+  mask-position: center;
+  mask-repeat: no-repeat;
+  mask-size: var(--space-24) var(--space-24);
+}
+.bell {
+  mask-image: url('../../assets/icons/bell.svg?no-inline');
+}
+.pin {
+  mask-image: url('../../assets/icons/pin.svg?no-inline');
+}
+.clock {
+  mask-image: url('../../assets/icons/clock.svg?no-inline');
+}
+.arrow-right {
+  mask-image: url('../../assets/icons/arrow-right.svg?no-inline');
+}
+.arrow-left {
+  mask-image: url('../../assets/icons/arrow-left.svg?no-inline');
+}
+.board {
+  mask-image: url('../../assets/icons/board.svg?no-inline');
+}
+.check {
+  mask-image: url('../../assets/icons/check.svg?no-inline');
+}
+.receipt {
+  mask-image: url('../../assets/icons/receipt.svg?no-inline');
+}
+.star {
+  mask-image: url('../../assets/icons/star.svg?no-inline');
+}
+.star-filled {
+  mask-image: url('../../assets/icons/star-filled.svg?no-inline');
+}
+.telegram {
+  mask-image: url('../../assets/icons/telegram.svg?no-inline');
+}
+.vk {
+  mask-image: url('../../assets/icons/vk.svg?no-inline');
+}
+.instagram {
+  mask-image: url('../../assets/icons/instagram.svg?no-inline');
+}
+.play {
+  mask-image: url('../../assets/icons/play.svg?no-inline');
+}
+.hourglass {
+  mask-image: url('../../assets/icons/hourglass.svg?no-inline');
+}
+.check-circle {
+  mask-image: url('../../assets/icons/check-circle.svg?no-inline');
+}
+.seal-check {
+  mask-image: url('../../assets/icons/seal-check.svg?no-inline');
+}
+.alert-circle {
+  mask-image: url('../../assets/icons/alert-circle.svg?no-inline');
+}
+.chevron-down {
+  mask-image: url('../../assets/icons/chevron-down.svg?no-inline');
+}
+.plus {
+  mask-image: url('../../assets/icons/plus.svg?no-inline');
+}
+.more-horizontal {
+  mask-image: url('../../assets/icons/more-horizontal.svg?no-inline');
+}
+.close {
+  mask-image: url('../../assets/icons/close.svg?no-inline');
+}
+.minus-circle {
+  mask-image: url('../../assets/icons/minus-circle.svg?no-inline');
+}

@@ -1,0 +1,184 @@
+{
+  "backendCommit": "7ab20f01d7a462f8ad99e1796a181bd33cdfcf4b",
+  "method": "in-process ASGITransport; synthetic isolated SQLite; no lifespan or external HTTP",
+  "capturedAt": "2026-10-07",
+  "runtime": {
+    "fastapi": "0.141.1",
+    "httpx": "0.28.1",
+    "pydantic-settings": "2.15.0",
+    "starlette": "1.6.0",
+    "segno": "1.6.6"
+  },
+  "responses": {
+    "status-empty": {
+      "method": "GET",
+      "path": "/api/status",
+      "httpStatus": 200
+    },
+    "status-start-day": {
+      "method": "GET",
+      "path": "/api/status",
+      "httpStatus": 200
+    },
+    "status-populated": {
+      "method": "GET",
+      "path": "/api/status",
+      "httpStatus": 200
+    },
+    "config-empty": {
+      "method": "GET",
+      "path": "/api/feedback/config",
+      "httpStatus": 200
+    },
+    "config-links": {
+      "method": "GET",
+      "path": "/api/feedback/config",
+      "httpStatus": 200
+    },
+    "claim-ok": {
+      "method": "POST",
+      "path": "/api/guest/claim",
+      "httpStatus": 200
+    },
+    "claim-taken": {
+      "method": "POST",
+      "path": "/api/guest/claim",
+      "httpStatus": 200
+    },
+    "claim-too-many": {
+      "method": "POST",
+      "path": "/api/guest/claim",
+      "httpStatus": 200
+    },
+    "claim-429": {
+      "method": "POST",
+      "path": "/api/guest/claim",
+      "httpStatus": 429
+    },
+    "validation-422": {
+      "method": "POST",
+      "path": "/api/guest/claim",
+      "httpStatus": 422
+    },
+    "check-not-found": {
+      "method": "GET",
+      "path": "/api/feedback/check",
+      "httpStatus": 200
+    },
+    "check-not-served": {
+      "method": "GET",
+      "path": "/api/feedback/check",
+      "httpStatus": 200
+    },
+    "check-ok": {
+      "method": "GET",
+      "path": "/api/feedback/check",
+      "httpStatus": 200
+    },
+    "feedback-not-claimed": {
+      "method": "POST",
+      "path": "/api/feedback",
+      "httpStatus": 200
+    },
+    "feedback-not-served": {
+      "method": "POST",
+      "path": "/api/feedback",
+      "httpStatus": 200
+    },
+    "feedback-not-found": {
+      "method": "POST",
+      "path": "/api/feedback",
+      "httpStatus": 200
+    },
+    "check-served-positive": {
+      "method": "GET",
+      "path": "/api/feedback/check",
+      "httpStatus": 200
+    },
+    "feedback-positive": {
+      "method": "POST",
+      "path": "/api/feedback",
+      "httpStatus": 200
+    },
+    "feedback-already": {
+      "method": "POST",
+      "path": "/api/feedback",
+      "httpStatus": 200
+    },
+    "check-already": {
+      "method": "GET",
+      "path": "/api/feedback/check",
+      "httpStatus": 200
+    },
+    "feedback-negative": {
+      "method": "POST",
+      "path": "/api/feedback",
+      "httpStatus": 200
+    },
+    "rate-ok": {
+      "method": "POST",
+      "path": "/api/feedback/rate",
+      "httpStatus": 200
+    },
+    "rate-wrong-token": {
+      "method": "POST",
+      "path": "/api/feedback/rate",
+      "httpStatus": 200
+    },
+    "rate-unknown-feedback": {
+      "method": "POST",
+      "path": "/api/feedback/rate",
+      "httpStatus": 200
+    },
+    "detail-ok": {
+      "method": "POST",
+      "path": "/api/feedback/detail",
+      "httpStatus": 200
+    },
+    "rate-locked": {
+      "method": "POST",
+      "path": "/api/feedback/rate",
+      "httpStatus": 200
+    },
+    "rate-expired": {
+      "method": "POST",
+      "path": "/api/feedback/rate",
+      "httpStatus": 200
+    },
+    "detail-expired": {
+      "method": "POST",
+      "path": "/api/feedback/detail",
+      "httpStatus": 200
+    },
+    "detail-wrong-token": {
+      "method": "POST",
+      "path": "/api/feedback/detail",
+      "httpStatus": 200
+    },
+    "detail-unknown-feedback": {
+      "method": "POST",
+      "path": "/api/feedback/detail",
+      "httpStatus": 200
+    },
+    "guest-event-ok": {
+      "method": "POST",
+      "path": "/api/guest/event",
+      "httpStatus": 200
+    },
+    "guest-event-ignored": {
+      "method": "POST",
+      "path": "/api/guest/event",
+      "httpStatus": 200
+    },
+    "client-event-ok": {
+      "method": "POST",
+      "path": "/api/client/event",
+      "httpStatus": 200
+    },
+    "health-ok": {
+      "method": "GET",
+      "path": "/api/health",
+      "httpStatus": 200
+    }
+  }
+}

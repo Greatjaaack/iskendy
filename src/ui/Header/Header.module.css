@@ -1,0 +1,50 @@
+.mobile {
+  display: flex;
+  align-items: center;
+  gap: var(--space-16);
+  height: 68px; /* figma: 90:95 */
+  width: 342px; /* figma: 90:95 */
+  max-width: 100%;
+  padding-block: var(--space-12);
+}
+.logoLink {
+  display: flex;
+  align-items: center;
+  flex: none;
+  min-height: 44px; /* figma: 90:95 */
+}
+.mobileLogo {
+  width: 276px; /* figma: 90:96 */
+}
+.mobile .logoLink {
+  flex: 0 1 auto;
+  min-width: 0;
+}
+.desktopLogo {
+  width: 340px; /* figma: 79:1492 */
+}
+.maps {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+  width: 44px; /* figma: 204:21829 */
+  height: 44px; /* figma: 204:21829 */
+  border-radius: 22px; /* figma: 204:21829 */
+  background: var(--color-surface-hero);
+  color: var(--color-text-primary);
+}
+.logoLink:focus-visible,
+.maps:focus-visible {
+  outline: 2px solid var(--iskendi-border-focus); /* figma: 90:95 */
+}
+.desktop {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  width: 1200px; /* figma: 79:1491 */
+  max-width: 100%;
+  height: 80px; /* figma: 79:1491 */
+  padding-block: var(--space-16);
+  border-bottom: 1px solid var(--iskendi-border-subtle);
+}

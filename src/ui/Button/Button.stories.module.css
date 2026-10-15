@@ -1,0 +1,11 @@
+.grid {
+  display: grid;
+  grid-template-columns: repeat(6, 210px); /* figma: 67:44 */
+  justify-items: start;
+  align-content: start;
+  row-gap: 36px; /* figma: 67:44 */
+  width: 1308px; /* figma: 67:44 */
+  height: 276px; /* figma: 67:44 */
+  padding: var(--space-24);
+  background: var(--iskendi-bg-canvas);
+}

@@ -1,0 +1,14 @@
+<svg preserveAspectRatio="xMidYMid meet" overflow="visible" style="display: block;" width="149" height="82" viewBox="0 0 149 82" fill="none" xmlns="http://www.w3.org/2000/svg">
+<g id="Game &#194;&#183; native vectors">
+<path id="Pixel-one" d="M24 12H20C18.8954 12 18 12.8954 18 14V18C18 19.1046 18.8954 20 20 20H24C25.1046 20 26 19.1046 26 18V14C26 12.8954 25.1046 12 24 12Z" fill="#B6CAEB" stroke="#43342B" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+<path id="Pixel-two" d="M33.5 7H30.5C29.6716 7 29 7.67157 29 8.5V11.5C29 12.3284 29.6716 13 30.5 13H33.5C34.3284 13 35 12.3284 35 11.5V8.5C35 7.67157 34.3284 7 33.5 7Z" fill="#F7D66E" stroke="#43342B" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+<path id="Coin" d="M120 26C124.971 26 129 21.9706 129 17C129 12.0294 124.971 8 120 8C115.029 8 111 12.0294 111 17C111 21.9706 115.029 26 120 26Z" fill="#F7D66E" stroke="#43342B" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+<path id="Coin-mark" d="M120 13V21" stroke="#43342B" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+<path id="Gamepad" d="M45 26H104C112 26 118 32 121 41L129 63C131 70 124 75 118 71L99 58H50L31 71C25 75 18 70 20 63L28 41C31 32 37 26 45 26Z" fill="#FFFCF5" stroke="#43342B" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+<path id="Dpad" d="M40 37H47V44H54V51H47V58H40V51H33V44H40V37Z" fill="#B6CAEB" stroke="#43342B" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+<path id="Button-yellow" d="M105 45.5C108.038 45.5 110.5 43.0376 110.5 40C110.5 36.9624 108.038 34.5 105 34.5C101.962 34.5 99.5 36.9624 99.5 40C99.5 43.0376 101.962 45.5 105 45.5Z" fill="#F7D66E" stroke="#43342B" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+<path id="Button-pink" d="M94 56.5C97.0376 56.5 99.5 54.0376 99.5 51C99.5 47.9624 97.0376 45.5 94 45.5C90.9624 45.5 88.5 47.9624 88.5 51C88.5 54.0376 90.9624 56.5 94 56.5Z" fill="#FFB2DD" stroke="#43342B" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+<path id="Start-select" d="M65 45H71M78 45H84" stroke="#43342B" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+<path id="Cable" d="M74 26V18C74 13 82 13 82 8" stroke="#43342B" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+</g>
+</svg>

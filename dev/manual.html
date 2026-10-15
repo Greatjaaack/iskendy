@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="ru">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>Искенди · ручные проверки</title>
+  </head>
+  <body>
+    <h1>Ручная проверка готовых вариантов</h1>
+    <p>
+      Стабильный локальный снимок. Синтетические данные, настоящий backend не
+      используется. Не все экраны готовы.
+    </p>
+    <label
+      >Сценарий
+      <select id="scenario"></select
+    ></label>
+    <label
+      >Ширина
+      <select id="width">
+        <option>320</option>
+        <option selected>390</option>
+        <option>768</option>
+        <option>1024</option>
+        <option>1440</option>
+      </select></label
+    >
+    <button id="start">Начать заново</button
+    ><button id="back">Назад в интерфейсе</button
+    ><button id="reopen">Открыть оценку снова</button>
+    <button id="repair">Убрать ошибку отправки</button>
+    <p>
+      <a id="kit" href="/dev/kit.html" target="_blank" rel="noopener"
+        >Витрина: эмоции 1–5, диалог R1–R4, состояния компонентов</a
+      >
+      ·
+      <a href="/manual-checklist.html" target="_blank" rel="noopener"
+        >Что проверять и что ещё не готово</a
+      >
+    </p>
+    <p id="status" role="status"></p>
+    <div style="overflow: auto; max-width: 100%">
+      <iframe
+        id="screen"
+        title="Проверяемый гостевой интерфейс"
+        width="390"
+        height="850"
+        style="border: 1px solid #777"
+      ></iframe>
+    </div>
+    <script type="module" src="/dev/manual.ts"></script>
+  </body>
+</html>

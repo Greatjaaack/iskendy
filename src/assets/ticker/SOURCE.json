@@ -1,0 +1,48 @@
+{
+  "figmaFile": "QDbhShERrxdg5nXHbrr27s",
+  "exportMethod": "read-only get_design_context assets of Footer/Mobile Ticker instance",
+  "scope": "Static Web/Ticker 228:21535 author cycle; motion deferred; not a substitute for an unspecified ornament.",
+  "files": [
+    {
+      "name": "star-pink.svg",
+      "nodeId": "228:21542",
+      "width": "18.6667",
+      "height": "18.6667",
+      "bytes": 584,
+      "sha256": "3f71afb4e46b39c12878ab2e41ac44b10456f4d3d3a6745c03b96f4e99a9c613"
+    },
+    {
+      "name": "star-yellow.svg",
+      "nodeId": "228:21546",
+      "width": "18.6667",
+      "height": "18.6667",
+      "bytes": 584,
+      "sha256": "e93dd5d7f8e4ed1194f3eabc5f7200e734858302022163a2efeee52013e81ede"
+    },
+    {
+      "name": "star-olive.svg",
+      "nodeId": "228:21549",
+      "width": "18.6667",
+      "height": "18.6667",
+      "bytes": 584,
+      "sha256": "73a7a0929a56196b7b0f9b92ad155809e9456389ea80592c3dc90deb08382ae2"
+    },
+    {
+      "name": "star-blue.svg",
+      "nodeId": "228:21553",
+      "width": "18.6667",
+      "height": "18.6667",
+      "bytes": 584,
+      "sha256": "bb23ae65d60ef98069cf91bd590607d84811334cf600e383c52f9a7751c4cec0"
+    },
+    {
+      "name": "heart.svg",
+      "nodeId": "228:21535",
+      "width": "20",
+      "height": "20",
+      "bytes": 609,
+      "sha256": "ee5c893cdcc660af44b75358c9a7931483d00bce9f5537914423a30a1a21c094",
+      "assetUrl": "https://www.figma.com/api/mcp/asset/2d25e188-7ecc-4e17-84bf-5fd6910fc40e.svg"
+    }
+  ]
+}

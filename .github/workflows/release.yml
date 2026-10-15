@@ -1,0 +1,21 @@
+name: Release archive dry run
+on: workflow_dispatch
+permissions:
+  contents: read
+jobs:
+  assemble:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - run: npm ci
+      - run: npm run build && npm run check:size
+      - run: cd artifacts && sha256sum --check *.sha256
+      - uses: actions/upload-artifact@v4
+        with:
+          name: release-dry-run
+          path: artifacts/iskendy-web-*
+          retention-days: 14

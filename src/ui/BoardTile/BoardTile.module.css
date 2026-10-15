@@ -1,0 +1,80 @@
+/* Exact Web/Tile instance 556:14070; paired with the owner-approved static game placeholder. */
+.tile {
+  display: flex;
+  flex-direction: column;
+  width: calc((100% - var(--space-12)) / 2);
+  min-width: 0;
+  border-radius: var(--radius-24);
+  background: var(--color-surface-info);
+  color: var(--iskendi-fg-primary);
+  text-decoration: none;
+  overflow: clip;
+}
+.art {
+  position: relative;
+  width: 100%;
+  height: 104px; /* figma: 556:14070 */
+  background: var(--color-tile-board-art);
+  border-radius: 0 0 var(--radius-24) var(--radius-24);
+  overflow: clip;
+}
+.chip {
+  position: absolute;
+  left: var(--space-12);
+  top: var(--space-16);
+  width: 40px; /* figma: 556:14070 */
+  height: 30px; /* figma: 556:14070 */
+  border-radius: 9px; /* figma: 556:14070 */
+  background: var(--color-tile-board-chip);
+}
+.chip:nth-child(2),
+.chip:nth-child(4) {
+  left: 58px; /* figma: 556:14070 */
+}
+.chip:nth-child(3),
+.chip:nth-child(4),
+.chip:nth-child(6) {
+  top: 58px; /* figma: 556:14070 */
+}
+.chip:nth-child(4) {
+  border: var(--space-4) solid var(--color-tile-board-outline);
+}
+.chip:nth-child(5),
+.chip:nth-child(6) {
+  left: 110px; /* figma: 556:14070 */
+  background: var(--color-tile-board-ready);
+}
+.go {
+  position: absolute;
+  left: 119px; /* figma: 556:14070 */
+  top: 10px; /* figma: 556:14070 */
+  width: 36px; /* figma: 556:14070 */
+  height: 36px; /* figma: 556:14070 */
+  border-radius: var(--radius-capsule);
+  background: var(--iskendi-bg-canvas);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.text {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  padding: var(--space-12) var(--space-16) var(--space-16);
+}
+.text strong {
+  display: flex;
+  align-items: center;
+  gap: var(--space-8);
+  font: var(--t-web-mobile-category);
+  font-size: 18px; /* figma: 556:14070 */
+  line-height: 30px; /* figma: 556:14070 */
+}
+.text > span {
+  font: var(--t-web-mobile-small);
+  color: var(--iskendi-fg-secondary);
+}
+.tile:focus-visible {
+  outline: 2px solid var(--iskendi-border-focus); /* figma: 184:213 */
+  outline-offset: var(--space-4);
+}

@@ -1,0 +1,30 @@
+{
+  "figmaFile": "QDbhShERrxdg5nXHbrr27s",
+  "exportMethod": "read-only node.exportAsync SVG",
+  "files": [
+    {
+      "name": "back.svg",
+      "nodeId": "245:3381",
+      "width": 24,
+      "height": 24,
+      "bytes": 487,
+      "sha256": "6fe537d3969183ff900e976cf09c28b144019937aac7ecf79cc742f645ba7253"
+    },
+    {
+      "name": "close.svg",
+      "nodeId": "245:3385",
+      "width": 24,
+      "height": 24,
+      "bytes": 645,
+      "sha256": "6c417e3232b2ba8889dd0a63d050dae30e97930d3f06782cc68bbf4f83797965"
+    },
+    {
+      "name": "check.svg",
+      "nodeId": "244:557",
+      "width": 18,
+      "height": 18,
+      "bytes": 490,
+      "sha256": "1df2d36c87e0448063696e434e55707f7d49335b98bf2f72534384a606b65a70"
+    }
+  ]
+}

@@ -1,0 +1,546 @@
+.iconButton {
+  width: 44px; /* figma: 791:22 */
+  height: 44px; /* figma: 791:22 */
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+  padding: 0;
+  position: relative;
+  border: 1px solid var(--review-glass-edge-light); /* figma: 791:22 */
+  border-radius: var(--radius-capsule);
+  color: var(--iskendi-fg-primary);
+  background: var(--review-glass-light);
+  box-shadow: 0 4px 16px var(--review-glass-shadow); /* figma: 791:22 */
+  backdrop-filter: blur(12px) saturate(1.35); /* figma: 791:22 */
+  cursor: pointer;
+} /* figma: 791:22 */
+.orderCard {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  width: 100%;
+  min-width: 0;
+  height: 208px; /* figma: 791:22 */
+  padding: 16px 20px; /* figma: 791:22 */
+  gap: 4px; /* figma: 791:22 */
+  text-align: left;
+  border: 0;
+  border-radius: var(--radius-24);
+  color: var(--iskendi-fg-primary);
+  background: var(--color-status-preparing-bg);
+  isolation: isolate;
+} /* figma: 791:22 */
+button.orderCard {
+  cursor: pointer;
+}
+.orderCard[data-status='ready'] {
+  background: var(--color-status-ready-bg);
+}
+.orderCard[data-status='issued'] {
+  background: var(--color-status-issued-bg);
+}
+.cardLabel,
+.cardStatus {
+  font: var(--t-web-mobile-label);
+}
+.orderNumber {
+  font: var(--t-web-mobile-order-number);
+}
+.cardStatus {
+  display: flex;
+  align-items: center;
+  gap: 8px; /* figma: 791:22 */
+  margin-top: auto;
+  min-height: 24px; /* figma: 791:22 */
+} /* figma: 791:22 */
+.cardStatus > span {
+  width: 20px; /* figma: 791:22 */
+  height: 20px; /* figma: 791:22 */
+} /* figma: 791:22 */
+.cardHint {
+  font: var(--t-web-mobile-small);
+}
+.ornament {
+  position: absolute;
+  top: 18px; /* figma: 791:22 */
+  right: 10px; /* figma: 791:22 */
+  width: 140px; /* figma: 791:22 */
+  height: 170px; /* figma: 791:22 */
+  z-index: -1;
+  pointer-events: none;
+} /* figma: 791:22 */
+.ornament > img {
+  width: 140px; /* figma: 791:22 */
+  height: 170px; /* figma: 791:22 */
+  max-width: none;
+} /* figma: 791:22 */
+.ornament .ornamentCenter {
+  position: absolute;
+  left: 24px; /* figma: 791:22 */
+  top: 12px; /* figma: 791:22 */
+  width: 104px; /* figma: 791:22 */
+  height: 104px; /* figma: 791:22 */
+} /* figma: 791:22 */
+.orderCard[data-narrow='true'] .ornament {
+  right: 12px; /* figma: 791:22 */
+  top: 102px; /* figma: 791:22 */
+  width: 34.588px; /* figma: 791:22 */
+  height: 42px; /* figma: 791:22 */
+} /* figma: 791:22 */
+.orderCard[data-narrow='true'] .ornament > img {
+  width: 34.588px; /* figma: 791:22 */
+  height: 42px; /* figma: 791:22 */
+} /* figma: 791:22 */
+.orderCard[data-narrow='true'] .ornament .ornamentCenter {
+  left: 5.929px; /* figma: 791:22 */
+  top: 2.965px; /* figma: 791:22 */
+  width: 25.694px; /* figma: 791:22 */
+  height: 25.694px; /* figma: 791:22 */
+} /* figma: 791:22 */
+.orderCard[data-narrow='true'] {
+  padding: 16px; /* figma: 791:22 */
+} /* figma: 791:22 */
+.illustratedAction {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  align-items: stretch;
+  gap: 8px; /* figma: 791:22 */
+  text-align: left;
+  padding: 12px; /* figma: 791:22 */
+  border: 0;
+  border-radius: var(--radius-24);
+  color: var(--iskendi-fg-primary);
+  background: var(--review-blue-soft);
+} /* figma: 791:22 */
+button.illustratedAction {
+  cursor: pointer;
+}
+.illustratedAction[data-kind='game'],
+.illustratedAction[data-kind='manager'] {
+  background: var(--review-pink-soft);
+}
+.illustratedAction[data-kind='review'] {
+  background: var(--review-cream);
+}
+.actionArt {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 82px; /* figma: 791:22 */
+  border-radius: var(--radius-16);
+  background: var(--review-blue);
+  flex: none;
+  overflow: hidden;
+} /* figma: 791:22 */
+.actionArt img {
+  width: 149px; /* figma: 791:22 */
+  height: 82px; /* figma: 791:22 */
+  max-width: 100%;
+  object-fit: contain;
+} /* figma: 791:22 */
+.illustratedAction[data-kind='game'] .actionArt,
+.illustratedAction[data-kind='manager'] .actionArt {
+  background: var(--review-pink);
+}
+.illustratedAction[data-kind='review'] .actionArt {
+  background: var(--review-yellow);
+}
+.illustratedAction[data-kind='manager'] .actionArt,
+.illustratedAction[data-kind='review'] .actionArt {
+  height: 66px; /* figma: 791:22 */
+} /* figma: 791:22 */
+.illustratedAction[data-kind='manager'] .actionArt img,
+.illustratedAction[data-kind='review'] .actionArt img {
+  height: 66px; /* figma: 791:22 */
+} /* figma: 791:22 */
+.actionCopy {
+  display: flex;
+  flex-direction: column;
+  gap: 8px; /* figma: 791:22 */
+} /* figma: 791:22 */
+.actionCopy strong {
+  font: var(--t-web-mobile-category);
+  overflow-wrap: anywhere;
+}
+/* prettier-ignore */
+.illustratedAction[data-kind='manager'] .actionCopy strong,
+.illustratedAction[data-kind='review'] .actionCopy strong {
+  font:
+    700 18px/22px 'Rubik', /* figma: 791:22 */
+    /* figma: 791:22 */ /* figma: 791:22 */ sans-serif;
+} /* figma: 791:22 */
+.actionCopy > span {
+  font: var(--t-web-mobile-small);
+  color: var(--iskendi-fg-secondary);
+}
+.indicator {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+.indicator button {
+  display: grid;
+  place-items: center;
+  width: 44px; /* figma: 791:22 */
+  min-height: 44px; /* figma: 791:22 */
+  border: 0;
+  padding: 0;
+  background: transparent;
+  cursor: pointer;
+} /* figma: 791:22 */
+.indicator span {
+  width: 6px; /* figma: 791:22 */
+  height: 6px; /* figma: 791:22 */
+  border-radius: var(--radius-capsule);
+  background: var(--iskendi-fg-secondary);
+  opacity: 0.3;
+} /* figma: 791:22 */
+.indicator [aria-current] span {
+  width: 16px; /* figma: 791:22 */
+  opacity: 1;
+} /* figma: 791:22 */
+.dock {
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
+  position: fixed;
+  bottom: calc(24px + env(safe-area-inset-bottom)); /* figma: 791:22 */
+  left: 50%;
+  transform: translateX(-50%);
+  width: calc(100% - 32px); /* figma: 791:22 */
+  max-width: 358px; /* figma: 791:22 */
+  height: 76px; /* figma: 791:22 */
+  display: flex;
+  gap: 4px; /* figma: 791:22 */
+  padding: 6px; /* figma: 791:22 */
+  z-index: 30;
+  border: 1px solid var(--review-glass-edge-light); /* figma: 791:22 */
+  border-radius: var(--radius-capsule);
+  background: var(--color-mobile-review-dock-light);
+  box-shadow: 0 5px 16px var(--review-dock-shadow); /* figma: 791:22 */
+  backdrop-filter: blur(18px) saturate(1.4); /* figma: 791:22 */
+  touch-action: none;
+} /* figma: 791:22 */
+/* prettier-ignore */
+.dockTab {
+  display: flex;
+  flex: 1;
+  min-width: 0;
+  flex-direction: column;
+  gap: 4px; /* figma: 791:22 */
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  border: 1px solid transparent; /* figma: 791:22 */
+  border-radius: var(--radius-capsule);
+  color: var(--review-ink);
+  text-decoration: none;
+  font:
+    700 12px/16px 'Onest', /* figma: 791:22 */
+    /* figma: 791:22 */ /* figma: 791:22 */ sans-serif;
+} /* figma: 791:22 */
+.dockTab img {
+  pointer-events: none;
+  -webkit-user-select: none;
+  flex: none;
+}
+.dockTab:not([aria-current]) > span {
+  opacity: 0.76;
+}
+.dockTab[aria-current] {
+  background: var(--color-mobile-review-dock-selected-light);
+  border-color: var(--review-glass-edge-light);
+  box-shadow: 0 1px 4px var(--review-glass-shadow); /* figma: 791:22 */
+} /* figma: 791:22 */
+/* prettier-ignore */
+.focusLens {
+  display: none;
+  position: absolute;
+  top: -14px; /* figma: 791:22 */
+  left: clamp(
+    0px, /* figma: 791:22 */
+    /* figma: 791:22 */ calc(var(--review-dock-lens-x) - 77px),
+    /* figma: 791:22 */ calc(100% - 154px) /* figma: 791:22 */
+  ); /* figma: 791:22 */
+  width: 154px; /* figma: 791:22 */
+  height: 104px; /* figma: 791:22 */
+  border-radius: var(--radius-capsule);
+  background: var(--color-mobile-review-dock-selected-light);
+  border: 1px solid var(--review-glass-edge-light); /* figma: 791:22 */
+  box-shadow:
+    inset 0 2px 5px var(--review-glass-edge-light), /* figma: 791:22 */
+    /* figma: 791:22 */ /* figma: 791:22 */ 0 6px 20px
+      var(--review-glass-shadow); /* figma: 791:22 */
+  backdrop-filter: blur(8px) saturate(1.6); /* figma: 791:22 */
+  pointer-events: none;
+} /* figma: 791:22 */
+.dock[data-held='true'] .focusLens {
+  display: block;
+}
+.dock[data-held='true'] .dockTab[aria-current] {
+  background: transparent;
+  border-color: transparent;
+  box-shadow: none;
+}
+.skeleton {
+  display: grid;
+  gap: 32px; /* figma: 791:22 */
+} /* figma: 791:22 */
+.skeletonCard {
+  height: 208px; /* figma: 791:22 */
+  border-radius: var(--radius-24);
+  padding: 20px; /* figma: 791:22 */
+  display: flex;
+  flex-direction: column;
+  gap: 16px; /* figma: 791:22 */
+  background: linear-gradient(
+    120deg,
+    var(--review-yellow),
+    var(--review-pink-soft),
+    var(--review-blue-soft)
+  );
+  border: 1px solid var(--review-glass-edge-light); /* figma: 791:22 */
+  box-shadow: 0 4px 16px var(--review-glass-shadow); /* figma: 791:22 */
+  backdrop-filter: blur(12px); /* figma: 791:22 */
+} /* figma: 791:22 */
+.skeletonCard span {
+  background: var(--review-glass-light);
+  height: 20px; /* figma: 791:22 */
+  width: 32%;
+  border-radius: var(--radius-capsule);
+} /* figma: 791:22 */
+.skeletonCard span:nth-child(2) {
+  height: 64px; /* figma: 791:22 */
+  width: 48%;
+} /* figma: 791:22 */
+.skeletonCard span:last-child {
+  margin-top: auto;
+  width: 60%;
+}
+.skeletonActions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px; /* figma: 791:22 */
+} /* figma: 791:22 */
+.skeletonActions span {
+  height: 132px; /* figma: 791:22 */
+  border-radius: var(--radius-24);
+  border: 1px solid var(--review-glass-edge-light); /* figma: 791:22 */
+  background: linear-gradient(
+    140deg,
+    var(--review-pink-soft),
+    var(--review-glass-light),
+    var(--review-blue-soft)
+  );
+} /* figma: 791:22 */
+/* prettier-ignore */
+@media (min-width: 768px) { /* figma: 791:22 */
+  /* figma: 791:22 */
+  /* prettier-ignore */
+  .dock {
+    max-width: 420px; /* figma: 791:22 */
+  } /* figma: 884:7620 */
+  /* figma: 791:22 */
+  .illustratedAction {
+    flex-direction: row-reverse;
+    align-items: center;
+    justify-content: space-between;
+    padding: 16px; /* figma: 791:22 */
+    gap: 16px; /* figma: 791:22 */
+    min-height: 174px; /* figma: 791:22 */
+  }
+  .actionArt {
+    width: 149px; /* figma: 791:22 */
+  }
+  .actionCopy {
+    flex: 1;
+  }
+} /* figma: 791:22 */
+/* prettier-ignore */
+@media (min-width: 1200px) { /* figma: 791:22 */
+  /* figma: 791:22 */
+  /* prettier-ignore */
+  .dock {
+    max-width: 358px; /* figma: 791:22 */
+  } /* figma: 881:4166 */
+  /* prettier-ignore */
+  .orderCard {
+    padding-bottom: 32px; /* figma: 791:22 */
+  } /* figma: 881:4166 */
+  /* figma: 791:22 */
+  .illustratedAction {
+    flex-direction: column;
+    align-items: stretch;
+    min-height: 322px; /* figma: 881:4166 */
+    padding: 24px; /* figma: 791:22 */
+    gap: 24px; /* figma: 791:22 */
+  }
+  .actionArt {
+    width: 100%;
+    height: 192px; /* figma: 881:4166 */
+  }
+  .actionArt img {
+    width: 224px; /* figma: 791:22 */
+    height: 192px; /* figma: 881:4166 */
+    object-fit: contain;
+  }
+  .illustratedAction[data-kind='board'] .actionArt img {
+    width: 296px; /* figma: 881:4166 */
+    height: 164px; /* figma: 881:4166 */
+  }
+  .illustratedAction[data-kind='manager'] .actionArt,
+  .illustratedAction[data-kind='review'] .actionArt {
+    height: 192px; /* figma: 881:4166 */
+  }
+  .illustratedAction[data-kind='manager'] .actionArt img,
+  .illustratedAction[data-kind='review'] .actionArt img {
+    height: 99.221px; /* figma: 791:22 */
+  }
+} /* figma: 791:22 */
+@media (prefers-reduced-motion: reduce) {
+  .dock[data-held='true'] .focusLens {
+    display: none;
+  }
+  .dock[data-held='true'] .dockTab[aria-current] {
+    background: var(--color-mobile-review-dock-selected-light);
+    border-color: var(--review-glass-edge-light);
+  }
+}
+
+/* prettier-ignore */
+@media (min-width: 1200px) { /* figma: 791:22 */
+  /* figma: 791:22 */
+  /* figma: 791:22 */
+  .orderCard[data-narrow='true'] {
+    padding: 16px 20px; /* figma: 791:22 */
+  }
+  .orderCard[data-narrow='true'] .ornament {
+    width: 140px; /* figma: 791:22 */
+    height: 170px; /* figma: 791:22 */
+    top: 18px; /* figma: 791:22 */
+    right: 10px; /* figma: 791:22 */
+  }
+  .orderCard[data-narrow='true'] .ornament > img {
+    width: 140px; /* figma: 791:22 */
+    height: 170px; /* figma: 791:22 */
+  }
+  .orderCard[data-narrow='true'] .ornament .ornamentCenter {
+    left: 24px; /* figma: 791:22 */
+    top: 12px; /* figma: 791:22 */
+    width: 104px; /* figma: 791:22 */
+    height: 104px; /* figma: 791:22 */
+  }
+} /* figma: 791:22 */
+
+.dock[data-visibility='keyboard'] {
+  visibility: hidden;
+  pointer-events: none;
+}
+
+.cardRoot {
+  min-width: 0;
+  width: 100%;
+  height: 208px; /* figma: 791:22 */
+} /* figma: 791:41 */
+.cardRoot > .orderCard {
+  height: 100%;
+}
+
+.orderControls {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: var(--space-16);
+  margin-top: var(--space-12);
+}
+.orderControls button {
+  width: 44px; /* figma: 791:22 */
+  height: 44px; /* figma: 791:22 */
+  display: grid;
+  place-items: center;
+  padding: 0;
+  border: 1px solid var(--review-glass-edge-light);
+  border-radius: var(--radius-capsule);
+  color: var(--iskendi-fg-primary);
+  background: var(--review-glass-light);
+  box-shadow: 0 4px 16px var(--review-glass-shadow); /* figma: 791:22 */
+  cursor: pointer;
+}
+.orderControls button:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+.orderControls > span {
+  min-width: var(--space-48);
+  text-align: center;
+  color: var(--iskendi-fg-secondary);
+  font: var(--t-web-mobile-small);
+}
+
+/* Use the artwork-above-text variant at the user's intermediate window width too. */
+/* prettier-ignore */
+@media (min-width: 768px) and (max-width: 1199px) { /* figma: 881:4166 */
+  .illustratedAction {
+    flex-direction: column;
+    align-items: stretch;
+    gap: var(--space-24);
+  }
+  .actionArt { width: 100%; height: 144px; } /* figma: 881:4166 */
+  .actionArt img { width: 180px; height: 144px; object-fit: contain; } /* figma: 881:4166 */
+  .illustratedAction[data-kind='board'] .actionArt img { width: 224px; height: 123.275px; } /* figma: 881:4166 */
+  .illustratedAction[data-kind='manager'] .actionArt,
+  .illustratedAction[data-kind='review'] .actionArt { height: 144px; } /* figma: 881:4166 */
+  .illustratedAction[data-kind='manager'] .actionArt img,
+  .illustratedAction[data-kind='review'] .actionArt img { width: 224px; height: 99.221px; } /* figma: 881:4166 */
+}
+@media (hover: hover) and (pointer: fine) {
+  .orderControls button:not(:disabled):hover {
+    background: var(--review-pink-soft);
+  }
+}
+.orderControls button:not(:disabled):active {
+  background: var(--color-mobile-review-dock-selected-light);
+}
+.orderNumber[data-long='true'] {
+  font-size: var(--space-40);
+  line-height: var(--space-48);
+}
+/* Compact mobile services; larger breakpoints retain their artwork height. */
+/* prettier-ignore */
+@media (max-width: 767px) { /* figma: 791:22 */
+  .actionArt, .actionArt img { height: var(--space-64); }
+}
+/* prettier-ignore */
+@media (min-width: 768px) and (max-height: 900px) { /* figma: 881:4166 */
+  .illustratedAction { min-height: 0; padding: var(--space-16); gap: var(--space-16); }
+  .actionArt,
+  .illustratedAction[data-kind='manager'] .actionArt,
+  .illustratedAction[data-kind='review'] .actionArt { height: 120px; } /* figma: 881:4166 */
+  .actionArt img { width: 180px; height: 120px; } /* figma: 881:4166 */
+  .illustratedAction[data-kind='board'] .actionArt img { width: 224px; height: 120px; } /* figma: 881:4166 */
+  .illustratedAction[data-kind='manager'] .actionArt img,
+  .illustratedAction[data-kind='review'] .actionArt img { width: 224px; height: 99.221px; } /* figma: 881:4166 */
+}
+@media (hover: hover) and (pointer: fine) {
+  .iconButton:hover {
+    background: var(--review-pink-soft);
+  }
+}
+.iconButton:active {
+  background: var(--color-mobile-review-dock-selected-light);
+}
+.iconButton:focus-visible,
+.orderControls button:focus-visible {
+  outline: 2px solid var(--review-pink); /* figma: 851:50 */
+  outline-offset: 2px; /* figma: 851:50 */
+}
+
+/* Preserve the exported art ratio at every stage size. */
+.illustratedAction .actionArt img {
+  object-fit: contain;
+  max-height: 100%;
+}

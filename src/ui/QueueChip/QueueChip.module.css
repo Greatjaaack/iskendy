@@ -1,0 +1,19 @@
+.chip {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+  width: 96px; /* figma: 73:1303 */
+  height: 56px; /* figma: 73:1303 */
+  border-radius: var(--radius-16);
+  font: var(--t-web-mobile-price);
+  background: var(--iskendi-bg-surface);
+  color: var(--color-status-preparing-text);
+}
+.ready {
+  background: var(--color-status-ready-bg);
+  color: var(--color-status-ready-text);
+}
+.chip[data-mine='true'] {
+  border: 3px solid var(--review-pink); /* figma: 797:675 */
+}
