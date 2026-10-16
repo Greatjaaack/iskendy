@@ -2,6 +2,29 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { createFeedbackCheckGate } from './check-gate';
 import type { checkFeedback } from '../../api/endpoints/guest';
 describe('shared fresh feedback check gate', () => {
+  it('reports a positive answer as eligible for 20 s only (B8)', async () => {
+    const read = vi
+      .fn<typeof checkFeedback>()
+      .mockResolvedValueOnce({
+        ok: true,
+        data: { ok: true, reason: null, number: 1, waitSeconds: 0 },
+      })
+      .mockResolvedValueOnce({
+        ok: true,
+        data: { ok: false, reason: 'already' },
+      });
+    let time = 0;
+    const check = createFeedbackCheckGate(read, () => time);
+    expect(check.recentlyEligible(1)).toBe(false);
+    await check(1);
+    time = 19_999;
+    expect(check.recentlyEligible(1)).toBe(true);
+    expect(check.recentlyEligible(2)).toBe(false);
+    time = 20_000;
+    expect(check.recentlyEligible(1)).toBe(false);
+    await check(1);
+    expect(check.recentlyEligible(1)).toBe(false);
+  });
   it('reads the injected interval clock after the gate was constructed', async () => {
     const read = vi.fn<typeof checkFeedback>().mockResolvedValue({
       ok: true,

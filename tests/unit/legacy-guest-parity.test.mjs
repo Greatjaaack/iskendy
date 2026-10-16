@@ -327,7 +327,7 @@ describe('W5-1 exact legacy domain request/storage parity', () => {
     ]);
     expect(next.read()).toEqual(old.read());
   });
-  it('missing claim adds fresh check, then identical claim/create with same guest and stored key', async () => {
+  it('missing claim: identical claim, then fresh check (B2: claim first), then identical create', async () => {
     const initial = { ...seed, claim: '' };
     const responses = {
       '/api/feedback/check': fixture('check-served-positive'),
@@ -339,8 +339,9 @@ describe('W5-1 exact legacy domain request/storage parity', () => {
     await old.api.fbSendRating(5);
     await next.rating.submit(5);
     expect(next.calls).toEqual([
+      old.calls[0],
       { path: '/api/feedback/check', method: 'GET', query: '?number=997' },
-      ...old.calls,
+      ...old.calls.slice(1),
     ]);
     expect(next.read()).toEqual(old.read());
   });

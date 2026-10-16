@@ -70,6 +70,7 @@ export function Rating({
       rate: updateRating,
       detail: sendFeedbackDetail,
       check: checkedFeedback,
+      eligible: checkedFeedback.recentlyEligible,
     });
     return createRatingFlow({
       service,

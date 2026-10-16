@@ -19,6 +19,8 @@ type Dependencies = {
   rate: typeof updateRating;
   detail: typeof sendFeedbackDetail;
   check: typeof checkFeedback;
+  /** B8: a positive check from the last 20 s (e.g. the subscription) stands in for a new one. */
+  eligible?: (number: number) => boolean;
 };
 export type RatingOutcome =
   | { kind: 'saved' | 'already'; record: OrderRecord; message?: string }
@@ -80,9 +82,37 @@ export function createRatingService(dependencies: Dependencies) {
           return { kind: 'business', reason: 'locked' };
         if (!record.fb && !record.servedAt)
           return { kind: 'business', reason: 'not_served' };
+        // B2: claim before the 20 s check gate, so «taken» is shown at once, not after the wait.
+        let claim = record.claim ?? '';
+        if (!record.fb && !claim) {
+          const response = await dependencies.claim(
+            { number: record.n, guest: dependencies.guest() },
+            { signal },
+          );
+          if (!current()) return { kind: 'stale' };
+          if (!response.ok) return { kind: 'api', error: response.error };
+          if (!response.data.ok)
+            return {
+              kind: 'business',
+              reason: response.data.reason,
+              message: response.data.message,
+            };
+          if (response.data.number !== record.n)
+            return {
+              kind: 'api',
+              error: { kind: 'schema', issues: ['claim identity mismatch'] },
+            };
+          claim = response.data.claimToken;
+          if (dependencies.write({ ...current()!, claim }) === false)
+            return { kind: 'storage' };
+        }
         const key = identity(record);
         // A cancelled/lost create can have committed. Fresh check is required before another POST.
-        if (!record.fb || uncertain.has(key)) {
+        const fresh =
+          !record.fb &&
+          !uncertain.has(key) &&
+          dependencies.eligible?.(record.n) === true;
+        if ((!record.fb || uncertain.has(key)) && !fresh) {
           const check = await dependencies.check(record.n, { signal });
           if (!current()) return { kind: 'stale' };
           if (!check.ok) return { kind: 'api', error: check.error };
@@ -110,29 +140,6 @@ export function createRatingService(dependencies: Dependencies) {
               error: { kind: 'schema', issues: ['check identity mismatch'] },
             };
           uncertain.delete(key);
-        }
-        let claim = record.claim ?? '';
-        if (!record.fb && !claim) {
-          const response = await dependencies.claim(
-            { number: record.n, guest: dependencies.guest() },
-            { signal },
-          );
-          if (!current()) return { kind: 'stale' };
-          if (!response.ok) return { kind: 'api', error: response.error };
-          if (!response.data.ok)
-            return {
-              kind: 'business',
-              reason: response.data.reason,
-              message: response.data.message,
-            };
-          if (response.data.number !== record.n)
-            return {
-              kind: 'api',
-              error: { kind: 'schema', issues: ['claim identity mismatch'] },
-            };
-          claim = response.data.claimToken;
-          if (dependencies.write({ ...current()!, claim }) === false)
-            return { kind: 'storage' };
         }
         if (!current()) return { kind: 'stale' };
         if (!record.fb) uncertain.add(key);

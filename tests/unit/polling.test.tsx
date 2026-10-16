@@ -7,7 +7,12 @@ import {
   isGuestOffline,
   isStaffOffline,
 } from '../../src/polling/connectivity';
-import { BoardPoller, useBoard } from '../../src/polling/BoardPoller';
+import {
+  BOARD_KEY,
+  BoardPoller,
+  useBoard,
+  waitForBoard,
+} from '../../src/polling/BoardPoller';
 import { AppProviders, createAppQueryClient } from '../../src/app/providers';
 import type { Board } from '../../src/api/schemas/guest';
 import type { ApiResult } from '../../src/api/errors';
@@ -412,5 +417,32 @@ describe('W5-1 executed polling contracts', () => {
     expect(loadBoard).toHaveBeenCalledOnce();
     expect(store.getSnapshot().consecutiveFailures).toBe(0);
     client.clear();
+  });
+});
+
+describe('waitForBoard (B1)', () => {
+  it('returns the cached board at once', async () => {
+    const client = createAppQueryClient();
+    client.setQueryData(BOARD_KEY, board);
+    expect(await waitForBoard(client, new AbortController().signal)).toBe(
+      board,
+    );
+  });
+  it('waits for the first poll instead of reporting offline', async () => {
+    const client = createAppQueryClient();
+    const pending = waitForBoard(client, new AbortController().signal);
+    client.setQueryData(BOARD_KEY, board);
+    expect(await pending).toBe(board);
+  });
+  it('gives up after the timeout or on abort', async () => {
+    vi.useFakeTimers();
+    const client = createAppQueryClient();
+    const late = waitForBoard(client, new AbortController().signal, 8_000);
+    await vi.advanceTimersByTimeAsync(8_000);
+    expect(await late).toBeNull();
+    const controller = new AbortController();
+    const aborted = waitForBoard(client, controller.signal);
+    controller.abort();
+    expect(await aborted).toBeNull();
   });
 });

@@ -1,10 +1,11 @@
 import { useEffect, useRef, useState } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 import type { FormEvent } from 'react';
 import { entryContent as text } from '../../content/entry';
 import { inputContent } from '../../content/input';
 import { ordersContent } from '../../content/orders';
 import { statusContent } from '../../content/status';
-import { useBoard } from '../../polling/BoardPoller';
+import { useBoard, waitForBoard } from '../../polling/BoardPoller';
 import { createSubscriptionService } from '../../domain/order/subscribe';
 import { claimOrder } from '../../api/endpoints/guest';
 import { checkedFeedback } from '../../api/endpoints/checked-feedback';
@@ -27,6 +28,7 @@ export function useOrderClaim({
 }) {
   const signals = useGuestSignals();
   const telemetry = useGuestTelemetry();
+  const client = useQueryClient();
   const board = useBoard();
   const request = useRef<AbortController | null>(null);
   const mounted = useRef(false);
@@ -70,9 +72,12 @@ export function useOrderClaim({
     setError('');
     setNotice('');
     try {
+      // B1: a tap before the first /api/status answer waits for it instead of «Нет связи».
+      const current = board ?? (await waitForBoard(client, attempt.signal));
+      if (!mounted.current || attempt.signal.aborted) return;
       const result = await subscribe(
         number,
-        board ?? null,
+        current,
         orderStorage.guestId(),
         Date.now(),
       );

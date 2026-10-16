@@ -252,7 +252,8 @@ describe('explicit rating actions and original storage contract', () => {
               ...base,
               fb: { id: 1, token: 'edit', rating: 1, branch: 'negative' },
             }
-          : { ...base, claim: '' };
+          : // The claim now precedes check (B2); isolate the late check on a claimed record.
+            { ...base, claim: phase === 'check' ? base.claim : '' };
       const pending = deferred<unknown>();
       // Controlled transport deliberately ignores AbortSignal to exercise the owner's stale-response guard.
       if (phase === 'check')
@@ -342,6 +343,38 @@ describe('explicit rating actions and original storage contract', () => {
     });
     expect((await service.submit(5)).kind).toBe('api');
     expect(record.fb).toBeUndefined();
+  });
+  it('claims before the throttled check, so a taken number fails at once (B2)', async () => {
+    record = { ...base, claim: '' };
+    deps.claim.mockResolvedValueOnce({
+      ok: true,
+      data: { ok: false, reason: 'taken', message: 'server message' },
+    });
+    expect(await createRatingService(deps).submit(5)).toEqual({
+      kind: 'business',
+      reason: 'taken',
+      message: 'server message',
+    });
+    expect(deps.check).not.toHaveBeenCalled();
+    expect(deps.create).not.toHaveBeenCalled();
+  });
+  it('reuses a positive check from the last 20 s for the first rating only (B8)', async () => {
+    const eligible = vi.fn(() => true);
+    const service = createRatingService({ ...deps, eligible });
+    expect((await service.submit(5)).kind).toBe('saved');
+    expect(deps.check).not.toHaveBeenCalled();
+    expect(deps.create).toHaveBeenCalledOnce();
+  });
+  it('still checks fresh after a lost create even if recently eligible (B8)', async () => {
+    const service = createRatingService({ ...deps, eligible: () => true });
+    deps.create.mockResolvedValueOnce({
+      ok: false,
+      error: { kind: 'network' },
+    });
+    expect((await service.submit(5)).kind).toBe('api');
+    expect(deps.check).toHaveBeenCalledOnce();
+    expect((await service.submit(5)).kind).toBe('saved');
+    expect(deps.check).toHaveBeenCalledTimes(2);
   });
   it('does not create after a failed or rejected missing-claim attempt', async () => {
     const service = createRatingService(deps);

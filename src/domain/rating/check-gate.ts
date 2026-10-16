@@ -7,6 +7,8 @@ export function createFeedbackCheckGate(
   now = () => performance.now(),
 ) {
   const last = new Map<number, number>();
+  // B8: when a positive answer arrived, so the first rating need not wait out the gate again.
+  const eligible = new Map<number, number>();
   const queues = new Map<number, Promise<unknown>>();
   const pause = (
     milliseconds: number,
@@ -30,7 +32,7 @@ export function createFeedbackCheckGate(
       const timer = setTimeout(() => finish(true), milliseconds);
       signal?.addEventListener('abort', cancel, { once: true });
     });
-  return (
+  const gate = (
     number: number,
     options: Parameters<typeof checkFeedback>[1] = {},
   ): ReturnType<typeof checkFeedback> => {
@@ -46,7 +48,10 @@ export function createFeedbackCheckGate(
       last.set(number, now());
       for (const [key, value] of last)
         if (now() - value > 120_000) last.delete(key);
-      return read(number, options);
+      const result = await read(number, options);
+      if (result.ok && result.data.ok) eligible.set(number, now());
+      else eligible.delete(number);
+      return result;
     });
     queues.set(number, task);
     const clear = () => {
@@ -55,4 +60,10 @@ export function createFeedbackCheckGate(
     void task.then(clear, clear);
     return task;
   };
+  /** True only for a positive check fetched less than 20 s ago; never used to resolve a lost POST. */
+  const recentlyEligible = (number: number) => {
+    const at = eligible.get(number);
+    return at !== undefined && now() - at < 20_000;
+  };
+  return Object.assign(gate, { recentlyEligible });
 }

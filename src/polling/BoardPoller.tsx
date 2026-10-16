@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useSyncExternalStore } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
+import type { QueryClient } from '@tanstack/react-query';
 import { getBoard } from '../api/endpoints/guest';
 import type { Board } from '../api/schemas/guest';
 import type { ApiError, ApiResult } from '../api/errors';
@@ -89,4 +90,31 @@ export function useBoardQueryState() {
     [client],
   );
   return useSyncExternalStore(subscribe, snapshot, snapshot);
+}
+
+/** Explicit guest action before the first poll lands: wait for the owner's cache, never fetch. */
+export function waitForBoard(
+  client: QueryClient,
+  signal: AbortSignal,
+  timeoutMs = 8_000,
+): Promise<Board | null> {
+  const ready = client.getQueryData<Board>(BOARD_KEY);
+  if (ready) return Promise.resolve(ready);
+  return new Promise((resolve) => {
+    const finish = (value: Board | null) => {
+      clearTimeout(timer);
+      unsubscribe();
+      signal.removeEventListener('abort', abort);
+      resolve(value);
+    };
+    const abort = () => finish(null);
+    const timer = setTimeout(abort, timeoutMs);
+    const unsubscribe = client.getQueryCache().subscribe((event) => {
+      if (event.query.queryKey[0] !== BOARD_KEY[0]) return;
+      const data = client.getQueryData<Board>(BOARD_KEY);
+      if (data) finish(data);
+    });
+    if (signal.aborted) abort();
+    else signal.addEventListener('abort', abort, { once: true });
+  });
 }
