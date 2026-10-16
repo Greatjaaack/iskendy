@@ -61,7 +61,14 @@ await a.page.screenshot({ path: '/out/01-subscribed.png' });
 // 2. Ни токен, ни номер не попадают в адрес
 const urls = a.requests.map((r) => r.url).join('\n');
 const ls = await a.page.evaluate(() => JSON.stringify({ ...localStorage }));
-const token = (ls.match(/claimToken[^A-Za-z0-9_-]+([A-Za-z0-9_-]{8,})/) ?? [])[1];
+// Фронт хранит claimToken в журнале iskendy_orders_v1:* под полем «claim».
+const token = await a.page.evaluate(() => {
+  for (const value of Object.values(localStorage)) {
+    const found = value.match(/"claim":"([A-Za-z0-9_-]{8,})"/);
+    if (found) return found[1];
+  }
+  return undefined;
+});
 log(Boolean(token), 'claimToken сохранён локально');
 log(!token || !urls.includes(token), 'claimToken не в URL запросов');
 log(!a.page.url().includes(String(N)), 'номер заказа не в адресе страницы', a.page.url());
@@ -178,4 +185,6 @@ log(/слишком много|Много гостей/i.test(eText), '6-й за
 await e.page.screenshot({ path: '/out/08-too-many.png' });
 
 await browser.close();
+// Касса одна на систему: выйти, иначе следующий сценарий получит 409 на входе.
+await api('/api/auth/logout', {}, staff);
 console.log(out.join('\n'));
