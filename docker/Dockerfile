@@ -39,3 +39,12 @@ WORKDIR /app/backend
 ENTRYPOINT ["python", "/app/backend/entrypoint.py"]
 CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8080", \
      "--no-proxy-headers", "--no-access-log"]
+
+# Полный штатный прогон проекта (typecheck, lint, токены, unit, сборка, размер, e2e
+# в Chromium и WebKit): docker build -f docker/Dockerfile --target verify .
+FROM deps AS verify
+ENV CI=true PLAYWRIGHT_BROWSERS_PATH=/ms-playwright
+RUN npx playwright install --with-deps chromium webkit
+COPY . .
+# Код возврата пишется в лог, а не роняет сборку: так отчёт можно достать.
+RUN npm run verify > /verify.log 2>&1; echo "verify exit $?" >> /verify.log

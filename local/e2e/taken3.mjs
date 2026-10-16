@@ -1,0 +1,23 @@
+import { chromium } from '@playwright/test';
+const BASE='http://stack:8080'; const sleep=(ms)=>new Promise(r=>setTimeout(r,ms));
+const b = await chromium.launch();
+const p = await (await b.newContext({viewport:{width:390,height:844}})).newPage();
+const resp=[]; p.on('response', async r=>{ if(r.url().includes('/api/') && !r.url().includes('status')) resp.push(r.url().split('/api/')[1]+' → '+(await r.text()).slice(0,120)); });
+await p.goto(BASE+'/'); await p.waitForLoadState('networkidle');
+await p.locator('input').first().fill('77');
+await p.getByRole('button',{name:'Показать статус'}).first().click(); await sleep(2500);
+console.log(resp.join('\n'));
+console.log((await p.locator('body').innerText()).slice(0,300).replace(/\n+/g,' / '));
+await p.screenshot({path:'/out/10-taken-real.png'});
+// оценка чужого выданного заказа 109
+const q = await (await b.newContext({viewport:{width:390,height:844}})).newPage();
+const r2=[]; q.on('response', async r=>{ if(r.url().includes('/api/') && !r.url().includes('status')) r2.push(r.url().split('/api/')[1]+' → '+(await r.text()).slice(0,140)); });
+await q.goto(BASE+'/'); await q.waitForLoadState('networkidle');
+await q.locator('input').first().fill('109');
+await q.getByRole('button',{name:'Показать статус'}).first().click(); await sleep(2000);
+const rate = q.getByText('Как вам заказ?').first(); if (await rate.count()) await rate.click(); await sleep(1500);
+const next = q.getByRole('button',{name:/Дальше|Готово|Отправить/}).first(); if (await next.count()) await next.click(); await sleep(2500);
+console.log('--- чужой выданный 109:\n'+r2.join('\n'));
+console.log((await q.locator('body').innerText()).slice(0,300).replace(/\n+/g,' / '));
+await q.screenshot({path:'/out/11-foreign-rate.png'});
+await b.close();
