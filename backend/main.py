@@ -78,7 +78,10 @@ app = FastAPI(title="Искенди — табло заказов")
 # каждого гостевого телефона — за пять дней это дало 109 278 строк из 119 231,
 # то есть 92% лога. Полезное в этом шуме не находится, а диск он ест исправно.
 # Ошибки (код 400 и выше) пишем всегда, даже для этих путей.
-QUIET_PATHS = ("/api/status", "/api/health", "/assets/", "/favicon")
+# /app/ — бандлы и шрифты нового гостевого фронта (iskendy-frontend): одна
+# загрузка страницы тянет два десятка файлов, и без этого они шли в лог строкой
+# каждый — 421 строка за час на локальном стенде.
+QUIET_PATHS = ("/api/status", "/api/health", "/assets/", "/app/", "/favicon")
 
 access = logging.getLogger("access")
 # Всё, что рассказывает о работе самого сайта, а не об отдельном запросе:
@@ -114,7 +117,27 @@ async def security_headers(request: Request, call_next):
     response.headers["Content-Security-Policy"] = CSP
     if not _indexable(request):
         response.headers["X-Robots-Tag"] = "noindex, nofollow, noarchive"
+    cache = _cache_control(path, response.status_code)
+    if cache:
+        response.headers["Cache-Control"] = cache
     return response
+
+
+# Страницы и service worker браузер обязан перепроверять при каждом открытии:
+# иначе после выкатки гость ещё сутки видит старый экран по эвристике кэша.
+# Файлы в /app/ собирает Vite с хэшем в имени — новое содержимое всегда
+# приходит под новым именем, поэтому их можно не перепроверять вовсе.
+NO_CACHE_PATHS = ("/", "/board", "/tv", "/staff", "/stats", "/sw.js")
+
+
+def _cache_control(path: str, status_code: int) -> str | None:
+    if status_code != 200:
+        return None
+    if path.startswith("/app/"):
+        return "public, max-age=31536000, immutable"
+    if path in NO_CACHE_PATHS or path.endswith(".html"):
+        return "no-cache"
+    return None
 
 
 # В поиске должна быть только главная iskendy.ru. Табло, экран кассы, статистика,
@@ -930,6 +953,20 @@ def security_summary(
     return db.security_summary(since=since)
 
 
+def _staff_page() -> FileResponse:
+    """Служебные экраны — ТВ, касса, статистика.
+
+    С новым гостевым фронтом (iskendy-frontend) прежний index.html лежит рядом
+    как legacy.html, а index.html становится JS-загрузчиком. Загрузчик умеет сам
+    скачать legacy.html и подменить им документ, но это лишний круг, 110 КБ
+    современного JS и требования Safari 15 / Chrome 100 — на телевизоре в
+    Яндекс.Браузере такое может просто не открыться. Поэтому отдаём legacy.html
+    сразу. Пока нового фронта нет, legacy.html нет и это прежний index.html.
+    """
+    legacy = FRONTEND_DIR / "legacy.html"
+    return FileResponse(legacy if legacy.exists() else FRONTEND_DIR / "index.html")
+
+
 # --- Статика фронта (после API, чтобы не перехватывать /api/*) ---
 if FRONTEND_DIR.exists():
 
@@ -946,16 +983,16 @@ if FRONTEND_DIR.exists():
     @app.api_route("/tv", methods=GET_HEAD)
     def tv() -> FileResponse:
         """ТВ-режим табло — крупная раскладка для телевизора в зале (для персонала)."""
-        return FileResponse(FRONTEND_DIR / "index.html")
+        return _staff_page()
 
     @app.api_route("/staff", methods=GET_HEAD)
     def staff() -> FileResponse:
         """Экран кассы — заносить заказы и двигать их статусы."""
-        return FileResponse(FRONTEND_DIR / "index.html")
+        return _staff_page()
 
     @app.api_route("/stats", methods=GET_HEAD)
     def stats() -> FileResponse:
         """Аналитика по дням/часам — под паролем кассы (для персонала)."""
-        return FileResponse(FRONTEND_DIR / "index.html")
+        return _staff_page()
 
     app.mount("/", StaticFiles(directory=FRONTEND_DIR), name="frontend")

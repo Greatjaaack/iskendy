@@ -2,7 +2,7 @@
 
 ```bash
 poetry install --with dev     # один раз
-poetry run pytest             # весь набор, 167 тестов, ~4 секунды
+poetry run pytest             # весь набор, 174 теста, ~10 секунд
 poetry run pytest backend/tests/test_feedback_claim.py -v
 ```
 
@@ -17,7 +17,7 @@ poetry run pytest backend/tests/test_feedback_claim.py -v
 | `test_feedback_claim.py` | отзыв только от того, кто занял номер; лимиты и протухание занятий |
 | `test_auth_session.py` | одна сессия кассы, отзыв токена, мусор вместо токена |
 | `test_client_ip.py` | разбор X-Forwarded-For во всех топологиях |
-| `test_public_surface.py` | что открыто без токена, QR только на свои адреса, скрытый orderId, noindex везде кроме главной, CSP пускает Метрику (`.ru`/`.com`/`.md`), HEAD на страницах — 200 |
+| `test_public_surface.py` | что открыто без токена, QR только на свои адреса, скрытый orderId, noindex везде кроме главной, CSP пускает Метрику (`.ru`/`.com`/`.md`), HEAD на страницах — 200, служебные экраны получают `legacy.html` нового фронта, `Cache-Control` страниц и `/app/` |
 | `test_rate_limit.py` | лимиты по адресу и раздельность корзин |
 | `test_orders.py` | приём заказа, статусы, дедуп, мягкое удаление |
 | `test_logs_and_alerts.py` | шум в логах, схлопывание алертов, маршрутизация по темам |

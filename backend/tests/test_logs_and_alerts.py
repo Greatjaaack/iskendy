@@ -18,6 +18,15 @@ class TestAccessLog:
             client.get("/api/health")
         assert caplog.records == []
 
+    def test_bandly_novogo_fronta_ne_pishutsya(self, client, caplog):
+        """Одна загрузка нового фронта — два десятка файлов /app/*: строкой
+        каждый они забивали лог. 404 по-прежнему пишется — как любая ошибка."""
+        import main
+        assert "/app/" in main.QUIET_PATHS
+        with caplog.at_level(logging.INFO, logger="access"):
+            client.get("/app/net-takogo.js")
+        assert "404" in " ".join(r.getMessage() for r in caplog.records)
+
     def test_deystvie_kassy_pishetsya(self, client, staff, caplog):
         with caplog.at_level(logging.INFO, logger="access"):
             client.post("/api/order", json={"number": 42}, headers=staff)

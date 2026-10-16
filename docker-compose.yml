@@ -11,6 +11,15 @@ services:
     volumes:
       - app-data:/data
     restart: unless-stopped
+    # Живость изнутри: API отвечает и фронт на месте. Пустой frontend/ после
+    # неудачного импорта нового фронта иначе выглядел бы здоровым — /api/health
+    # жив, а гость видит белый экран. Внешний сторож — guard.sh, это дополнение.
+    healthcheck:
+      test: ["CMD", "python", "-c", "import pathlib,urllib.request; urllib.request.urlopen('http://127.0.0.1:8080/api/health', timeout=3); assert pathlib.Path('/app/frontend/index.html').stat().st_size > 0"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 20s
 
 volumes:
   app-data:

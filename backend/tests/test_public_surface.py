@@ -103,8 +103,12 @@ class TestGostNeVidetNepoladok:
     """
 
     def _front(self):
+        """Кассу и ТВ рисует прежний index.html; с новым гостевым фронтом он
+        лежит рядом как legacy.html, а index.html становится загрузчиком."""
         from pathlib import Path
-        return (Path(__file__).resolve().parents[2] / "frontend" / "index.html").read_text()
+        front = Path(__file__).resolve().parents[2] / "frontend"
+        legacy = front / "legacy.html"
+        return (legacy if legacy.exists() else front / "index.html").read_text()
 
     def test_plashka_pokazyvaetsya_tolko_na_kasse(self):
         html = self._front()
@@ -153,3 +157,52 @@ class TestIndexaciya:
         for path in ("/board", "/tv", "/staff", "/stats", "/api/health", "/nety-takogo"):
             r = client.get(path, headers={"Host": "iskendy.ru"})
             assert "noindex" in r.headers["x-robots-tag"], path
+
+
+class TestNovyjGostevojFront:
+    """Новый гостевой фронт (iskendy-frontend) кладёт во frontend/ загрузчик
+    index.html, прежний экран как legacy.html и бандлы в /app/. Служебные
+    экраны должны получать legacy.html сразу: JS-загрузчик на телевизоре в
+    Яндекс.Браузере может не завестись вовсе.
+    """
+
+    def _front(self, tmp_path, monkeypatch, legacy=True):
+        import main
+        (tmp_path / "index.html").write_text("<!doctype html>ZAGRUZCHIK")
+        if legacy:
+            (tmp_path / "legacy.html").write_text("<!doctype html>STARYJ")
+        monkeypatch.setattr(main, "FRONTEND_DIR", tmp_path)
+
+    def test_sluzhebnye_ekrany_poluchayut_legacy(self, client, tmp_path, monkeypatch):
+        self._front(tmp_path, monkeypatch)
+        for path in ("/tv", "/staff", "/stats"):
+            assert "STARYJ" in client.get(path).text, path
+
+    def test_gostevye_ekrany_poluchayut_zagruzchik(self, client, tmp_path, monkeypatch):
+        self._front(tmp_path, monkeypatch)
+        for path in ("/", "/board"):
+            assert "ZAGRUZCHIK" in client.get(path).text, path
+
+    def test_bez_novogo_fronta_vsyo_po_staromu(self, client, tmp_path, monkeypatch):
+        self._front(tmp_path, monkeypatch, legacy=False)
+        for path in ("/", "/board", "/tv", "/staff", "/stats"):
+            assert "ZAGRUZCHIK" in client.get(path).text, path
+
+
+class TestKesh:
+    """Страницы перепроверяются при каждом открытии, хэшированные бандлы
+    /app/ кэшируются навсегда — имя меняется вместе с содержимым."""
+
+    def test_stranicy_no_cache(self, client):
+        for path in ("/", "/board", "/tv", "/staff", "/stats", "/sw.js"):
+            assert client.get(path).headers.get("Cache-Control") == "no-cache", path
+
+    def test_api_bez_kesha_ot_nas(self, client):
+        assert "Cache-Control" not in client.get("/api/status").headers
+
+    def test_bandly_navsegda(self):
+        import main
+        assert main._cache_control("/app/mount-DKH2.js", 200) == (
+            "public, max-age=31536000, immutable"
+        )
+        assert main._cache_control("/app/net-takogo.js", 404) is None
