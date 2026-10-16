@@ -1,0 +1,31 @@
+# docker compose -f docker/compose.yml up -d --build mock    → http://127.0.0.1:5173
+# docker compose -f docker/compose.yml up -d --build stack   → http://127.0.0.1:8098
+name: iskendy-frontend
+
+services:
+  mock:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+      target: mock
+    ports:
+      - "127.0.0.1:5173:5173"
+    restart: unless-stopped
+
+  stack:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+      target: stack
+      additional_contexts:
+        backend: ../../iskendy_site
+    ports:
+      - "127.0.0.1:8098:8080"
+    env_file:
+      - stack.env
+    volumes:
+      - stack-data:/data
+    restart: unless-stopped
+
+volumes:
+  stack-data:

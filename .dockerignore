@@ -1,0 +1,10 @@
+node_modules
+dist
+dist-mock
+coverage
+artifacts
+playwright-report
+test-results
+.cache
+**/.DS_Store
+docker/stack.env
