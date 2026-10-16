@@ -20,6 +20,9 @@ export default tseslint.config(
       'legacy/**',
       'design/**',
       'scripts/figma-export-tokens.js',
+      // Локальная обвязка Искенди (ветка local/docker): сценарии стенда, не код фронта.
+      'local/**',
+      'docker/**',
     ],
   },
   {

@@ -1,5 +1,8 @@
-# docker compose -f docker/compose.yml up -d --build mock    → http://127.0.0.1:5173
-# docker compose -f docker/compose.yml up -d --build stack   → http://127.0.0.1:8098
+# Docker-стенд нового фронта. Все команды — из корня репозитория.
+#   docker compose -f docker/compose.yml up -d --build          mock + stack
+#   docker compose -f docker/compose.yml run --rm verify         все проверки
+# Порты: mock 5173, stack 8090. 8098/8099 не занимать — их берёт
+# scripts/progon.py табло (подставная аналитика и контейнер прогона).
 name: iskendy-frontend
 
 services:
@@ -10,6 +13,7 @@ services:
       target: mock
     ports:
       - "127.0.0.1:5173:5173"
+    mem_limit: 1g
     restart: unless-stopped
 
   stack:
@@ -20,12 +24,31 @@ services:
       additional_contexts:
         backend: ../../iskendy_site
     ports:
-      - "127.0.0.1:8098:8080"
+      - "127.0.0.1:8090:8080"
     env_file:
-      - stack.env
+      - path: stack.env
+      # Подключение к настоящей кассе (iiko/Saby через аналитику) — свои
+      # значения сюда; файл в git не попадает. Образец — stack.local.env.example.
+      - path: stack.local.env
+        required: false
     volumes:
       - stack-data:/data
+    mem_limit: 512m
     restart: unless-stopped
+
+  verify:
+    profiles: [test]
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+      target: test
+    environment:
+      UNIT_WORKERS: ${UNIT_WORKERS:-2}
+      E2E_WORKERS: ${E2E_WORKERS:-1}
+      SKIP_E2E: ${SKIP_E2E:-0}
+    volumes:
+      - ./out:/out
+    mem_limit: 4g
 
 volumes:
   stack-data:

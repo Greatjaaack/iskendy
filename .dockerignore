@@ -7,4 +7,5 @@ playwright-report
 test-results
 .cache
 **/.DS_Store
-local
+docker/out
+docker/stack.local.env
