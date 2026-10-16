@@ -29,14 +29,16 @@
 
 | # | Шаг | Готово, когда |
 |---|---|---|
-| 1 | Скрипт `scripts/import-frontend.sh <коммит>` в табло: клонирует фронт на коммит, собирает `docker build --target dist`, кладёт `dist/` во `frontend/`, пишет `frontend/VERSION` | Две сборки одного коммита дают одинаковый sha256 архива |
-| 2 | Проверка состава до коммита: `index.html`, `legacy.html`, `sw.js`, `app/`, `assets/`, `VERSION`, `ROUTES.json`; ни одного `.map` | Тест в `tests/` табло падает на лишний/пропавший файл |
-| 3 | `legacy.html` сверять с прежним `frontend/index.html` (sha256 из `legacy/SOURCE.json`) | Правка кассы в табло без синхронизации фронта ломает сборку, а не прод |
-| 4 | Бэкенд: `/tv`, `/staff`, `/stats` → `legacy.html` напрямую; `QUIET_PATHS` + `/app/`; `Cache-Control` для `/app/*` | Тесты `test_public_surface` обновлены |
-| 5 | `healthcheck` в `docker-compose.prod.yml`: `GET /api/health` + наличие `frontend/index.html` и `frontend/app/` | `docker ps` показывает `healthy`; пустой фронт — `unhealthy`, а не «молчаливый сбой» |
-| 6 | Смоук после деплоя (только чтение): `/`, `/board`, `/VERSION`, `/sw.js` — 200; `/tv` отдаёт legacy; на `/` нет noindex, на остальном есть | Скрипт `scripts/smoke-front.sh`, запускается из скилла `prod-server` |
-| 7 | Откат одной командой: `git revert` коммита импорта + обычный деплой | Отрепетировано на локальном стенде |
-| 8 | Переход на A, когда у автора появятся релизы: builder-стадия `FROM alpine` + `ADD --checksum=sha256:…`, `frontend/` перестаёт коммититься | Деплой без Node и без сгенерированных файлов в git |
+| 1 ✅ | Скрипт `scripts/import-frontend.sh <коммит>` в табло: клонирует фронт на коммит, собирает `docker build --target dist`, кладёт `dist/` во `frontend/`, пишет `frontend/VERSION` | Две сборки одного коммита дают одинаковый sha256 архива |
+| 2 ✅ | Проверка состава до коммита: `index.html`, `legacy.html`, `sw.js`, `app/`, `assets/`, `VERSION`, `ROUTES.json`; ни одного `.map` | Тест в `tests/` табло падает на лишний/пропавший файл |
+| 3 ✅ | `legacy.html` сверять с прежним `frontend/index.html` (sha256 из `legacy/SOURCE.json`) | Правка кассы в табло без синхронизации фронта ломает сборку, а не прод |
+| 4 ✅ | Бэкенд: `/tv`, `/staff`, `/stats` → `legacy.html` напрямую; `QUIET_PATHS` + `/app/`; `Cache-Control` для `/app/*` | Тесты `test_public_surface` обновлены |
+| 5 ✅ | `healthcheck` в `docker-compose.prod.yml`: `GET /api/health` + наличие `frontend/index.html` и `frontend/app/` | `docker ps` показывает `healthy`; пустой фронт — `unhealthy`, а не «молчаливый сбой» |
+| 6 ✅ | Смоук после деплоя (только чтение): `/`, `/board`, `/VERSION`, `/sw.js` — 200; `/tv` отдаёт legacy; на `/` нет noindex, на остальном есть | Скрипт `scripts/smoke-front.sh`, запускается из скилла `prod-server` |
+| 7 ⏸ | Откат одной командой: `git revert` коммита импорта + обычный деплой | Отрепетировано на локальном стенде |
+| 8 ⏸ | Переход на A, когда у автора появятся релизы: builder-стадия `FROM alpine` + `ADD --checksum=sha256:…`, `frontend/` перестаёт коммититься | Деплой без Node и без сгенерированных файлов в git |
+
+**Статус 16.10 (вечер):** шаги 1–6 сделаны в табло (`dev`: `928cf84`, `5db1173`). Проверено: две сборки одного коммита совпали во всех 111 файлах; правка кассы в табло останавливает импорт; `smoke-front.sh` OK на текущем сайте (:8099) и на стенде с новым фронтом (:8090); `healthcheck` различает пустой `index.html`. Шаг 7 репетировать при первом настоящем импорте (после ⛔), шаг 8 — когда у автора будут релизы. Отличия от плана: тест состава живёт в самом скрипте, а не в pytest табло (pytest не должен собирать Docker); проверка legacy — по текущему экрану кассы, а не по `legacy/SOURCE.json` (так ловятся и наши правки кассы).
 
 ## Стабильность контейнера
 
