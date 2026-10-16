@@ -22,11 +22,11 @@
 
 | | Что | Где |
 |---|---|---|
-| ⛔ | `/tv`, `/staff`, `/stats` отдавать `legacy.html` напрямую, а не через JS-загрузчик и `document.write` (ТВ в Яндекс.Браузере может не потянуть Safari 15 / Chrome 100) | `backend/main.py`, роуты страниц |
-| ⚠️ | `QUIET_PATHS` + `/app/` — иначе каждая загрузка JS/шрифтов попадёт в журнал запросов | `backend/main.py:81` |
-| ⚠️ | `Cache-Control: immutable` на `/app/*`, `no-cache` на HTML и `sw.js` | middleware в `main.py` или блок Caddy |
+| ✅ | `/tv`, `/staff`, `/stats` отдавать `legacy.html` напрямую, а не через JS-загрузчик и `document.write` (ТВ в Яндекс.Браузере может не потянуть Safari 15 / Chrome 100) | `_staff_page()` в `main.py`, ветка `dev` табло (16.10) |
+| ✅ | `QUIET_PATHS` + `/app/` — иначе каждая загрузка JS/шрифтов попадёт в журнал запросов | `main.py`, `dev` (16.10) |
+| ✅ | `Cache-Control: immutable` на `/app/*`, `no-cache` на HTML и `sw.js` | `_cache_control()` в `main.py`, `dev` (16.10) |
 | ⚠️ | `/VERSION` и `/ROUTES.json` раскрывают коммит — решить: оставить (удобно для смоука) или закрыть | статика |
-| ⚠️ | Тесты `test_public_surface`: новые файлы (`legacy.html`, `/app/*`, `VERSION`) и noindex на них | `tests/` |
+| ✅ | Тесты: `TestNovyjGostevojFront`, `TestKesh`, тихий `/app/`; тесты кассы читают `legacy.html`, если он есть. 174 теста | `backend/tests/`, `dev` (16.10) |
 | 💡 | API сообщения управляющему и вложений — требования в `docs/48` фронта | новый эндпоинт |
 | 💡 | `ETag`/304 на `/api/status` | `main.py` |
 
@@ -44,9 +44,9 @@
 
 | | Что |
 |---|---|
-| ⛔ | Выбрать способ (рекомендация — коммит собранного `dist/` во `frontend/`, см. [plan-docker.md](plan-docker.md)), написать `scripts/import-frontend.sh` |
+| ✅ | Способ — коммит собранного `dist/` во `frontend/` ([plan-docker.md](plan-docker.md)); `scripts/import-frontend.sh` и `scripts/smoke-front.sh` в табло (`dev`, 16.10). Сам импорт — только после решений §1 |
 | ⚠️ | Правки кассы/ТВ теперь вносить и в `legacy/` фронта — иначе следующий импорт их затрёт. Договориться с автором или держать `legacy` у себя |
-| ⚠️ | Скилл `prod-server`: шаг смоука нового фронта и откат |
+| ⚠️ | Скилл `prod-server`: добавить шаг `scripts/smoke-front.sh` после выкатки и откат `git revert` коммита импорта |
 
 ## 4. Проверки до переключения
 
