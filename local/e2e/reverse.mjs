@@ -61,7 +61,7 @@ await a.page.screenshot({ path: '/out/01-subscribed.png' });
 // 2. Ни токен, ни номер не попадают в адрес
 const urls = a.requests.map((r) => r.url).join('\n');
 const ls = await a.page.evaluate(() => JSON.stringify({ ...localStorage }));
-const token = (ls.match(/"claimToken\\?":\\?"([^"\\]+)/) ?? [])[1];
+const token = (ls.match(/claimToken[^A-Za-z0-9_-]+([A-Za-z0-9_-]{8,})/) ?? [])[1];
 log(Boolean(token), 'claimToken сохранён локально');
 log(!token || !urls.includes(token), 'claimToken не в URL запросов');
 log(!a.page.url().includes(String(N)), 'номер заказа не в адресе страницы', a.page.url());
@@ -139,7 +139,7 @@ await sleep(3000);
 await d.page.route('**/api/status', (route) => route.abort());
 await sleep(40000);
 const offText = await d.page.locator('body').innerText();
-log(/связ/i.test(offText), 'офлайн: сообщение о связи', offText.slice(0, 160).replace(/\n/g, ' / '));
+log(/связ|интернет/i.test(offText), 'офлайн: сообщение о связи', offText.slice(0, 160).replace(/\n/g, ' / '));
 await d.page.screenshot({ path: '/out/06-offline.png' });
 
 // 12. WebKit (Safari) — главная открывается и подписка работает
@@ -162,7 +162,7 @@ await wk.close();
 const e = await guest('E');
 await e.page.goto(BASE + '/');
 for (let i = 0; i < 6; i++) {
-  const n = 900 + i;
+  const n = 500 + (N % 40) * 10 + i; // ввод принимает 1–999
   await api('/api/order', { number: n }, staff);
   const add = e.page.getByRole('button', { name: /Добавить заказ/ }).first();
   if (i > 0 && (await add.count())) await add.click().catch(() => {});

@@ -8,7 +8,8 @@ await q.locator('input').first().fill('109');
 await q.getByRole('button',{name:'Показать статус'}).first().click(); await sleep(2000);
 await q.getByText('Как вам заказ?').first().click(); await sleep(1500); console.log('buttons:', (await q.getByRole('button').allInnerTexts()).join(' | ')); await q.getByRole('button',{name:/Оставить отзыв|Оценить/}).first().click().catch(e=>console.log('no btn')); await sleep(1500); console.log('buttons2:', (await q.getByRole('button').allInnerTexts()).join(' | '));
 await q.screenshot({path:'/out/12-rate-open.png'});
-for (const name of [/Дальше/, /Пропустить/, /Готово|Отправить/]) { const x=q.getByRole('button',{name}).first(); if (await x.count()) { await x.click().catch(()=>{}); await sleep(2000);} }
+await q.getByRole('button',{name:/Дальше/}).first().click(); await sleep(2000); console.log('ПОСЛЕ ДАЛЬШЕ:', (await q.getByRole('dialog').innerText().catch(()=>'нет диалога')).replace(/\n+/g,' / ')); await q.screenshot({path:'/out/14-after-next.png'});
+for (const name of []) { const x=q.getByRole('button',{name}).first(); if (await x.count()) { await x.click().catch(()=>{}); await sleep(2000);} }
 console.log(r2.join('\n'));
 console.log((await q.locator('body').innerText()).slice(0,300).replace(/\n+/g,' / '));
 await q.screenshot({path:'/out/13-rate-result.png'});
