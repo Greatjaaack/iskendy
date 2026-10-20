@@ -14,11 +14,11 @@ import { createHash } from 'node:crypto';
 import { ROUTES } from '../../src/boot/routes.ts';
 
 describe('release contracts', () => {
-  it('keeps operational routes on legacy and only guest routes on the new app', () => {
+  it('keeps staff routes on legacy; guest routes and the hall TV on the new app', () => {
     expect(ROUTES).toEqual({
       '/': 'app',
       '/board': 'app',
-      '/tv': 'legacy',
+      '/tv': 'app',
       '/staff': 'legacy',
       '/stats': 'legacy',
     });

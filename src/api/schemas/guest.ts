@@ -39,6 +39,7 @@ export const boardSchema = z.looseObject({
   updatedAt: z.string(),
   now: z.string(),
 });
+export const healthSchema = z.looseObject({ ok: z.literal(true) });
 export const configSchema = z.looseObject({
   promptDelaySec: z.number().check(z.nonnegative()),
   links,

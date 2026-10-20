@@ -31,7 +31,7 @@ test('guest entry loads without JS errors or background claims', async ({
   await expect(page.locator('html')).toHaveAttribute('lang', 'ru');
 });
 
-for (const path of ['/tv', '/staff', '/stats']) {
+for (const path of ['/staff', '/stats']) {
   test(`operational route ${path} is isolated in legacy`, async ({ page }) => {
     const requests: string[] = [];
     await page.route('https://**/*', (route) => route.abort());

@@ -52,7 +52,7 @@ describe('legacy guest route handoff', () => {
     browser.history.pushState({}, '', '/board?my=1');
     expect(change).toHaveBeenLastCalledWith({}, '', '/board?my=1');
   });
-  it.each(['/tv', '/staff', '/stats', '/unknown'])(
+  it.each(['/staff', '/stats', '/unknown'])(
     'keeps %s navigation within legacy',
     (path) => {
       const { browser } = browserStub();
@@ -98,7 +98,7 @@ describe('legacy guest route handoff', () => {
 });
 
 describe('new app route handoff', () => {
-  it.each(['/tv', '/staff', '/stats'])(
+  it.each(['/staff', '/stats'])(
     'boots legacy when history returns to %s',
     (path) => {
       const { browser, pop } = browserStub();

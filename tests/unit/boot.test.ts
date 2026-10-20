@@ -5,14 +5,14 @@ import { loadLegacy } from '../../src/boot/legacy';
 
 afterEach(() => vi.useRealTimers());
 describe('route isolation', () => {
-  it.each(['/', '/board'])('boots only the app on %s', async (path) => {
+  it.each(['/', '/board', '/tv'])('boots only the app on %s', async (path) => {
     const app = vi.fn(async () => {}),
       legacy = vi.fn(async () => {});
     await startFrontend(path, app, legacy);
     expect(app).toHaveBeenCalledOnce();
     expect(legacy).not.toHaveBeenCalled();
   });
-  it.each(['/tv', '/staff', '/stats', '/unknown', '/staff/'])(
+  it.each(['/staff', '/stats', '/unknown', '/staff/', '/tv/'])(
     'never imports the app on %s',
     async (path) => {
       const app = vi.fn(async () => {}),
@@ -23,6 +23,24 @@ describe('route isolation', () => {
       expect(app).not.toHaveBeenCalled();
     },
   );
+});
+describe('hall TV fallback', () => {
+  it('shows the legacy TV when the new board cannot start', async () => {
+    const legacy = vi.fn(async () => {});
+    await startFrontend(
+      '/tv',
+      () => Promise.reject(new SyntaxError('old engine')),
+      legacy,
+    );
+    expect(legacy).toHaveBeenCalledOnce();
+  });
+  it('keeps guest start failures visible instead of swapping documents', async () => {
+    const legacy = vi.fn(async () => {});
+    await expect(
+      startFrontend('/', () => Promise.reject(new Error('boom')), legacy),
+    ).rejects.toThrow('boom');
+    expect(legacy).not.toHaveBeenCalled();
+  });
 });
 describe('same-URL legacy loader', () => {
   const documentTarget = () => ({

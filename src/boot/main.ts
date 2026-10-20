@@ -11,7 +11,7 @@ void startFrontend(
       await enableMocks();
     }
     const { mountApp } = await import('../app/mount');
-    mountApp();
+    await mountApp();
     bindRouteHandoff('app');
   },
   async () => {

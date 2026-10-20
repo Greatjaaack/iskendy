@@ -31,7 +31,6 @@ for (const path of ['/', '/board?my=1', '/board?view=queue']) {
 }
 
 for (const [path, selector] of [
-  ['/tv', '#guest'],
   ['/staff', '#loginBox'],
   ['/stats', '#statsAuthNote'],
 ] as const) {
@@ -63,9 +62,7 @@ for (const [path, selector] of [
     );
     await expect(page.locator(selector)).toBeVisible();
     await expect(page.locator('#root')).toHaveCount(0);
-    const wordmark = page.locator(
-      `${path === '/tv' ? '#guest' : `#${path.slice(1)}`} img.wordmark`,
-    );
+    const wordmark = page.locator(`#${path.slice(1)} img.wordmark`);
     await expect
       .poll(() =>
         wordmark.evaluate((image) => (image as HTMLImageElement).naturalWidth),

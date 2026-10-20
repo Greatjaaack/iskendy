@@ -5,7 +5,6 @@ const status = readFileSync('tests/fixtures/status-populated.json', 'utf8');
 const config = readFileSync('tests/fixtures/config-empty.json', 'utf8');
 const pixel = readFileSync('tests/fixtures/pixel.png');
 const operational = [
-  ['/tv', '#guest'],
   ['/staff', '#loginBox'],
   ['/stats', '#statsAuthNote'],
 ] as const;
@@ -69,9 +68,7 @@ for (const [path, selector] of operational) {
     page.on('pageerror', (error) => errors.push(error.message));
     await page.goto(path);
     await expect(page.locator(selector)).toBeVisible();
-    const wordmark = page.locator(
-      `${path === '/tv' ? '#guest' : `#${path.slice(1)}`} img.wordmark`,
-    );
+    const wordmark = page.locator(`#${path.slice(1)} img.wordmark`);
     await expect(wordmark).toHaveCount(1);
     await expect
       .poll(() =>
@@ -148,7 +145,8 @@ test('synthetic legacy login opens the staff panel and analytics', async ({
   expect(errors).toEqual([]);
 });
 
-for (const [path, selector] of operational.slice(0, 2)) {
+// /tv polling moved to the new app (tests/unit/tv-app.test.tsx, tv-route.spec.ts).
+for (const [path, selector] of operational.slice(0, 1)) {
   test(`${path} keeps polling and recovers after two failures`, async ({
     page,
   }) => {

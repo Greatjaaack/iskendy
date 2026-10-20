@@ -2,7 +2,7 @@
 export const ROUTES = {
   '/': 'app',
   '/board': 'app',
-  '/tv': 'legacy',
+  '/tv': 'app',
   '/staff': 'legacy',
   '/stats': 'legacy',
 } as const;

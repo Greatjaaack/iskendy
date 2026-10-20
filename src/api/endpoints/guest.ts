@@ -8,11 +8,17 @@ import {
   rateSchema,
   detailSchema,
   eventSchema,
+  healthSchema,
 } from '../schemas/guest';
 
 type ReadOptions = Pick<RequestOptions, 'signal' | 'fetcher'>;
 export const getBoard = (options: ReadOptions = {}) =>
   request('/api/status', boardSchema, { ...options, timeoutMs: 6_000 });
+export const getHealth = (options: ReadOptions = {}) =>
+  request('/api/health', healthSchema, { ...options, timeoutMs: 6_000 });
+/** Same image as the legacy TV: server-side QR of this site's /board. */
+export const boardQrSrc = (origin: string) =>
+  `/api/qr?border=1&data=${encodeURIComponent(`${origin}/board`)}`;
 export const getConfig = (options: ReadOptions = {}) =>
   request('/api/feedback/config', configSchema, options);
 export const checkFeedback = (number: number, options: ReadOptions = {}) =>
