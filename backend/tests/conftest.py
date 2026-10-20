@@ -80,6 +80,12 @@ def _clean_state(monkeypatch):
     # Заглушка вместо сети. Даже если конфиг однажды разъедется, наружу
     # не уйдёт ничего, а тесты смогут проверить, что уведомление собиралось.
     monkeypatch.setattr(notify, "send_message", _capture)
+
+    async def _capture_file(target, name, mime, data, caption):
+        sent.append((caption, [target], name))
+        return True
+
+    monkeypatch.setattr(notify, "send_file", _capture_file)
     yield sent
     for suffix in ("", "-wal", "-shm"):
         Path(str(_TMP_DB) + suffix).unlink(missing_ok=True)

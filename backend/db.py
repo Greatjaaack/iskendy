@@ -1113,6 +1113,29 @@ def feedback_detail(
         return {"ok": True, "first": not had_details, "feedback": _feedback_dict(fresh)}
 
 
+def feedback_owned(feedback_id: int, edit_token: str) -> dict:
+    """Своя ли это свежая оценка — для вложений к ней. Те же правила, что у
+    деталей: ключ автора и окно feedback_edit_window_min. Ничего не пишет."""
+    with _connect() as conn:
+        row = conn.execute(
+            "SELECT * FROM feedbacks WHERE id = ?", (feedback_id,)
+        ).fetchone()
+    if row is None:
+        return {"ok": False, "reason": "unknown_feedback"}
+    expected = row["edit_token"] or ""
+    if not expected or not hmac.compare_digest(
+        str(edit_token).encode("utf-8"), expected.encode("utf-8")
+    ):
+        return {"ok": False, "reason": "wrong_token"}
+    created = _parse_naive(row["created_at"])
+    if created is None:
+        return {"ok": False, "reason": "expired"}
+    now_naive = datetime.now(ZoneInfo(settings.timezone)).replace(tzinfo=None)
+    if (now_naive - created).total_seconds() / 60 > settings.feedback_edit_window_min:
+        return {"ok": False, "reason": "expired"}
+    return {"ok": True, "feedback": _feedback_dict(row)}
+
+
 def feedback_rate(feedback_id: int, edit_token: str, rating: int) -> dict:
     """Исправить оценку — гость мог промахнуться по звезде.
 

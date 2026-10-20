@@ -27,6 +27,7 @@ from oshibki import opisanie
 logger = logging.getLogger("notify")
 
 TELEGRAM_API = "https://api.telegram.org/bot{token}/sendMessage"
+TELEGRAM_METHOD = "https://api.telegram.org/bot{token}/{method}"
 SEND_TIMEOUT_SEC = 10
 
 
@@ -102,7 +103,9 @@ def hide_password(proxy: str | None) -> str:
     return re.sub(r"://[^@]+@", "://", proxy)
 
 
-async def _deliver(url: str, payload: dict, chat_id: str) -> bool:
+async def _deliver(
+    url: str, payload: dict, chat_id: str, files: dict | None = None
+) -> bool:
     """Доставить одно сообщение, перебирая прокси до первого успеха.
 
     Переключаемся только на сетевой ошибке. Ответ Telegram с кодом — это про
@@ -115,7 +118,10 @@ async def _deliver(url: str, payload: dict, chat_id: str) -> bool:
             async with httpx.AsyncClient(
                 timeout=SEND_TIMEOUT_SEC, proxy=proxy
             ) as client:
-                r = await client.post(url, json=payload)
+                if files:
+                    r = await client.post(url, data=payload, files=files)
+                else:
+                    r = await client.post(url, json=payload)
         except Exception as exc:  # noqa: BLE001 — пробуем следующий адрес
             # Тип обязателен: у ConnectTimeout пустое сообщение, и две ночи
             # подряд (09–11.09.2026) лог показывал «не отправлено в 121331370:»
@@ -246,6 +252,93 @@ async def notify_feedback_detail(fb: dict, branch: str) -> int:
     # Первые две строки (оценка и ожидание) уже были в первом сообщении.
     tail = body[2] if len(body) > 2 else ""
     return await send_message(f"{head}\n{tail}".strip(), targets)
+
+
+# ------------------------------------------- сообщения гостей с файлами
+# Фото и видео от гостя не хранятся на сервере: сразу уходят в тему отзывов,
+# там их и смотрит смена. Диск прода и так почти полон, а чат — уже готовый
+# архив с поиском.
+PHOTO_TYPES = ("image/jpeg", "image/png", "image/webp")
+# Больше 10 МБ Telegram не примет как фото, но примет как документ (до 50 МБ).
+PHOTO_MAX_BYTES = 10 * 1024 * 1024
+
+
+def _file_method(mime: str, size: int) -> tuple[str, str]:
+    """Каким методом Bot API слать файл: фото и видео — с превью, прочее — документом."""
+    if mime in PHOTO_TYPES and size <= PHOTO_MAX_BYTES:
+        return "sendPhoto", "photo"
+    if mime in ("video/mp4", "video/quicktime"):
+        return "sendVideo", "video"
+    return "sendDocument", "document"
+
+
+async def send_file(
+    target: tuple[str, int | None], name: str, mime: str, data: bytes, caption: str
+) -> bool:
+    """Один файл одному адресату. Отдельно от send_message, чтобы тесты могли
+    подменить именно сеть, а не сборку сообщения."""
+    chat_id, thread_id = target
+    method, field = _file_method(mime, len(data))
+    url = TELEGRAM_METHOD.format(token=settings.telegram_bot_token, method=method)
+    payload = {"chat_id": chat_id, "caption": caption, "parse_mode": "HTML"}
+    if thread_id is not None:
+        payload["message_thread_id"] = str(thread_id)
+    return await _deliver(url, payload, chat_id, files={field: (name, data, mime)})
+
+
+def guest_post_targets() -> list[tuple[str, int | None]]:
+    """Куда идут сообщения гостей: в тему отзывов, как негатив — всегда, без
+    рубильника хороших оценок. Пусто, если Telegram не настроен."""
+    return targets_for("negative")
+
+
+async def send_guest_post(
+    text: str,
+    files: list[tuple[str, str, bytes]],
+    targets: list[tuple[str, int | None]],
+) -> bool:
+    """Текст и вложения гостя. True — только если дошло всё и хотя бы одному
+    адресату: гостю нельзя сказать «отправлено», когда фото потерялись.
+
+    Сначала файлы, потом текст: текст оказывается последним в теме и читается
+    как подпись к пачке снимков над ним.
+    """
+    if not targets or not settings.telegram_bot_token:
+        return False
+    head = text.split("\n", 1)[0]
+    delivered = 0
+    for target in targets:
+        ok = True
+        for i, (name, mime, data) in enumerate(files, start=1):
+            caption = f"{head} · {i}/{len(files)}"
+            ok = await send_file(target, name, mime, data, caption) and ok
+        ok = await send_message(text, [target]) == 1 and ok
+        delivered += ok
+    return delivered > 0
+
+
+def format_guest_message(text: str, number: int | None, files: int) -> str:
+    """Анонимное сообщение управляющему с /board.
+
+    ✉️ Сообщение гостя · заказ №25
+    «Дюрюм холодный»
+    Вложений: 2 (выше)
+    """
+    head = "✉️ <b>Сообщение гостя</b>"
+    if number:
+        head = f"✉️ <b>Сообщение гостя · заказ №{number}</b>"
+    lines = [head, f"«{_esc(text)}»"]
+    if files:
+        lines.append(f"Вложений: {files} (выше)")
+    return "\n".join(lines)
+
+
+def format_feedback_files(fb: dict, files: int) -> str:
+    """Подпись к фото, которые гость приложил к оценке."""
+    return (
+        f"📎 <b>Вложения к отзыву · заказ №{fb.get('number')}</b>\n"
+        f"Оценка {fb.get('rating')}★ · файлов: {files} (выше)"
+    )
 
 
 # ----------------------------------------------------------- схлопывание

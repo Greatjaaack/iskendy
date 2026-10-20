@@ -510,6 +510,14 @@ RATE_LIMIT_LOGIN = 10  # POST /api/auth/login
 # забрать день целиком, этого мало: 200 номеров растянутся на 20 минут, а
 # незанятые кассой номера к тому времени начнут протухать.
 RATE_LIMIT_CLAIM = 10  # POST /api/guest/claim
+# Сообщение управляющему и вложения к отзыву: каждое уходит в рабочий чат с
+# файлами, поэтому потолок ниже записи отзыва — пять в минуту на весь зал.
+RATE_LIMIT_MESSAGE = 5  # POST /api/guest/message и /api/feedback/files
+# Вложения гостя. Telegram принимает от бота до 50 МБ на файл; держим запас и
+# общий потолок, чтобы одна отправка не висела минутами на гостевом Wi-Fi.
+GUEST_FILES_MAX = 5
+GUEST_FILE_MAX_BYTES = 20 * 1024 * 1024
+GUEST_FILES_TOTAL_BYTES = 50 * 1024 * 1024
 # С какого числа занятых за день номеров одним устройством слать алерт.
 CLAIM_ALERT_AT = 3
 _rate_hits: dict[str, list[float]] = {}
@@ -861,6 +869,91 @@ async def feedback_detail(request: Request, body: FeedbackDetailBody) -> dict:
     # же формы не должна сыпать в чат одинаковые сообщения.
     if result.get("first"):
         _fire(notify.notify_feedback_detail(fb, db.feedback_branch(fb["rating"])))
+    return {"ok": True}
+
+
+GUEST_SEND_FAILED = (
+    "Не удалось отправить. Обратитесь к сотруднику на кассе — "
+    "черновик сохранён"
+)
+
+
+async def _guest_files(request: Request):
+    """Прочитать multipart гостя: поля и до пяти файлов. Ошибки — сразу 4xx.
+
+    Размер проверяем по Content-Length до разбора: иначе стомегабайтное тело
+    сначала легло бы во временные файлы, а отказ пришёл бы после.
+    """
+    length = request.headers.get("content-length", "")
+    if not length.isdigit():
+        raise HTTPException(status_code=411, detail="Нужен размер запроса")
+    if int(length) > GUEST_FILES_TOTAL_BYTES + 64 * 1024:
+        raise HTTPException(status_code=413, detail="Файлы больше 50 МБ вместе")
+    if not request.headers.get("content-type", "").startswith(
+        ("multipart/form-data", "application/x-www-form-urlencoded")
+    ):
+        raise HTTPException(status_code=415, detail="Ожидали форму")
+    form = await request.form(max_files=GUEST_FILES_MAX, max_fields=8)
+    files: list[tuple[str, str, bytes]] = []
+    for item in form.getlist("files"):
+        if isinstance(item, str):
+            continue
+        data = await item.read()
+        mime = (item.content_type or "").lower()
+        if not data:
+            raise HTTPException(status_code=400, detail="Пустой файл")
+        if len(data) > GUEST_FILE_MAX_BYTES:
+            raise HTTPException(status_code=413, detail="Файл больше 20 МБ")
+        if not (mime.startswith(("image/", "video/")) or mime == "application/pdf"):
+            raise HTTPException(
+                status_code=415, detail="Принимаем только фото, видео и PDF"
+            )
+        files.append(((item.filename or "file")[-100:], mime, data))
+    return form, files
+
+
+async def _deliver_guest_post(text: str, files: list) -> None:
+    """В тему отзывов — или честный отказ, чтобы фронт сохранил черновик."""
+    targets = notify.guest_post_targets()
+    if not targets or not await notify.send_guest_post(text, files, targets):
+        raise HTTPException(status_code=503, detail=GUEST_SEND_FAILED)
+
+
+@app.post("/api/guest/message")
+async def guest_message(request: Request) -> dict:
+    """Анонимное сообщение управляющему с /board: текст, номер заказа по
+    желанию, до пяти фото, видео или PDF. Ничего не храним — сразу в Telegram.
+    Ответ «ok» — только когда дошло всё, вместе с файлами."""
+    _guard(request, RATE_LIMIT_MESSAGE, "m")
+    form, files = await _guest_files(request)
+    text = str(form.get("text") or "").strip()
+    if not text or len(text) > 1000:
+        raise HTTPException(
+            status_code=422, detail="Напишите, что случилось, до 1000 знаков"
+        )
+    raw = str(form.get("number") or "").strip()
+    number = int(raw) if raw.isdigit() and 0 < int(raw) <= 100000 else None
+    await _deliver_guest_post(
+        notify.format_guest_message(text, number, len(files)), files
+    )
+    logger.info("Сообщение гостя: заказ №%s, файлов %d", number or "—", len(files))
+    return {"ok": True}
+
+
+@app.post("/api/feedback/files")
+async def feedback_files(request: Request) -> dict:
+    """Фото и видео к своей свежей оценке — по тому же ключу, что и детали."""
+    _guard(request, RATE_LIMIT_MESSAGE, "m")
+    form, files = await _guest_files(request)
+    raw = str(form.get("feedback_id") or "")
+    if not raw.isdigit() or not files:
+        raise HTTPException(status_code=422, detail="Нет оценки или файлов")
+    result = db.feedback_owned(int(raw), str(form.get("edit_token") or "")[:64])
+    if not result["ok"]:
+        return _with_text(result)
+    await _deliver_guest_post(
+        notify.format_feedback_files(result["feedback"], len(files)), files
+    )
     return {"ok": True}
 
 
