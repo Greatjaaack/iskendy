@@ -11,6 +11,7 @@ import hashlib
 import io
 import logging
 import ipaddress
+import json
 import re
 import time
 from logging.handlers import RotatingFileHandler
@@ -953,18 +954,30 @@ def security_summary(
     return db.security_summary(since=since)
 
 
-def _staff_page() -> FileResponse:
+def _staff_page(path: str) -> FileResponse:
     """Служебные экраны — ТВ, касса, статистика.
 
     С новым гостевым фронтом (iskendy-frontend) прежний index.html лежит рядом
     как legacy.html, а index.html становится JS-загрузчиком. Загрузчик умеет сам
     скачать legacy.html и подменить им документ, но это лишний круг, 110 КБ
-    современного JS и требования Safari 15 / Chrome 100 — на телевизоре в
-    Яндекс.Браузере такое может просто не открыться. Поэтому отдаём legacy.html
-    сразу. Пока нового фронта нет, legacy.html нет и это прежний index.html.
+    современного JS и требования Safari 15 / Chrome 100. Поэтому экран, который
+    сборка ещё держит на legacy, отдаём legacy.html сразу. Какой экран уже
+    переехал на новый фронт, решает сама сборка — её `ROUTES.json` (с 20.10
+    там `/tv`): переключение экрана не требует правки бэкенда. Пока нового
+    фронта нет, legacy.html нет и это прежний index.html.
     """
     legacy = FRONTEND_DIR / "legacy.html"
-    return FileResponse(legacy if legacy.exists() else FRONTEND_DIR / "index.html")
+    if legacy.exists() and _front_routes().get(path) != "app":
+        return FileResponse(legacy)
+    return FileResponse(FRONTEND_DIR / "index.html")
+
+
+def _front_routes() -> dict:
+    """`ROUTES.json` сборки фронта; нет или битый — всё служебное на legacy."""
+    try:
+        return json.loads((FRONTEND_DIR / "ROUTES.json").read_text())
+    except (OSError, ValueError):
+        return {}
 
 
 # --- Статика фронта (после API, чтобы не перехватывать /api/*) ---
@@ -983,16 +996,16 @@ if FRONTEND_DIR.exists():
     @app.api_route("/tv", methods=GET_HEAD)
     def tv() -> FileResponse:
         """ТВ-режим табло — крупная раскладка для телевизора в зале (для персонала)."""
-        return _staff_page()
+        return _staff_page("/tv")
 
     @app.api_route("/staff", methods=GET_HEAD)
     def staff() -> FileResponse:
         """Экран кассы — заносить заказы и двигать их статусы."""
-        return _staff_page()
+        return _staff_page("/staff")
 
     @app.api_route("/stats", methods=GET_HEAD)
     def stats() -> FileResponse:
         """Аналитика по дням/часам — под паролем кассы (для персонала)."""
-        return _staff_page()
+        return _staff_page("/stats")
 
     app.mount("/", StaticFiles(directory=FRONTEND_DIR), name="frontend")

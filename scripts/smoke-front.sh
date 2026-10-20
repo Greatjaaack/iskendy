@@ -33,9 +33,15 @@ case "$BASE" in
   https://iskendy.ru) [ -z "$(header / X-Robots-Tag)" ] && ok "/ индексируется" || bad "/ закрыт от поиска" ;;
 esac
 
-# Служебные экраны — всегда прежний экран, а не JS-загрузчик.
+# Служебные экраны — прежний экран, пока сборка не перевела их на новый фронт
+# (ROUTES.json сборки; с 20.10 там /tv).
+ROUTES=$(body /ROUTES.json 2>/dev/null)
 for p in /tv /staff /stats; do
-  body "$p" | grep -q 'staff-view' && ok "$p — экран кассы/ТВ" || bad "$p отдаёт не экран кассы/ТВ"
+  if echo "$ROUTES" | grep -q "\"$p\": *\"app\""; then
+    body "$p" | grep -q 'id="root"' && ok "$p — новый фронт" || bad "$p: по ROUTES.json новый фронт, а отдаётся другое"
+  else
+    body "$p" | grep -q 'staff-view' && ok "$p — экран кассы/ТВ" || bad "$p отдаёт не экран кассы/ТВ"
+  fi
 done
 
 if [ "$(code /VERSION)" = 200 ]; then

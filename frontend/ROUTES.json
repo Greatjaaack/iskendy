@@ -1,7 +1,7 @@
 {
   "/": "app",
   "/board": "app",
-  "/tv": "legacy",
+  "/tv": "app",
   "/staff": "legacy",
   "/stats": "legacy"
 }

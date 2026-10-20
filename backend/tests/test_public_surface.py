@@ -166,11 +166,13 @@ class TestNovyjGostevojFront:
     Яндекс.Браузере может не завестись вовсе.
     """
 
-    def _front(self, tmp_path, monkeypatch, legacy=True):
+    def _front(self, tmp_path, monkeypatch, legacy=True, routes=None):
         import main
         (tmp_path / "index.html").write_text("<!doctype html>ZAGRUZCHIK")
         if legacy:
             (tmp_path / "legacy.html").write_text("<!doctype html>STARYJ")
+        if routes is not None:
+            (tmp_path / "ROUTES.json").write_text(routes)
         monkeypatch.setattr(main, "FRONTEND_DIR", tmp_path)
 
     def test_sluzhebnye_ekrany_poluchayut_legacy(self, client, tmp_path, monkeypatch):
@@ -182,6 +184,20 @@ class TestNovyjGostevojFront:
         self._front(tmp_path, monkeypatch)
         for path in ("/", "/board"):
             assert "ZAGRUZCHIK" in client.get(path).text, path
+
+    def test_ekran_pereekhavshij_v_routes_poluchaet_zagruzchik(
+        self, client, tmp_path, monkeypatch
+    ):
+        routes = '{"/": "app", "/board": "app", "/tv": "app", "/staff": "legacy", "/stats": "legacy"}'
+        self._front(tmp_path, monkeypatch, routes=routes)
+        assert "ZAGRUZCHIK" in client.get("/tv").text
+        for path in ("/staff", "/stats"):
+            assert "STARYJ" in client.get(path).text, path
+
+    def test_bityj_routes_ostavlyaet_legacy(self, client, tmp_path, monkeypatch):
+        self._front(tmp_path, monkeypatch, routes="{ne json")
+        for path in ("/tv", "/staff", "/stats"):
+            assert "STARYJ" in client.get(path).text, path
 
     def test_bez_novogo_fronta_vsyo_po_staromu(self, client, tmp_path, monkeypatch):
         self._front(tmp_path, monkeypatch, legacy=False)
