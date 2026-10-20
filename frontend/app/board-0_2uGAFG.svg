@@ -1,0 +1,16 @@
+<svg preserveAspectRatio="xMidYMid meet" overflow="visible" style="display: block;" width="149" height="82" viewBox="0 0 149 82" fill="none" xmlns="http://www.w3.org/2000/svg">
+<g id="Board &#194;&#183; native vectors">
+<path id="Ticket-left" d="M40 19H21C16.5817 19 13 22.5817 13 27V59C13 63.4183 16.5817 67 21 67H40C44.4183 67 48 63.4183 48 59V27C48 22.5817 44.4183 19 40 19Z" fill="#FFFCF5" stroke="#43342B" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+<path id="Order-left" d="M22 30H39M22 36H33" stroke="#43342B" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+<path id="Waiting-left" d="M32 44H29C25.134 44 22 47.134 22 51C22 54.866 25.134 58 29 58H32C35.866 58 39 54.866 39 51C39 47.134 35.866 44 32 44Z" fill="#F7D66E" stroke="#43342B" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+<path id="Clock-left" d="M30.5 47V51L33.5 53" stroke="#43342B" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+<path id="Ticket-center" d="M87 9H64C59.0294 9 55 13.0294 55 18V62C55 66.9706 59.0294 71 64 71H87C91.9706 71 96 66.9706 96 62V18C96 13.0294 91.9706 9 87 9Z" fill="#FFFCF5" stroke="#43342B" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+<path id="Order-center" d="M65 22H86M65 29H79" stroke="#43342B" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+<path id="Ready" d="M86 50.5C86 44.701 81.299 40 75.5 40C69.701 40 65 44.701 65 50.5C65 56.299 69.701 61 75.5 61C81.299 61 86 56.299 86 50.5Z" fill="#9AAB65" stroke="#43342B" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+<path id="Check" d="M70 50L74 54L82 46" stroke="#43342B" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+<path id="Ticket-right" d="M128 25H111C106.582 25 103 28.5817 103 33V57C103 61.4183 106.582 65 111 65H128C132.418 65 136 61.4183 136 57V33C136 28.5817 132.418 25 128 25Z" fill="#FFFCF5" stroke="#43342B" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+<path id="Order-right" d="M111 35H128M111 41H122" stroke="#43342B" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+<path id="Waiting-right" d="M112 51H127" stroke="#F7D66E" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/>
+<path id="Board-spark" d="M105 12H112M108.5 8.5V15.5" stroke="#43342B" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+</g>
+</svg>

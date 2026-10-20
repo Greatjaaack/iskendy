@@ -1,0 +1,9 @@
+<svg preserveAspectRatio="none" overflow="visible" style="display: block;" width="140" height="170" viewBox="0 0 140 170" fill="none" xmlns="http://www.w3.org/2000/svg">
+<g id="&#208;&#148;&#208;&#181;&#208;&#186;&#208;&#190;&#209;&#128;&#208;&#176;&#209;&#130;&#208;&#184;&#208;&#178;&#208;&#189;&#208;&#176;&#209;&#143; &#208;&#186;&#208;&#190;&#208;&#188;&#208;&#191;&#208;&#190;&#208;&#183;&#208;&#184;&#209;&#134;&#208;&#184;&#209;&#143; &#194;&#183; Rosette">
+<path id="Rose-field" opacity="0.35" d="M28 10C56 -5 102 1 122 31C142 60 132 115 105 147C85 170 50 165 29 141C9 117 1 83 10 50C14 33 19 19 28 10Z" fill="#FAE0E4"/>
+<path id="Tile-left" d="M18 116L31 129L18 142L5 129L18 116Z" fill="#FFFCF5" stroke="#43342B" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+<path id="Tile-right" d="M109 125L123 139L109 153L95 139L109 125Z" fill="#FAE0E4" stroke="#43342B" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+<path id="Tile-small" d="M62 144L70 152L62 160L54 152L62 144Z" fill="#FFFCF5" stroke="#43342B" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+<path id="Etched-lines" opacity="0.65" d="M14 52L23 61M14 60L23 69M116 21V31M111 26H121" stroke="#43342B" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+</g>
+</svg>

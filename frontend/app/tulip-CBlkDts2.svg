@@ -1,0 +1,20 @@
+<svg preserveAspectRatio="none" overflow="visible" style="display: block;" width="140" height="170" viewBox="0 0 140 170" fill="none" xmlns="http://www.w3.org/2000/svg">
+<g id="&#208;&#145;&#209;&#131;&#208;&#186;&#208;&#181;&#209;&#130; &#209;&#130;&#209;&#142;&#208;&#187;&#209;&#140;&#208;&#191;&#208;&#176;&#208;&#189;&#208;&#190;&#208;&#178; &#194;&#183; &#209;&#129;&#208;&#178;&#209;&#143;&#208;&#183;&#208;&#176;&#208;&#189;&#208;&#189;&#209;&#139;&#208;&#181; &#209;&#129;&#209;&#130;&#208;&#181;&#208;&#177;&#208;&#187;&#208;&#184; &#208;&#184; &#208;&#187;&#208;&#184;&#209;&#129;&#209;&#130;&#209;&#140;&#209;&#143;">
+<ellipse id="&#208;&#161;&#208;&#178;&#208;&#181;&#209;&#130;&#208;&#187;&#208;&#190;-&#209;&#128;&#208;&#190;&#208;&#183;&#208;&#190;&#208;&#178;&#209;&#139;&#208;&#185; &#209;&#129;&#208;&#191;&#208;&#190;&#209;&#130;" cx="70" cy="85" rx="63" ry="77" fill="#FAE0E4"/>
+<path id="Main-stem" d="M84 72C84 101 85 132 77 161" stroke="#43342B" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/>
+<path id="Branch-left" d="M77 151C61 124 40 101 32 72" stroke="#43342B" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/>
+<path id="Branch-right" d="M80 143C98 126 115 105 122 78" stroke="#43342B" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/>
+<path id="Leaf-left-low" d="M13 113C42 103 66 121 78 151C47 154 19 142 13 113Z" fill="#B6CAEB" stroke="#43342B" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/>
+<path id="Leaf-left-vein" d="M27 121C44 127 58 136 77 151" stroke="#43342B" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/>
+<path id="Leaf-right-low" d="M81 138C88 112 109 99 134 104C131 130 109 147 81 138Z" fill="#B6CAEB" stroke="#43342B" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/>
+<path id="Leaf-right-vein" d="M82 138C99 127 111 119 123 112" stroke="#43342B" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/>
+<path id="Leaf-left-high" d="M62 117C42 114 29 101 28 85C49 86 62 97 62 117Z" fill="#FFFCF5" stroke="#43342B" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/>
+<path id="Leaf-right-high" d="M88 108C85 90 94 75 110 68C115 87 108 101 88 108Z" fill="#FFFCF5" stroke="#43342B" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/>
+<path id="Bud-left" d="M14 42L26 52L32 37L40 52L53 43L50 62C48 73 40 79 32 78C23 77 16 69 15 58L14 42Z" fill="#B6CAEB" stroke="#43342B" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/>
+<path id="Bud-left-petal" d="M32 38C25 51 26 62 32 72C39 62 41 51 32 38Z" fill="#F7D66E" stroke="#43342B" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/>
+<path id="Bud-right" d="M106 52L116 59L123 45L129 59L139 52L136 69C135 78 128 84 122 83C114 82 109 76 108 67L106 52Z" fill="#B6CAEB" stroke="#43342B" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/>
+<path id="Bud-right-petal" d="M123 47C117 59 117 68 122 76C128 69 129 59 123 47Z" fill="#FFFCF5" stroke="#43342B" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/>
+<path id="Tulip-main" d="M55 11L75 29L84 5L95 29L116 11L113 48C112 67 100 79 84 79C68 79 57 67 56 48L55 11Z" fill="#FFFCF5" stroke="#43342B" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/>
+<path id="Tulip-center" d="M84 5C69 26 68 50 84 70C100 50 99 26 84 5Z" fill="#F7D66E" stroke="#43342B" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/>
+</g>
+</svg>
