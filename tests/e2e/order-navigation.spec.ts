@@ -271,13 +271,20 @@ test('offline retains cached orders, labels stale data and recovers without clai
   await expect(page.getByText('Нет интернета', { exact: true })).toHaveCount(0);
   expect(claims).toBe(0);
 });
-test('Other explanation and selected files survive an unavailable upload; text details send only after removal', async ({
+test('Other explanation and selected files survive a failed upload; the retry sends files before the details', async ({
   page,
 }) => {
-  let details = 0;
+  const writes: string[] = [];
   page.on('request', (r) => {
-    if (new URL(r.url()).pathname === '/api/feedback/detail') details++;
+    const path = new URL(r.url()).pathname;
+    if (/^\/api\/feedback\/(detail|files)$/.test(path)) writes.push(path);
   });
+  let uploads = 0;
+  await page.route('**/api/feedback/files', (route) =>
+    ++uploads === 1
+      ? route.fulfill({ status: 503, json: { detail: 'synthetic outage' } })
+      : route.fulfill({ json: { ok: true } }),
+  );
   await seed(page, 3, 135);
   await page.goto(origin + '/board?my=1&rate=1');
   await expect(page.getByRole('slider')).toHaveAttribute('aria-valuenow', '3');
@@ -308,25 +315,33 @@ test('Other explanation and selected files survive an unavailable upload; text d
   await expect(page.getByRole('alert')).toContainText(
     'Не удалось отправить вложения',
   );
-  expect(details).toBe(0);
-  await page
-    .getByRole('button', { name: 'Удалить synthetic-video.mp4' })
-    .click();
+  expect(writes).toEqual(['/api/feedback/files']);
+  await expect(page.getByText('synthetic-video.mp4')).toBeVisible();
   await page
     .getByRole('button', { name: 'Отправить отзыв', exact: true })
     .click();
   await expect(
     page.getByRole('heading', { name: 'Спасибо вам большое' }),
   ).toBeVisible();
-  expect(details).toBe(1);
+  expect(writes).toEqual([
+    '/api/feedback/files',
+    '/api/feedback/files',
+    '/api/feedback/detail',
+  ]);
 });
-test('manager form stays anonymous, supports file removal and never fabricates delivery', async ({
+test('manager form stays anonymous, keeps the draft on failure and confirms only real delivery', async ({
   page,
 }) => {
   const writes: string[] = [];
   page.on('request', (r) => {
     if (r.method() === 'POST') writes.push(new URL(r.url()).pathname);
   });
+  let sends = 0;
+  await page.route('**/api/guest/message', (route) =>
+    ++sends === 1
+      ? route.fulfill({ status: 503, json: { detail: 'synthetic outage' } })
+      : route.fulfill({ json: { ok: true } }),
+  );
   await seed(page, 1);
   await page.goto(origin + '/board?view=manager');
   await page
@@ -364,9 +379,13 @@ test('manager form stays anonymous, supports file removal and never fabricates d
   await expect(
     page.getByText('synthetic-long-filename-document.pdf'),
   ).toHaveCount(0);
+  await page.getByRole('button', { name: 'Отправить сообщение' }).click();
+  await expect(
+    page.getByRole('heading', { name: 'Сообщение отправлено' }),
+  ).toBeVisible();
   expect(
     writes.filter((p) => !/\/api\/(guest\/event|client\/event)$/.test(p)),
-  ).toEqual([]);
+  ).toEqual(['/api/guest/message', '/api/guest/message']);
 });
 test('pointer lens follows a held gesture; cancel does not navigate and release commits once', async ({
   page,

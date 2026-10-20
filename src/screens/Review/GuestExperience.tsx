@@ -16,6 +16,7 @@ import { advanceOrder } from '../../domain/order/machine';
 import { stripStatus } from '../../domain/order/stack';
 import { orderListHref, ratingHref } from '../../domain/order/routes';
 import { BOARD_KEY } from '../../polling/BoardPoller';
+import { sendManagerMessage } from '../../api/endpoints/guest';
 import { useGuestSignals } from '../../app/guest-signals-context';
 import { reviewContent as text } from '../../content/review';
 import { Entry } from '../Entry/Entry';
@@ -114,6 +115,8 @@ export function GuestExperience({
     [messageNumber, setMessageNumber] = useState(''),
     [files, setFiles] = useState<AttachmentDraft[]>([]),
     [messageError, setMessageError] = useState(''),
+    [sending, setSending] = useState(false),
+    [sent, setSent] = useState(false),
     [discard, setDiscard] = useState(false);
   const stateOf = (r: OrderRecord) =>
     stripStatus(advanceOrder(r, board, now, promptDelaySec).state, r);
@@ -562,11 +565,26 @@ export function GuestExperience({
             label={text.leaveMessage}
             onClick={() => {
               setMessageNumber(current ? String(current.n) : '');
+              setSent(false);
               navigate('/board?view=message');
             }}
           />
         </section>
       </>
+    );
+  else if (view === 'message' && sent)
+    content = (
+      <section className={styles.readPanel} role="status">
+        <h2>{text.messageSent}</h2>
+        <p>{text.messageSentHint}</p>
+        <Button
+          label={text.returnHelp}
+          onClick={() => {
+            setSent(false);
+            navigate('/board?view=help');
+          }}
+        />
+      </section>
     );
   else if (view === 'message')
     content = (
@@ -574,9 +592,23 @@ export function GuestExperience({
         className={styles.messageForm + ' ym-hide-content'}
         onSubmit={(event) => {
           event.preventDefault();
-          setMessageError(
-            !message.trim() ? text.requiredMessage : text.unavailableSend,
-          );
+          if (sending) return;
+          if (!message.trim()) return setMessageError(text.requiredMessage);
+          setMessageError('');
+          setSending(true);
+          // The draft stays until the backend confirms text and every file arrived.
+          void sendManagerMessage({
+            text: message.trim(),
+            number: messageNumber.trim(),
+            files: files.map(({ file }) => file),
+          }).then((response) => {
+            setSending(false);
+            if (!response.ok) return setMessageError(text.unavailableSend);
+            setMessage('');
+            setMessageNumber('');
+            setFiles([]);
+            setSent(true);
+          });
         }}
         noValidate
       >
@@ -602,7 +634,7 @@ export function GuestExperience({
             messageError === text.requiredMessage ? messageError : undefined
           }
         />
-        <Attachments files={files} onChange={setFiles} />
+        <Attachments files={files} onChange={setFiles} disabled={sending} />
         <p className={styles.anonymous}>{text.anonymous}</p>
         {messageError && messageError !== text.requiredMessage && (
           <p role="alert" className={styles.errorText}>
@@ -610,7 +642,11 @@ export function GuestExperience({
           </p>
         )}
         <div className={styles.formAction}>
-          <Button type="submit" label={text.sendMessage} />
+          <Button
+            type="submit"
+            label={text.sendMessage}
+            state={sending ? 'loading' : 'default'}
+          />
         </div>
       </form>
     );

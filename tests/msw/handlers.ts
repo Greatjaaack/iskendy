@@ -25,6 +25,8 @@ const defaults: Record<string, string> = {
   '/api/feedback': 'feedback-positive',
   '/api/feedback/rate': 'rate-ok',
   '/api/feedback/detail': 'detail-ok',
+  '/api/feedback/files': 'feedback-files-ok',
+  '/api/guest/message': 'message-ok',
   '/api/guest/event': 'guest-event-ok',
   '/api/client/event': 'client-event-ok',
 };

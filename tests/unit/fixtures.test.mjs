@@ -5,11 +5,17 @@ const read = (name) =>
 const source = read('SOURCE');
 describe('captured backend response provenance', () => {
   it('contains every recorded response and expected status without accidental throttling', () => {
-    expect(Object.keys(source.responses)).toHaveLength(34);
+    expect(Object.keys(source.responses)).toHaveLength(38);
     for (const [name, info] of Object.entries(source.responses)) {
       expect(read(name)).toBeDefined();
       expect(info.httpStatus).toBe(
-        name === 'claim-429' ? 429 : name === 'validation-422' ? 422 : 200,
+        name === 'claim-429'
+          ? 429
+          : name === 'validation-422'
+            ? 422
+            : name === 'message-503'
+              ? 503
+              : 200,
       );
     }
   });

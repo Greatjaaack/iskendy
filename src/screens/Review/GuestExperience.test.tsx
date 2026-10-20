@@ -107,8 +107,16 @@ describe('approved responsive guest scenarios', () => {
       }),
     ).toHaveAttribute('aria-current', 'page');
   });
-  it('keeps the message anonymous, validates it, and retains files when delivery is unavailable', async () => {
+  it('keeps the message anonymous, retains the draft on failure and sends text with files', async () => {
     history.replaceState(null, '', '/board?view=message');
+    const bodies: FormData[] = [];
+    const fetcher = vi.fn(async (_url: string, init: RequestInit) => {
+      bodies.push(init.body as FormData);
+      return bodies.length === 1
+        ? Response.json({ detail: 'Не удалось отправить' }, { status: 503 })
+        : Response.json({ ok: true });
+    });
+    vi.stubGlobal('fetch', fetcher);
     const { user, container } = setup();
     expect(screen.getByText(/Ваше сообщение будет анонимным/)).toBeVisible();
     expect(screen.queryByRole('checkbox')).toBeNull();
@@ -119,6 +127,7 @@ describe('approved responsive guest scenarios', () => {
     expect(
       screen.getByText('Напишите, что случилось с заказом.'),
     ).toBeVisible();
+    expect(fetcher).not.toHaveBeenCalled();
     await user.type(
       screen.getByLabelText('Что случилось?'),
       'Не хватает соуса',
@@ -129,7 +138,7 @@ describe('approved responsive guest scenarios', () => {
     await user.click(
       screen.getByRole('button', { name: 'Отправить сообщение' }),
     );
-    expect(screen.getByRole('alert')).toHaveTextContent(
+    expect(await screen.findByRole('alert')).toHaveTextContent(
       'Не удалось отправить сообщение',
     );
     expect(screen.getByLabelText('Что случилось?')).toHaveValue(
@@ -137,9 +146,36 @@ describe('approved responsive guest scenarios', () => {
     );
     expect(screen.getByText('receipt.mp4')).toBeVisible();
     await user.click(
-      screen.getByRole('button', { name: 'Удалить receipt.mp4' }),
+      screen.getByRole('button', { name: 'Отправить сообщение' }),
     );
-    expect(screen.queryByText('receipt.mp4')).toBeNull();
+    expect(
+      await screen.findByRole('heading', { name: 'Сообщение отправлено' }),
+    ).toBeVisible();
+    expect(fetcher.mock.calls.map(([url]) => url)).toEqual([
+      '/api/guest/message',
+      '/api/guest/message',
+    ]);
+    expect(bodies[1]!.get('text')).toBe('Не хватает соуса');
+    expect(bodies[1]!.get('number')).toBe('');
+    expect((bodies[1]!.getAll('files')[0] as File).name).toBe('receipt.mp4');
+    vi.unstubAllGlobals();
+  });
+  it('limits attachments to five photos, videos or PDFs', async () => {
+    history.replaceState(null, '', '/board?view=message');
+    const { container } = setup();
+    const files = [
+      ...Array.from(
+        { length: 6 },
+        (_, i) => new File(['x'], `photo-${i}.jpg`, { type: 'image/jpeg' }),
+      ),
+      new File(['MZ'], 'virus.exe', { type: 'application/x-msdownload' }),
+    ];
+    fireEvent.change(container.querySelector('input[type=file]')!, {
+      target: { files },
+    });
+    expect(screen.getAllByRole('button', { name: /^Удалить/ })).toHaveLength(5);
+    expect(screen.queryByText('virus.exe')).toBeNull();
+    expect(screen.getByRole('alert')).toHaveTextContent(/до\s5 файлов/);
   });
   it('allows continuing a draft and confirms explicit discard', async () => {
     history.replaceState(null, '', '/board?view=message');

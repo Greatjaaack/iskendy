@@ -49,8 +49,10 @@ type Props = {
   onReviewClick?: () => void;
   alreadyMessage?: string;
   onRestoreFocus?: () => void;
+  /** Uploads step-3 files before the detail; false keeps them in the draft. */
+  onFiles?: (files: File[]) => Promise<boolean>;
 };
-/** Real input and feedback API; files need the backend contract in docs/48. */
+/** Real input and feedback API; files go through onFiles before the detail. */
 export function RatingDialog({
   open,
   onOpenChange,
@@ -69,12 +71,15 @@ export function RatingDialog({
   error,
   alreadyMessage,
   onRestoreFocus,
+  onFiles,
 }: Props) {
   const heading = useRef<HTMLHeadingElement>(null),
     content = useRef<HTMLDivElement>(null),
     previousStep = useRef(step);
   const [files, setFiles] = useState<AttachmentDraft[]>([]),
-    [fileError, setFileError] = useState('');
+    [fileError, setFileError] = useState(''),
+    [uploading, setUploading] = useState(false),
+    busy = pending || uploading;
   const [otherOpen, setOtherOpen] = useState(false);
   const [otherText, setOtherText] = useState('');
   const otherTrigger = useRef<HTMLButtonElement>(null);
@@ -131,10 +136,19 @@ export function RatingDialog({
     previousStep.current = step;
   }, [step, open]);
   const reasons = text.reasons[branch];
-  const next = () => {
+  const next = async () => {
     if (step === 3 && files.length) {
-      setFileError(review.unavailableFiles);
-      return;
+      setFileError('');
+      setUploading(true);
+      const sent = onFiles
+        ? await onFiles(files.map(({ file }) => file))
+        : false;
+      setUploading(false);
+      if (!sent) {
+        setFileError(review.unavailableFiles);
+        return;
+      }
+      setFiles([]);
     }
     setFileError('');
     onNext();
@@ -299,7 +313,7 @@ export function RatingDialog({
                   value={draft.comment}
                   maxLength={1000}
                   hint={`${draft.comment.length} / 1000`}
-                  disabled={pending}
+                  disabled={busy}
                   onValueChange={(comment) =>
                     onDraftChange({ ...draft, comment })
                   }
@@ -310,7 +324,7 @@ export function RatingDialog({
                     setFiles(nextFiles);
                     setFileError('');
                   }}
-                  disabled={pending}
+                  disabled={busy}
                 />
                 <p className={styles.anonymous}>{review.anonymousReview}</p>
               </>
@@ -346,20 +360,22 @@ export function RatingDialog({
               label={
                 step === 4 ? text.done : step === 3 ? text.send : text.next
               }
-              state={pending ? 'loading' : 'default'}
-              onClick={step === 4 ? () => onOpenChange(false) : next}
+              state={busy ? 'loading' : 'default'}
+              onClick={
+                step === 4 ? () => onOpenChange(false) : () => void next()
+              }
             />
             {step < 4 && (
               <Button
                 variant="secondary"
                 label={text.skip}
-                disabled={pending}
+                disabled={busy}
                 onClick={
                   step === 1
                     ? (onSkipRating ?? (() => onOpenChange(false)))
                     : step === 2
                       ? onSkip
-                      : next
+                      : () => void next()
                 }
               />
             )}

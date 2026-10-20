@@ -234,3 +234,46 @@ it('focuses Other in a nested editor and commits only with OK', async () => {
   });
   expect(screen.queryByRole('textbox', { name: 'Что именно?' })).toBeNull();
 });
+it('uploads step-3 files before the detail and keeps them when the upload fails', async () => {
+  vi.stubGlobal(
+    'ResizeObserver',
+    class {
+      observe() {}
+      unobserve() {}
+      disconnect() {}
+    },
+  );
+  const onNext = vi.fn();
+  const onFiles = vi
+    .fn<(files: File[]) => Promise<boolean>>()
+    .mockResolvedValueOnce(false)
+    .mockResolvedValueOnce(true);
+  const { container } = render(
+    <RatingDialog
+      {...props}
+      step={3}
+      branch="negative"
+      onNext={onNext}
+      onFiles={onFiles}
+    />,
+  );
+  const photo = new File(['jpg'], 'dyurum.jpg', { type: 'image/jpeg' });
+  fireEvent.change(container.ownerDocument.querySelector('input[type=file]')!, {
+    target: { files: [photo] },
+  });
+  await userEvent.click(
+    screen.getByRole('button', { name: 'Отправить отзыв' }),
+  );
+  expect(await screen.findByRole('alert')).toHaveTextContent(
+    'Не удалось отправить вложения',
+  );
+  expect(onNext).not.toHaveBeenCalled();
+  expect(screen.getByText('dyurum.jpg')).toBeVisible();
+  await userEvent.click(
+    screen.getByRole('button', { name: 'Отправить отзыв' }),
+  );
+  await vi.waitFor(() => expect(onNext).toHaveBeenCalledTimes(1));
+  expect(onFiles).toHaveBeenLastCalledWith([photo]);
+  expect(screen.queryByText('dyurum.jpg')).toBeNull();
+  vi.unstubAllGlobals();
+});

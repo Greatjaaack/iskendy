@@ -6,7 +6,15 @@ import video from '../../assets/review/video.svg';
 import { Icon } from '../Icon/Icon';
 import styles from './Attachments.module.css';
 export type AttachmentDraft = { id: string; file: File };
-/** Local selection only. Upload and successful delivery require the backend contract in docs/48. */
+/** Backend limits: iskendy_site POST /api/guest/message and /api/feedback/files. */
+export const ATTACHMENTS_MAX = 5;
+export const ATTACHMENT_MAX_BYTES = 20 * 1024 * 1024;
+const ACCEPT = 'image/*,video/*,application/pdf';
+const accepted = (file: File) =>
+  file.size > 0 &&
+  file.size <= ATTACHMENT_MAX_BYTES &&
+  (/^(image|video)\//.test(file.type) || file.type === 'application/pdf');
+/** Selection and previews; the owner screen uploads them with its own request. */
 export function Attachments({
   files,
   onChange,
@@ -22,8 +30,16 @@ export function Attachments({
   const [error, setError] = useState('');
   const choose = (list: FileList | null) => {
     if (!list) return;
-    const additions = Array.from(list).filter((file) => file.size > 0);
-    if (additions.length !== list.length) setError(text.invalidFile);
+    const chosen = Array.from(list);
+    const additions = chosen
+      .filter(accepted)
+      .slice(0, Math.max(0, ATTACHMENTS_MAX - files.length));
+    if (additions.length !== chosen.length)
+      setError(
+        chosen.some((file) => file.size === 0)
+          ? text.invalidFile
+          : text.fileLimit,
+      );
     else setError('');
     onChange([
       ...files,
@@ -36,6 +52,7 @@ export function Attachments({
         id={id}
         ref={input}
         type="file"
+        accept={ACCEPT}
         multiple
         hidden
         disabled={disabled}

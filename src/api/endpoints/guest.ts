@@ -9,6 +9,8 @@ import {
   detailSchema,
   eventSchema,
   healthSchema,
+  sentSchema,
+  feedbackFilesSchema,
 } from '../schemas/guest';
 
 type ReadOptions = Pick<RequestOptions, 'signal' | 'fetcher'>;
@@ -49,6 +51,35 @@ export const sendFeedbackDetail = (
   },
   options: ReadOptions = {},
 ) => request('/api/feedback/detail', detailSchema, { ...options, body });
+/** Files go straight to the team chat; the slow hall Wi-Fi gets two minutes. */
+const UPLOAD_TIMEOUT_MS = 120_000;
+const withFiles = (fields: Record<string, string>, files: readonly File[]) => {
+  const form = new FormData();
+  for (const [key, value] of Object.entries(fields)) form.append(key, value);
+  for (const file of files) form.append('files', file, file.name);
+  return form;
+};
+export const sendManagerMessage = (
+  body: { text: string; number?: string; files: readonly File[] },
+  options: ReadOptions = {},
+) =>
+  request('/api/guest/message', sentSchema, {
+    ...options,
+    timeoutMs: UPLOAD_TIMEOUT_MS,
+    body: withFiles({ text: body.text, number: body.number ?? '' }, body.files),
+  });
+export const sendFeedbackFiles = (
+  body: { feedback_id: number; edit_token: string; files: readonly File[] },
+  options: ReadOptions = {},
+) =>
+  request('/api/feedback/files', feedbackFilesSchema, {
+    ...options,
+    timeoutMs: UPLOAD_TIMEOUT_MS,
+    body: withFiles(
+      { feedback_id: String(body.feedback_id), edit_token: body.edit_token },
+      body.files,
+    ),
+  });
 export type GuestStep =
   | 'board_open'
   | 'sub_try'

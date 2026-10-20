@@ -83,6 +83,11 @@ export const detailSchema = z.discriminatedUnion('ok', [
   failure(['unknown_feedback', 'wrong_token', 'expired']),
 ]);
 export const eventSchema = z.looseObject({ ok: z.boolean() });
+export const sentSchema = z.looseObject({ ok: z.literal(true) });
+export const feedbackFilesSchema = z.discriminatedUnion('ok', [
+  sentSchema,
+  failure(['unknown_feedback', 'wrong_token', 'expired']),
+]);
 export type Board = z.infer<typeof boardSchema>;
 export type Claim = z.infer<typeof claimSchema>;
 export type FeedbackCheck = z.infer<typeof checkSchema>;

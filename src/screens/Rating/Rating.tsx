@@ -11,6 +11,7 @@ import {
   createFeedback,
   updateRating,
   sendFeedbackDetail,
+  sendFeedbackFiles,
 } from '../../api/endpoints/guest';
 import { checkedFeedback } from '../../api/endpoints/checked-feedback';
 import {
@@ -36,7 +37,7 @@ export function Rating({
 }) {
   const client = useQueryClient();
   const telemetry = useGuestTelemetry();
-  const [flow] = useState(() => {
+  const [{ flow, read }] = useState(() => {
     const binding = createOrderBinding(orderStorage, record);
     const read = () => {
       const current = binding.read();
@@ -72,7 +73,7 @@ export function Rating({
       check: checkedFeedback,
       eligible: checkedFeedback.recentlyEligible,
     });
-    return createRatingFlow({
+    const flow = createRatingFlow({
       service,
       record,
       rated: () => telemetry.rated(record.n),
@@ -82,6 +83,7 @@ export function Rating({
         return current?.fb ? binding.write({ ...current, done: true }) : false;
       },
     });
+    return { flow, read };
   });
   const state = useSyncExternalStore(flow.subscribe, flow.getSnapshot);
   // UX-16: a face tapped on «Выдан» arrives as &emotion=N and starts R1 with it.
@@ -141,6 +143,16 @@ export function Rating({
       }}
       mapsHref={mapsHref}
       onReviewClick={telemetry.reviewClick}
+      onFiles={async (files) => {
+        const fb = read()?.fb;
+        if (!fb) return false;
+        const response = await sendFeedbackFiles({
+          feedback_id: fb.id,
+          edit_token: fb.token,
+          files,
+        });
+        return response.ok && response.data.ok;
+      }}
       onRestoreFocus={() => {
         requestAnimationFrame(() =>
           requestAnimationFrame(() => {

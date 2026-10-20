@@ -42,10 +42,12 @@ export async function request<T>(
       method: options.body === undefined ? 'GET' : 'POST',
       ...(options.body === undefined
         ? {}
-        : {
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(options.body),
-          }),
+        : options.body instanceof FormData
+          ? { body: options.body }
+          : {
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify(options.body),
+            }),
       signal: controller.signal,
       cache: 'no-store',
       credentials: 'same-origin',

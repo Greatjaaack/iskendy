@@ -179,6 +179,26 @@
       "method": "GET",
       "path": "/api/health",
       "httpStatus": 200
+    },
+    "message-ok": {
+      "method": "POST",
+      "path": "/api/guest/message",
+      "httpStatus": 200
+    },
+    "message-503": {
+      "method": "POST",
+      "path": "/api/guest/message",
+      "httpStatus": 503
+    },
+    "feedback-files-ok": {
+      "method": "POST",
+      "path": "/api/feedback/files",
+      "httpStatus": 200
+    },
+    "feedback-files-wrong-token": {
+      "method": "POST",
+      "path": "/api/feedback/files",
+      "httpStatus": 200
     }
   }
 }
