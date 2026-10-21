@@ -2,7 +2,7 @@
 
 ```bash
 poetry install --with dev     # один раз
-poetry run pytest             # весь набор, 174 теста, ~10 секунд
+poetry run pytest             # весь набор, 188 тестов, ~5 секунд
 poetry run pytest backend/tests/test_feedback_claim.py -v
 ```
 
