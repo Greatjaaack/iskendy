@@ -49,7 +49,7 @@
 | ✅ | Способ — коммит собранного `dist/` во `frontend/` ([plan-docker.md](plan-docker.md)); `scripts/import-frontend.sh` и `scripts/smoke-front.sh` в табло (`dev`, 16.10). Импорт сделан в `feature/new-guest-front`: последний — фронт `6c5d4c6` |
 | ✅ | 21.10: как у Маси — `legacy/` живёт во фронте; правки кассы и старого ТВ вносить там, иначе следующий импорт их затрёт (`import-frontend.sh` остановится на расхождении `legacy.html`) |
 | ✅ | Скилл `prod-server`: шаг `scripts/smoke-front.sh` после выкатки и откат `git revert` коммита импорта (16.10) |
-| ⚠️ | Слить `feature/new-guest-front` → `dev` → `main`, ночная выкатка — по команде Арслана |
+| ⚠️ | Слить `feature/new-guest-front` → `dev` → `main`, ночная выкатка — по команде Арслана. Откат — [otkat-novyj-front.md](otkat-novyj-front.md) |
 
 ## 4. Проверки до переключения
 
