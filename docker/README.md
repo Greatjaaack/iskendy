@@ -1,14 +1,46 @@
 # Docker-стенд нового фронта
 
-Локальная обвязка Искенди поверх чужого репозитория `Max-Sundstrom/iskendy-frontend`. Живёт в ветке `local/docker`, в `origin` не пушится. Node на хосте не нужен: проекту нужен ровно 24.19, на маке стоит 23.
+Обвязка Искенди поверх `Max-Sundstrom/iskendy-frontend`: Docker-стенд с настоящим бэкендом табло, проверки в контейнере и наши доработки (`/tv`, сообщения и вложения гостей). Ветка у нас — `local/docker`, у автора — `arslan/integraciya`; `main` автора не трогаем. Node на хосте не нужен: всё собирается в контейнере на Node 24.19.
+
+## Быстрый старт
+
+Нужен Docker Desktop: не меньше 6 ГБ памяти и 4 ядер ВМ (Settings → Resources).
+
+1. Положить оба репозитория рядом, бэкенд — под именем `iskendy_site`, его ждёт `compose.yml` (`../../iskendy_site` от `docker/`):
+
+   ```sh
+   mkdir iskendi && cd iskendi
+   git clone -b arslan/integraciya https://github.com/Max-Sundstrom/iskendy-frontend.git
+   git clone https://github.com/Greatjaaack/iskendy.git iskendy_site
+   cd iskendy-frontend
+   ```
+
+   ⚠️ Ручки `POST /api/guest/message` и `/api/feedback/files` (сообщение управляющему и вложения) пока есть только в ветке `feature/new-guest-front` табло, она ещё не на GitHub. На `main` табло стенд работает, но отправка сообщения и фото получит 404, фронт покажет «не удалось отправить».
+
+2. Поднять стенд:
+
+   ```sh
+   docker compose -f docker/compose.yml up -d --build      # mock :5173 и stack :8090, первая сборка ~5–10 мин
+   ```
+
+3. Открыть:
+
+   | Что | Адрес |
+   |---|---|
+   | Фронт на синтетике (MSW) | http://127.0.0.1:5173 |
+   | Фронт + настоящий бэкенд | http://127.0.0.1:8090 — `/`, `/board`, `/tv` |
+   | Касса (двигать заказы) | http://127.0.0.1:8090/staff, пароль `local-test` |
+
+4. Проверки — `docker compose -f docker/compose.yml run --rm verify` (см. ниже).
+
+Остановить — `docker compose -f docker/compose.yml down`.
 
 ## Раскладка
 
 | Что | Где |
 |---|---|
-| Новый фронт (этот репо) | `~/Desktop/iskendi/iskendy-frontend`, ветка `local/docker` |
-| Бэкенд табло | `~/Desktop/iskendi/iskendy_site` — берётся из рабочего дерева как есть |
-| Проект PyCharm | `.idea/` (в `.git/info/exclude`) |
+| Новый фронт (этот репо) | `iskendy-frontend`, ветка `local/docker` (у автора — `arslan/integraciya`) |
+| Бэкенд табло | `../iskendy_site` — берётся из рабочего дерева как есть, на той ветке, что выбрана |
 | Наши документы | `local/` (оглавление — `local/README.md`) |
 
 ## Сервисы
@@ -68,7 +100,7 @@ Telegram на стенде выключен и должен оставаться
 ## Обновление
 
 ```sh
-git fetch origin && git rebase origin/main          # свежий фронт под нашей обвязкой
+git fetch origin && git rebase origin/main          # свежий фронт автора под нашей обвязкой
 docker compose -f docker/compose.yml up -d --build  # пересобрать mock и stack
 ```
 
