@@ -12,7 +12,7 @@
    mkdir iskendi && cd iskendi
    git clone -b arslan/integraciya https://github.com/Max-Sundstrom/iskendy-frontend.git
    # пока ветки у автора нет — та же ветка лежит в репозитории табло:
-   # git clone -b frontend/arslan-integraciya https://github.com/Greatjaaack/iskendy.git iskendy-frontend
+   # git clone -b front https://github.com/Greatjaaack/iskendy.git iskendy-frontend
    git clone -b feature/new-guest-front https://github.com/Greatjaaack/iskendy.git iskendy_site
    cd iskendy-frontend
    ```
