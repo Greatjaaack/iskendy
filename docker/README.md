@@ -13,11 +13,11 @@
    git clone -b arslan/integraciya https://github.com/Max-Sundstrom/iskendy-frontend.git
    # пока ветки у автора нет — та же ветка лежит в репозитории табло:
    # git clone -b frontend/arslan-integraciya https://github.com/Greatjaaack/iskendy.git iskendy-frontend
-   git clone https://github.com/Greatjaaack/iskendy.git iskendy_site
+   git clone -b feature/new-guest-front https://github.com/Greatjaaack/iskendy.git iskendy_site
    cd iskendy-frontend
    ```
 
-   ⚠️ Ручки `POST /api/guest/message` и `/api/feedback/files` (сообщение управляющему и вложения) пока есть только в ветке `feature/new-guest-front` табло, она ещё не на GitHub. На `main` табло стенд работает, но отправка сообщения и фото получит 404, фронт покажет «не удалось отправить».
+   Ветка табло `feature/new-guest-front` — с ручками `POST /api/guest/message` и `/api/feedback/files` (сообщение управляющему и вложения). На `main` табло их пока нет: стенд работает, но отправка сообщения и фото получит 404.
 
 2. Поднять стенд:
 
