@@ -221,12 +221,42 @@ else
   fi
 fi
 
+# ------------------------------------------------------ бэкапы свежие?
+# Ночные копии — единственное, что останется, если база испортится. С 12.10.2026
+# Яндекс.Диск не пускает бесплатный аккаунт к файлам (410), внешней копии нет:
+# копии живут только здесь. Поэтому сторожим сами копии, а не выгрузку: файл
+# моложе 26 часов (ночной снимок плюс запас на сдвиг крона). Тревога одна на
+# систему и снимается, как только снимок появился.
+BACKUP_MAX_MIN=${BACKUP_MAX_MIN:-1560}
+SITE_BACKUPS=${SITE_BACKUPS:-/var/lib/docker/volumes/iskendy_app-data/_data/backups}
+ANALYTICS_BACKUPS=${ANALYTICS_BACKUPS:-/root/backups/analytics}
+
+backup_fresh() {  # $1 — каталог, $2 — маска файла
+  [ -n "$(find "$1" -maxdepth 1 -name "$2" -mmin "-$BACKUP_MAX_MIN" 2>/dev/null | head -1)" ]
+}
+
+if backup_fresh "$SITE_BACKUPS" "iskendy-*.db.gz"; then
+  clear_once backup_stale_site "✅ Бэкап табло снова снимается"
+else
+  once backup_stale_site "🔴 Бэкапа табло нет больше суток.
+Смотреть: $SITE_BACKUPS"
+fi
+if backup_fresh "$ANALYTICS_BACKUPS" "iskendi-*.db.gz"; then
+  clear_once backup_stale_analytics "✅ Бэкап аналитики снова снимается"
+else
+  once backup_stale_analytics "🔴 Бэкапа аналитики нет больше суток.
+Смотреть: $ANALYTICS_BACKUPS, /var/log/iskendy-analytics-backup.log"
+fi
+
 # ----------------------------------------------------------------- диск
 USED=$(df --output=pcent / | tail -1 | tr -dc "0-9")
 if [ "${USED:-0}" -ge "$DISK_LIMIT" ]; then
   BEFORE=$(df --output=avail -h / | tail -1 | tr -d " ")
   docker image prune -f >/dev/null 2>&1
   docker builder prune -f >/dev/null 2>&1
+  # Системный журнал сам не ограничен: 01.11.2026 он дорос до 1 ГБ и упёр диск
+  # в 88%, а чистка образов не помогала. Старые системные логи не жалко.
+  journalctl --vacuum-size=200M >/dev/null 2>&1
   AFTER_PCT=$(df --output=pcent / | tail -1 | tr -dc "0-9")
   AFTER=$(df --output=avail -h / | tail -1 | tr -d " ")
   log "диск был ${USED}%, стал ${AFTER_PCT}%"
